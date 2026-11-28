@@ -339,6 +339,17 @@ describe('the start script', () => {
     return { child, output: () => text, exit }
   }
 
+  /** Waits until the output holds the text, or the script ends. */
+  const printed = async (started: ReturnType<typeof run>, text: string) => {
+    await until(
+      () => started.output().includes(text) || started.child.exitCode !== null,
+      () => `no output with "${text}":\n${started.output()}`,
+    )
+    if (!started.output().includes(text)) {
+      expect.fail(`the script stopped before it printed "${text}":\n${started.output()}`)
+    }
+  }
+
   const ready = async (args: string[]) => {
     const started = run(['--port', '0', ...args])
     const page = () => /wishem: PixiJS page at (http:\/\/127\.0\.0\.1:\d+\/)/.exec(started.output())?.[1]
@@ -350,11 +361,14 @@ describe('the start script', () => {
     if (pageUrl === undefined) {
       expect.fail(`the script stopped with no address:\n${started.output()}`)
     }
+    // The line of the link follows the line of the page.
+    await printed(started, 'wishem: the page connects to ')
     return { started, pageUrl }
   }
 
   it('prints the address of the page and of the link, with the default hub port 4750', { timeout: 30000 }, async () => {
     const { started } = await ready([])
+    await printed(started, 'wishem: the page connects to ws://127.0.0.1:4750/link\n')
 
     expect(started.output()).toMatch(
       /^wishem: PixiJS page at http:\/\/127\.0\.0\.1:\d+\/\nwishem: the page connects to ws:\/\/127\.0\.0\.1:4750\/link\n/,
@@ -363,6 +377,7 @@ describe('the start script', () => {
 
   it('names the hub port of the option', { timeout: 30000 }, async () => {
     const { started } = await ready(['--hub-port', '4751'])
+    await printed(started, 'wishem: the page connects to ws://127.0.0.1:4751/link\n')
 
     expect(started.output()).toContain('wishem: the page connects to ws://127.0.0.1:4751/link\n')
   })
