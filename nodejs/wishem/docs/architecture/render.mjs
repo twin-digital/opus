@@ -1,13 +1,27 @@
 // Writes the SVG diagrams of the architecture documents.
-// Usage: node render.mjs
+// Usage: node render.mjs [--check] [--packages <folder>] [--out <folder>]
 // Each diagram is described once, below. The script writes one file for each theme.
 // Colors come from the role tokens of the workbench. Text uses the standard typeface of the system.
-// The script writes C4 diagrams and an entity diagram (docs/diagrams.md).
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+// The script writes C4 diagrams, an entity diagram, and the package dependency view (docs/diagrams.md).
+// The package dependency view comes from the package.json files of the packages and from the layers below.
+// The script fails, and writes no file, when the packages disagree with the layers or with the table of the packages.
+// With --check, the script writes no file. It fails when a file on the disk is not current.
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
+import { parseArgs } from 'node:util'
 
 const here = import.meta.dirname
 const tokensFile = join(here, '..', '..', 'workbench-app', 'src', 'styles', 'tokens.css')
+
+const { values: options } = parseArgs({
+  options: {
+    check: { type: 'boolean', default: false },
+    packages: { type: 'string', default: join(here, '..', '..') },
+    out: { type: 'string', default: here },
+  },
+})
+const packagesFolder = resolve(options.packages)
+const outFolder = resolve(options.out)
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -534,8 +548,65 @@ const legend = (c, item) => {
   return out.join('\n')
 }
 
-const layers = { group, element, entity, arrow, relationship, legend }
-const order = ['group', 'element', 'entity', 'arrow', 'relationship', 'legend']
+// ---------------------------------------------------------------------------
+// Package dependency view: bands and cards
+// ---------------------------------------------------------------------------
+
+const BAND = { x: 24, w: 832, head: 40, pad: 16, gap: 12, spacing: 16 }
+const CARDS_PER_ROW = 4
+const CARD_PAD = 10
+const CARD_TOP = 14
+const CARD_LINES_MAX = 8
+
+/** A band: the tinted area of one layer. `label` names the layer. */
+const band = (c, item) =>
+  [
+    rect(item, 14, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5"`),
+    text(c, {
+      x: item.x + 16,
+      y: item.y + 26,
+      line: item.label,
+      size: SIZE.detail,
+      weight: 600,
+      color: c.fgMuted,
+      maxWidth: item.w - 32,
+    }),
+  ].join('\n')
+
+/** A package card: the name, then the lines of the lists of packages. */
+const packageCard = (c, item) => {
+  const { x, y, h, w, name, lines } = item
+  const inner = w - 2 * CARD_PAD
+  if (h < CARD_TOP + LEAD.name + lines.length * LEAD.description + 8) {
+    throw new Error(`The card of ${name} does not fit in ${String(h)} px`)
+  }
+  const out = [
+    rect(item, 12, `fill="${c.surface}" stroke="${c.border}" filter="url(#shadow)"`),
+    text(c, {
+      x: x + CARD_PAD,
+      y: y + CARD_TOP + LEAD.name - 5,
+      line: name,
+      size: SIZE.name,
+      weight: 600,
+      maxWidth: inner,
+    }),
+  ]
+  lines.forEach((line, index) => {
+    out.push(
+      text(c, {
+        x: x + CARD_PAD,
+        y: y + CARD_TOP + LEAD.name + (index + 1) * LEAD.description - 5,
+        line,
+        color: c.fgMuted,
+        maxWidth: inner,
+      }),
+    )
+  })
+  return out.join('\n')
+}
+
+const layers = { group, band, card: packageCard, element, entity, arrow, relationship, legend }
+const order = ['group', 'band', 'card', 'element', 'entity', 'arrow', 'relationship', 'legend']
 
 // ---------------------------------------------------------------------------
 // Diagram descriptions
@@ -1240,7 +1311,202 @@ const entitiesModelFolder = {
   ],
 }
 
-const diagrams = [context, containers, dynamicChange, componentsPage, entitiesModelFolder]
+// ---------------------------------------------------------------------------
+// Packages: the layers, the checks, and the package dependency view
+// ---------------------------------------------------------------------------
+
+// The layers, from the lowest to the highest. A runtime dependency goes to the same layer or a lower layer.
+const packageLayers = [
+  { name: 'Hub', packages: ['hub'] },
+  { name: 'Model and subsystems', packages: ['core', 'clock', 'update'] },
+  {
+    name: 'Hosts, renderers, and products',
+    packages: [
+      'host-nodejs',
+      'construct-manager',
+      'renderer-react',
+      'renderer-pixi',
+      'renderer-godot',
+      'sample-product',
+    ],
+  },
+  { name: 'Applications', packages: ['workbench', 'workbench-app', 'pixi-page'] },
+  { name: 'Checks', packages: ['docs-check'] },
+]
+
+const PACKAGE_PREFIX = '@thrashplay/wishem-'
+const CHECK_PACKAGE = 'docs-check'
+const TABLE_HEADING = '## Package dependency view: Wishem'
+
+/** Reads each package of the folder: its folder name, its name field, and its Wishem dependencies. */
+const readPackages = () =>
+  readdirSync(packagesFolder, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(packagesFolder, entry.name, 'package.json')))
+    .map((entry) => entry.name)
+    .sort()
+    .map((folder) => {
+      const manifest = JSON.parse(readFileSync(join(packagesFolder, folder, 'package.json'), 'utf8'))
+      const wishemNames = (record) =>
+        Object.keys(record ?? {})
+          .filter((name) => name.startsWith(PACKAGE_PREFIX))
+          .map((name) => name.slice(PACKAGE_PREFIX.length))
+      const uses = [
+        ...new Set([...wishemNames(manifest.dependencies), ...wishemNames(manifest.peerDependencies)]),
+      ].sort()
+      const tests = wishemNames(manifest.devDependencies)
+        .filter((name) => !uses.includes(name))
+        .sort()
+      return { folder, name: manifest.name, uses, tests, devDependencies: wishemNames(manifest.devDependencies) }
+    })
+
+/** Reads the short names of the packages in the first table after the heading of the view in `README.md`. */
+const readTableRows = () => {
+  const file = join(outFolder, 'README.md')
+  if (!existsSync(file)) {
+    return new Set()
+  }
+  const lines = readFileSync(file, 'utf8').split('\n')
+  const start = lines.findIndex((line) => line.trim() === TABLE_HEADING)
+  const rows = new Set()
+  if (start === -1) {
+    return rows
+  }
+  let inTable = false
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('|')) {
+      inTable = true
+      const first = /^\|\s*`([^`]+)`\s*\|/.exec(line)
+      if (first) {
+        rows.add(first[1])
+      }
+    } else if (inTable) {
+      break
+    }
+  }
+  return rows
+}
+
+/** Finds each disagreement between the packages, the layers, and the table of the packages. */
+const checkPackages = (packages) => {
+  const problems = []
+  const known = new Set(packages.map((pkg) => pkg.folder))
+  const layerOf = new Map()
+  const doubled = new Set()
+  packageLayers.forEach((layer, index) => {
+    for (const name of layer.packages) {
+      if (!known.has(name)) {
+        problems.push(`render: the layer "${layer.name}" names ${name}, which is not a package`)
+      } else if (layerOf.has(name)) {
+        doubled.add(name)
+      } else {
+        layerOf.set(name, index)
+      }
+    }
+  })
+  const rows = readTableRows()
+  const checker = packages.find((pkg) => pkg.folder === CHECK_PACKAGE)
+  for (const pkg of packages) {
+    if (pkg.name !== `${PACKAGE_PREFIX}${pkg.folder}`) {
+      problems.push(`render: the folder ${pkg.folder} holds the package ${String(pkg.name)}`)
+    }
+    if (doubled.has(pkg.folder)) {
+      problems.push(`render: the package ${pkg.folder} is in two layers`)
+    } else if (!layerOf.has(pkg.folder)) {
+      problems.push(`render: the package ${pkg.folder} has no layer`)
+    }
+    for (const used of pkg.uses) {
+      if (layerOf.has(pkg.folder) && layerOf.has(used) && layerOf.get(used) > layerOf.get(pkg.folder)) {
+        problems.push(
+          `render: ${pkg.folder} (layer "${packageLayers[layerOf.get(pkg.folder)].name}") uses ${used} (layer "${packageLayers[layerOf.get(used)].name}"), which is a higher layer`,
+        )
+      }
+    }
+    if (!rows.has(pkg.folder)) {
+      problems.push(`render: the table of the packages has no row for ${pkg.folder}`)
+    }
+    if (checker !== undefined && pkg !== checker && !checker.devDependencies.includes(pkg.folder)) {
+      problems.push(`render: ${pkg.folder} is not a development dependency of ${CHECK_PACKAGE}`)
+    }
+  }
+  return { problems, layerOf }
+}
+
+/** The lines of a card below its name: the packages that it uses, and the packages that it tests with. */
+const cardLines = (pkg, packages) => {
+  const inner = CARD_W_PACKAGE - 2 * CARD_PAD
+  const uses = pkg.uses.length === 0 ? 'Uses: no package of Wishem' : `Uses: ${pkg.uses.join(', ')}`
+  const lines = wrap(uses, inner, CARD_LINES_MAX)
+  if (pkg.tests.length > 0) {
+    const others = packages.filter((other) => other !== pkg)
+    const all = others.every((other) => pkg.tests.includes(other.folder))
+    lines.push(
+      ...wrap(all ? 'Tests with: each other package' : `Tests with: ${pkg.tests.join(', ')}`, inner, CARD_LINES_MAX),
+    )
+  }
+  return lines
+}
+
+const CARD_W_PACKAGE = (BAND.w - 2 * BAND.pad - (CARDS_PER_ROW - 1) * BAND.gap) / CARDS_PER_ROW
+
+/** The package dependency view: one band for each layer, the highest layer at the top. */
+const packagesDiagram = (packages, layerOf) => {
+  const cards = packages.map((pkg) => ({ pkg, lines: cardLines(pkg, packages) }))
+  const cardH = CARD_TOP + LEAD.name + Math.max(...cards.map((card) => card.lines.length)) * LEAD.description + 12
+  const items = []
+  let y = 64
+  for (let index = packageLayers.length - 1; index >= 0; index--) {
+    const members = cards.filter((card) => layerOf.get(card.pkg.folder) === index)
+    const rows = Math.ceil(members.length / CARDS_PER_ROW)
+    const h = BAND.head + rows * cardH + (rows - 1) * BAND.gap + BAND.pad
+    items.push({
+      kind: 'band',
+      x: BAND.x,
+      y,
+      w: BAND.w,
+      h,
+      label: `Layer ${String(index + 1)}: ${packageLayers[index].name}`,
+    })
+    members.forEach((card, position) => {
+      items.push({
+        kind: 'card',
+        x: BAND.x + BAND.pad + (position % CARDS_PER_ROW) * (CARD_W_PACKAGE + BAND.gap),
+        y: y + BAND.head + Math.floor(position / CARDS_PER_ROW) * (cardH + BAND.gap),
+        w: CARD_W_PACKAGE,
+        h: cardH,
+        name: card.pkg.folder,
+        lines: card.lines,
+      })
+    })
+    y += h + BAND.spacing
+  }
+  const names = packageLayers.map((layer, index) => `layer ${String(index + 1)} (${layer.name})`).join(', ')
+  return {
+    name: 'packages',
+    title: 'Package dependency view: Wishem',
+    description: `The view shows ${String(packages.length)} packages in ${String(packageLayers.length)} layers: ${names}. Layer 1 is at the bottom and layer ${String(packageLayers.length)} is at the top. Each card lists the packages that its package uses and the packages that it tests with. A package uses only packages in its own layer or in a lower layer.`,
+    width: WIDTH_PX,
+    height: y - BAND.spacing + 24,
+    items,
+  }
+}
+
+const packages = readPackages()
+const { problems, layerOf } = checkPackages(packages)
+if (problems.length > 0) {
+  for (const problem of problems) {
+    console.error(problem)
+  }
+  process.exit(1)
+}
+
+const diagrams = [
+  context,
+  containers,
+  dynamicChange,
+  componentsPage,
+  packagesDiagram(packages, layerOf),
+  entitiesModelFolder,
+]
 
 // ---------------------------------------------------------------------------
 // Output
@@ -1283,12 +1549,25 @@ const tokens = readTokens()
 // Render every file first, so that a failed check writes no file.
 const files = diagrams.flatMap((diagram) =>
   ['light', 'dark'].map((theme) => ({
-    file: join(here, `${diagram.name}-${theme}.svg`),
+    file: join(outFolder, `${diagram.name}-${theme}.svg`),
     content: renderDiagram(diagram, theme, tokens),
   })),
 )
 
-for (const { file, content } of files) {
-  writeFileSync(file, content)
-  console.log(`wrote ${file}`)
+if (options.check) {
+  const stale = files.filter(({ file, content }) => !existsSync(file) || readFileSync(file, 'utf8') !== content)
+  if (stale.length === 0) {
+    console.log('render: each file is current')
+  } else {
+    for (const { file } of stale) {
+      console.log(`render: ${basename(file)} is out of date`)
+    }
+    console.log('render: run node nodejs/wishem/docs/architecture/render.mjs')
+    process.exitCode = 1
+  }
+} else {
+  for (const { file, content } of files) {
+    writeFileSync(file, content)
+    console.log(`wrote ${file}`)
+  }
 }

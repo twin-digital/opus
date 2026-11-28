@@ -20,6 +20,8 @@ The `docs/` folder holds the blueprint.
 - `renderer-godot` (`@thrashplay/wishem-renderer-godot`): the Godot renderer. It holds the remote port in GDScript, the renderer, the Godot application, the construct in a Node.js process, the Godot runner, and a `start` script. Its GDScript tests and its screenshot test need Docker. It is private.
 - `workbench-app` (`@thrashplay/wishem-workbench-app`): the browser application of the workbench. It holds the page, the client of the hub, the views, the `start` script of the workbench, and the style guide with its screenshot tests, which need Docker.
 
+- `docs-check` (`@thrashplay/wishem-docs-check`): tests that the architecture document agrees with the packages. They run `docs/architecture/render.mjs --check`. It is private.
+
 ## Read before you design or build
 
 1. `docs/README.md`: the status labels and what to read for each task.

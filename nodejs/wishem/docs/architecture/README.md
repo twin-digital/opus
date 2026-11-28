@@ -105,20 +105,6 @@ This is the path of a tick from the clock in the PixiJS process to the picture i
 | renderer-react       | Container: TypeScript package  | The React renderer: `Renderer`, `collectViews`, the names of props, and the generator of the types of the props. `Renderer` draws from a port. The root entry uses no Node.js API. Package: `@thrashplay/wishem-renderer-react`.                                                                                                                               |
 | sample-product       | Container: TypeScript package  | The sample product: `model/`, its model folder, `countBehavior`, and the list `behaviors`. `countBehavior` is a native behavior. It stands in for the behavior feature (#481). `model/` is the example product model folder. It uses no Node.js API. Package: `@thrashplay/wishem-sample-product`.                                                             |
 
-- `@thrashplay/wishem-workbench-app` depends on `@thrashplay/wishem-construct-manager`, `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-host-nodejs`, `@thrashplay/wishem-renderer-react`, `@thrashplay/wishem-update`, and `@thrashplay/wishem-workbench`. `@thrashplay/wishem-sample-product` is a development dependency of it. The `start` script loads it as the product code, and a test uses it.
-- `@thrashplay/wishem-construct-manager` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-clock`, `@thrashplay/wishem-host-nodejs`, and `@thrashplay/wishem-update`. `@thrashplay/wishem-sample-product` is a development dependency of it, for a test.
-- `@thrashplay/wishem-workbench` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-host-nodejs`. It does not depend on `@thrashplay/wishem-workbench-app`.
-- `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`. `@thrashplay/wishem-clock` is a development dependency of it, for a test.
-- `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`.
-- `@thrashplay/wishem-renderer-react` depends on `@thrashplay/wishem-core` for types only, and on `@thrashplay/wishem-hub` for `LinkClosedError`. It has `react` as a peer dependency.
-- `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`. `@thrashplay/wishem-pixi-page` depends on it. `@thrashplay/wishem-core` is a development dependency of it, for a test.
-- `@thrashplay/wishem-update` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`. `@thrashplay/wishem-construct-manager`, `@thrashplay/wishem-workbench-app`, and `@thrashplay/wishem-pixi-page` depend on it.
-- `@thrashplay/wishem-renderer-pixi` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub` for types only. It has `pixi.js` as a peer dependency.
-- `@thrashplay/wishem-pixi-page` depends on `@thrashplay/wishem-clock`, `@thrashplay/wishem-core`, `@thrashplay/wishem-host-nodejs`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-renderer-pixi`, and `@thrashplay/wishem-update`.
-- `@thrashplay/wishem-renderer-godot` depends on `@thrashplay/wishem-clock`, `@thrashplay/wishem-core`, `@thrashplay/wishem-host-nodejs`, and `@thrashplay/wishem-hub`. No other package depends on it.
-- `@thrashplay/wishem-sample-product` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-update`. `@thrashplay/wishem-clock` is a development dependency of it, for a test. The packages `workbench-app` and `construct-manager` have it as a development dependency.
-- `@thrashplay/wishem-hub` depends on no other package of Wishem.
-
 The package `host-nodejs` also provides the `wishem` command. The command starts a construct for a model folder, with no page. The option `--product <folder>` mounts a product model folder. The `start` script of `@thrashplay/wishem-workbench` uses it (`wishem start ./model`). The command runs no construct manager.
 
 This is the path of a tick from the clock in the Godot process to the screenshot.
@@ -187,6 +173,40 @@ The `Page` shows the zero state (`ZeroState`) of the catalog in the space below 
 | Catalog           | Component: React            | `src/components/`. It holds the components of the workbench, such as `AppBar` and `ZeroState`.                                                                                                                                                    |
 
 The React renderer is the package `renderer-react`. It holds `Renderer`, `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, and the generator. The page keeps `connectHub`, the views, and the sidecars.
+
+## Package dependency view: Wishem
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="packages-dark.svg">
+  <img alt="Package dependency view of Wishem. Five layers hold 14 packages. Layer 1 is at the bottom and layer 5 is at the top. Each card lists the packages that its package uses and the packages that it tests with. A package uses only packages in its own layer or in a lower layer." src="packages-light.svg">
+</picture>
+
+The view is not a C4 diagram. `render.mjs` makes it from the `package.json` files of the packages in `nodejs/wishem/`. Each card names one package. The line `Uses:` lists each package of Wishem in `dependencies` or `peerDependencies`. The line `Tests with:` lists each package of Wishem that is only in `devDependencies`.
+
+The layers are data in `render.mjs`. A package uses only packages in its own layer or in a lower layer. A package can test with a package in any layer.
+
+The script fails when a package has no layer or is in two layers, when a runtime dependency goes to a higher layer, when the table below has no row for a package, or when a package is not a development dependency of `docs-check`. This command fails when a file is out of date. The tests of `@thrashplay/wishem-docs-check` run it in CI.
+
+```
+node nodejs/wishem/docs/architecture/render.mjs --check
+```
+
+| Package             | Layer | Responsibility                                                                                                   |
+| ------------------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
+| `hub`               | 1     | The hub, the ports, the record, and the link. It uses no Node.js API.                                            |
+| `core`              | 2     | The model types, the validation, `isEqual`, and the store. It uses no Node.js API.                               |
+| `clock`             | 2     | The `time` subsystem and the clock. It uses no Node.js API.                                                      |
+| `update`            | 2     | The update subsystem. It runs the native behaviors of a product in each tick.                                    |
+| `host-nodejs`       | 3     | Runs a construct in a Node.js process, serves the link, writes `state.json`, and provides the `wishem` command.  |
+| `construct-manager` | 3     | The construct list and `productChanges`. The entry `node` holds the construct manager and the product construct. |
+| `renderer-react`    | 3     | The React renderer. It draws React views from a port, and it writes the types of the props of the views.         |
+| `renderer-pixi`     | 3     | The PixiJS renderer. It draws PixiJS views from a port.                                                          |
+| `renderer-godot`    | 3     | The Godot renderer: the remote port in GDScript, the Godot application, the construct, and the Godot runner.     |
+| `sample-product`    | 3     | The sample product: a model folder with a color and a count, and the count behavior.                             |
+| `workbench`         | 4     | The base workbench. It holds the first model and a `start` script.                                               |
+| `workbench-app`     | 4     | The browser application of the workbench: the page, the client of the hub, the views, and the `start` script.    |
+| `pixi-page`         | 4     | A construct with a clock in a Node.js process, a page that draws it through the link, and a `start` script.      |
+| `docs-check`        | 5     | Tests that this document agrees with the packages.                                                               |
 
 ## Entity diagram: the model folder
 
