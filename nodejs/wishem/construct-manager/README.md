@@ -164,7 +164,7 @@ The launcher gives each line of the standard output and the standard error of th
 
 `close()` sends `stop`. The child sends `stopping` on each WebSocket link, frees its port, and ends. The launcher sends `SIGKILL` after `stopMs` (default 2000). Each call gives the same promise.
 
-The child ends when its IPC channel disconnects. This happens when the parent ends for any cause, also `SIGKILL`. `ended` resolves with a message when the child ends and no `close()` was called.
+The child ends when its IPC channel disconnects. This happens when the parent ends for any cause, also `SIGKILL`. A watchdog thread of the child checks the parent each 500 ms, so a child with a blocked event loop also ends within 0.5 s. The child ignores `SIGINT`: a Ctrl+C of the process group stops the construct through `stop` or the disconnect. `ended` resolves with a message when the child ends and no `close()` was called.
 
 ### The faults of a product construct process
 

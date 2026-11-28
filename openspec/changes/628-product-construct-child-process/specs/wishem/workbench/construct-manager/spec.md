@@ -123,6 +123,11 @@ When a product construct process ends while its construct is wanted to run, the 
 - **WHEN** `play` failed, and an input subsystem sends `constructs/stop` and then `constructs/start` with `play`
 - **THEN** `play` runs in a new process with the status `running`
 
+#### Scenario: A stop and a start while the end is reported
+
+- **WHEN** the process of `play` ends, and an input subsystem sends `constructs/stop` and then `constructs/start` with `play` before the construct manager reports the end
+- **THEN** the construct manager starts a new process for `play`, and the part holds `play` with the status `running`, not `failed`
+
 ### Requirement: A product construct process that does not answer is a failed construct
 
 The construct manager SHALL end a product construct process with `SIGKILL` and report the status `failed` when the process does not start its link in 10 seconds, or does not answer a check or an input in 5 seconds. The message SHALL be `The construct did not start in 10 seconds.` or `The construct did not answer in 5 seconds.` Each other construct and the workbench SHALL continue.

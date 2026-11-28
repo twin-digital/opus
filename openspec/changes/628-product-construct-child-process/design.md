@@ -94,7 +94,7 @@ The workbench gives the launcher the file URL of the product code. Each child im
 
 ### 5. A product construct process that ends
 
-The launcher resolves `ended` with a message when the child ends and no `close()` was called: `The process of the construct ended with the exit code <code>.` or `... with the signal <signal>.` The manager then removes the construct from `live` and `running`, closes its ports, prints `wishem: construct <id> failed: <message>`, and reports `failed` with the message. It does not start the construct again: the rule of `main` keeps a `failed` construct until a stop and a start.
+The launcher resolves `ended` with a message when the child ends and no `close()` was called: `The process of the construct ended with the exit code <code>.` or `... with the signal <signal>.` The manager then removes the construct from `live` and `running`, closes its ports, prints `wishem: construct <id> failed: <message>`, and reports `failed` with the message. It does not start the construct again: the rule of `main` keeps a `failed` construct until a stop and a start. The `failed` report holds `startSeq`, the start number of its start. The construct list ignores a report with the `startSeq` of an earlier start, so a stop and a start that come before the report keep the new start.
 
 - A WebSocket client of the old link sees the connection close with no `stopping` event, because the process ended. The page of the stage shows its state `down`, as for each lost link (#539).
 

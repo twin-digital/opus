@@ -95,7 +95,7 @@ describe('the faults of a product construct process', () => {
   })
 
   it(
-    'kills a child whose behavior does not end, and resolves ended in less than 2 seconds',
+    'kills a child whose behavior does not end, and resolves ended in less than 4 seconds',
     { timeout: 10000 },
     async () => {
       await setup()
