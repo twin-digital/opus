@@ -22,6 +22,12 @@ const fail = (error: unknown): never => {
 /** Runs the GDScript tests in a container. Gives 1 when the output has a script error, else the exit code of Godot. */
 const runGdscriptTests = async (docker: DockerCli, tag: string): Promise<number> => {
   const container = `wishem-godot-test-${process.pid}`
+  const stop = () => {
+    docker.run(['rm', '--force', container])
+    process.exit(130)
+  }
+  process.on('SIGINT', stop)
+  process.on('SIGTERM', stop)
   if (
     docker.run([
       'create',
@@ -36,6 +42,8 @@ const runGdscriptTests = async (docker: DockerCli, tag: string): Promise<number>
       'res://tests/run.gd',
     ]) === undefined
   ) {
+    process.off('SIGINT', stop)
+    process.off('SIGTERM', stop)
     throw new Error('The creation of the container failed.')
   }
   try {
@@ -64,6 +72,8 @@ const runGdscriptTests = async (docker: DockerCli, tag: string): Promise<number>
     }
     return code
   } finally {
+    process.off('SIGINT', stop)
+    process.off('SIGTERM', stop)
     docker.run(['rm', '--force', container])
   }
 }
@@ -82,8 +92,8 @@ const runApplication = async (args: string[]): Promise<number> => {
         resolve(0)
       })
     }
-    process.once('SIGINT', stop)
-    process.once('SIGTERM', stop)
+    process.on('SIGINT', stop)
+    process.on('SIGTERM', stop)
   })
   const code = await Promise.race([stopped, run.exited])
   await run.close()

@@ -2,7 +2,7 @@
   "compilerOptions": {
     // Node.js runs scripts/*.ts by type stripping, which allows erasable syntax only.
     "erasableSyntaxOnly": true,
-    // Scripts import each other with the `.ts` extension, as Node.js needs. Nothing is emitted from them.
-    "allowImportingTsExtensions": true
+    // Sources import each other with the `.ts` extension, as Node.js needs. The build rewrites it to `.js`.
+    "rewriteRelativeImportExtensions": true
   }
 }

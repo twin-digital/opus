@@ -126,6 +126,7 @@ describe('runGodot', () => {
     expect(commands[4]).toMatch(new RegExp(`^run create --name ${run.container} --label wishem-godot=[0-9a-f]{8} `))
     expect(commands[4]).toContain('--link ws://127.0.0.1:4760/link --shots /out')
     expect(commands[4]).toContain('--resolution 640x360')
+    expect(commands[4]).toContain('--audio-driver Dummy')
     expect(commands[5]).toMatch(new RegExp(`/godot ${run.container}:/srv/godot$`))
     expect(commands[7]).toBe(`spawn exec -i ${run.container} node /srv/relay.mjs 4760`)
     expect(run.container).toMatch(/^wishem-godot-[0-9a-f]{8}$/)

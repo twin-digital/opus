@@ -29,13 +29,13 @@
   "scripts": {
     "build": "build",
     "clean": "clean",
-    "godot": "node scripts/godot.ts run",
+    "godot": "exec node scripts/godot.ts run",
     "godot:image": "node scripts/godot.ts image",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "start": "exec node scripts/start.ts",
     "test": "opus-test",
-    "test:godot": "node scripts/godot.ts test",
+    "test:godot": "exec node scripts/godot.ts test",
     "test:ui": "pnpm test:godot && node --test \"tests/*.test.ts\"",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"

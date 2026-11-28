@@ -59,6 +59,8 @@ const startRun = (options: RunGodotOptions): GodotRun => {
 
   const godotArgs = [
     'godot',
+    '--audio-driver',
+    'Dummy',
     '--rendering-driver',
     'opengl3',
     '--resolution',

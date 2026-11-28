@@ -200,7 +200,7 @@ The plan read `LINK.md` as the writer of a GDScript client and found these gaps.
 
 - The architecture document shows the new containers (see "Container diagram after the change"), with a short list of the path of a tick from the clock in the Godot process to the screenshot.
 - `concepts.md`, "Processes and links": the item "A remote port exists in TypeScript, for a page in a web browser, and in GDScript, for Godot" gets the package `renderer-godot`. "The three renderers": the Godot renderer is in `renderer-godot`, its view is the Godot view (sidecar kind `godot`), and its construct runs in a Node.js process. The item about the view of the Godot renderer gives `ClearColor`.
-- `glossary.md`: a new term **Godot view** (**Agreed**), beside **PixiJS view**. Reason: rule R17 (**Agreed**) gives each renderer its own kind of view.
+- `glossary.md`: a new term **Godot view** (**Proposed**), beside **PixiJS view**. Reason: rule R17 (**Agreed**) gives each renderer its own kind of view.
 - `nodejs/wishem/CLAUDE.md`: the package in the list, with the note that its GDScript tests and its screenshot test need Docker.
 
 ## Interfaces
