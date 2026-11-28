@@ -1,7 +1,9 @@
 import type { Input, Port } from '@thrashplay/wishem-hub'
 import { timeInputs } from '@thrashplay/wishem-clock'
 import type { TimePart } from '@thrashplay/wishem-clock'
-import { STEP_MS } from './construct/model.js'
+
+/** The time of one step of the period key, in milliseconds. */
+export const STEP_MS = 500
 
 /** Sends the input and ignores each rejection and each failure. */
 const send = (port: Port, input: Input): void => {
