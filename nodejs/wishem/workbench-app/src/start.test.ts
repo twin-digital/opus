@@ -435,6 +435,41 @@ describe('the start script of the workbench', () => {
     })
 
     it(
+      'closes the manager, the page server, and the construct when the keeper cannot stop',
+      { timeout: 30000 },
+      async () => {
+        const hubPort = await freePort()
+        const actual = await vi.importActual<typeof import('vite')>('vite')
+        vite.createServer.mockImplementation(async (config) => {
+          const server = await actual.createServer(config)
+          server.watcher.off = () => {
+            throw new Error('keeper failed')
+          }
+          return server
+        })
+        let managerClosed = false
+        const actualAttach = managerModule.attachConstructManager.getMockImplementation()
+        managerModule.attachConstructManager.mockImplementationOnce((options: never) => {
+          const manager = (actualAttach as (options: never) => { close(): Promise<void> })(options)
+          const close = manager.close.bind(manager)
+          return {
+            ...manager,
+            close: async () => {
+              managerClosed = true
+              await close()
+            },
+          }
+        })
+        const workbench = await startWorkbench({ model, product, views, port: 0, hubPort, log: () => undefined })
+
+        await expect(workbench.close()).rejects.toThrow('keeper failed')
+
+        expect(managerClosed).toBe(true)
+        expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+      },
+    )
+
+    it(
       'closes the construct and reports the start error when the page server cannot start',
       { timeout: 30000 },
       async () => {

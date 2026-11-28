@@ -82,6 +82,12 @@ When a client changes an entity through the store, the construct writes `state.j
 The option `subsystems` of `startConstruct` is a list of more model subsystems. The hub gets them after the stores, so the parts of the joined state are `store`, then `product` (when the construct mounts a product), then the parts of the list, in the order of the list. With no list, the joined state has no more parts. `startConstruct` rejects when a subsystem has the ID of a store, because the hub does not accept two subsystems with the same ID.
 
 ```ts
+const counter: ModelSubsystem<number> = {
+  id: 'counter',
+  inputs: ['counter/bump'],
+  initial: 0,
+  apply: (part) => part + 1,
+}
 const construct = await startConstruct({ folder, subsystems: [counter] })
 ```
 

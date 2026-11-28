@@ -160,7 +160,7 @@ When the workbench stops, the construct manager SHALL stop each product construc
 #### Scenario: The person stops the workbench
 
 - **WHEN** `play` runs, and the person sends an interrupt signal to the `start` script of the workbench page
-- **THEN** a client of the link of `play` gets the `stopping` event, the address of `play` accepts no connection, and the command stops with exit code 0
+- **THEN** a client of the link of `play` gets the `stopping` event, the address of `play` accepts no connection, and `node scripts/start.ts` stops with exit code 0
 
 ### Requirement: The terminal shows each change of a product construct
 

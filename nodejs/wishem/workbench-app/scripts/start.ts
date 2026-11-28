@@ -237,16 +237,8 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     await server.listen()
   } catch (error) {
     // Each part closes. The start error below is the one to report.
-    try {
-      await server?.close()
-    } catch {
-      // Ignored.
-    }
-    try {
-      await manager?.close()
-    } catch {
-      // Ignored.
-    }
+    await server?.close().catch(() => undefined)
+    await manager?.close().catch(() => undefined)
     await construct.close()
     if (isPortInUse(error)) {
       log(`wishem: port ${port} is in use`)
@@ -266,8 +258,11 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     linkUrl: construct.linkUrl,
     close: async () => {
       try {
-        await keeper?.stop()
-        await manager?.close()
+        try {
+          await keeper?.stop()
+        } finally {
+          await manager?.close()
+        }
       } finally {
         try {
           await server.close()
