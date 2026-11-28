@@ -468,9 +468,11 @@ wishem: error: Task.view.json: the label of the field fld_6f7a8b9c-0d1e-4f2a-9b3
 | `@thrashplay/wishem-core`           | private              | minor | Three field types. `FieldValue` and `FieldType` get more members, which is a breaking change of the types of a consumer that expects a string.                    |
 | `@thrashplay/wishem-renderer-react` | private              | minor | `ViewTools`, the prop `wishem`, the port `input`, nested views, the new types of the generator, `holdWarnings`, `stubViewTools`. The generated files change form. |
 | `@thrashplay/wishem-workbench-app`  | private              | minor | The title control, two subsystems on the link, the source of a page, the regenerated `AppBar.view.gen.ts`, the style guide.                                       |
+| `@thrashplay/wishem-hub`            | private              | minor | `connectLink` keeps one ID for each subsystem for the life of the client, and makes new IDs only after `id-in-use`.                                               |
+| `@thrashplay/wishem-pixi-page`      | private              | patch | No code change. Its link IDs are stable, because it uses `connectLink`.                                                                                           |
 | `@thrashplay/wishem-host-nodejs`    | private              | patch | No code change. The model folder now accepts the new types, so the behavior of the storage subsystem changes.                                                     |
 
-No package is published. `hub`, `clock`, and `workbench` do not change.
+No package is published. `connectLink` of `hub` changes (Decision 15), and the behavior of `pixi-page` changes with it: its link IDs are stable. `clock` and `workbench` do not change.
 
 ## UI
 
@@ -689,7 +691,7 @@ Result: the first line ends with `true`.
 sed -i 's/"fld_6f7a8b9c-0d1e-4f2a-9b3c-5d6e7f809102": *3/"fld_6f7a8b9c-0d1e-4f2a-9b3c-5d6e7f809102": "many"/' /tmp/a3-model/state.json
 ```
 
-Result: terminal 1 prints a line that starts with `wishem: problem in /tmp/a3-model/state.json:` and names the field `Points` and the type `number`. The page keeps `(3 points)`. Run the command again with `"many"` and `3` swapped. Result: no problem line.
+Result: terminal 1 prints a line that starts with `wishem: problem in state.json:` and names the field `Points` and the type `number`. The page keeps `(3 points)`. Run the command again with `"many"` and `3` swapped. Result: no problem line.
 
 ### 10. The store refuses to remove an entity that a reference names
 

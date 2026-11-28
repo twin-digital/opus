@@ -546,7 +546,7 @@ describe('connectHub', () => {
       expect(remove.mock.calls).toHaveLength(removed)
     })
 
-    it('inside onPortss: closes the link, calls onPorts no more, and writes no warning', async () => {
+    it('inside onPorts: closes the link, calls onPorts no more, and writes no warning', async () => {
       const holder: { client?: HubClient } = {}
       const closing = (pair: HubPorts) => {
         ports.push(pair.output)

@@ -71,7 +71,7 @@ A view has three files in `src/views/`. The files have one base name, for exampl
 
 - `AppBar.tsx`: the view file.
 - `AppBar.view.json`: the sidecar. It holds the kind of the view and the ID of its component type: `{ "kind": "react", "componentType": "ct_..." }`.
-- `AppBar.view.gen.ts`: the generated types. It exports the type `Props`, with one read-only member for each field of the component type.
+- `AppBar.view.gen.ts`: the generated types. It exports the type `Values`, with one member for each field of the component type, and the type `Props`. `Props` has one read-only member for each field, and the member `wishem` that sends inputs.
 
 The name of a prop comes from the label of its field. The rule divides the label into words at each run of characters that are not ASCII letters or digits. The first word starts with a lower case letter. Each other word starts with an upper case letter. For example, the label `Max health` gives the prop `maxHealth`.
 

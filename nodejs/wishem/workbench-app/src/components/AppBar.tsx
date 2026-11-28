@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { outcomeText } from '../views/outcome-text.js'
 
 export type RenameOutcome = { saved: true } | { saved: false; reason: string }
+
+const FAILED = 'The workbench failed to apply the change.'
 
 type Phase = 'read' | 'edit' | 'saving' | 'not-saved'
 
@@ -78,17 +79,18 @@ export const AppBar = ({ title, onRename, initial }: AppBarProps) => {
     }
     setReason('')
     go('saving')
-    const fail = () => {
+    const fail = (error: unknown) => {
+      console.error(error)
       if (mounted.current) {
-        setReason(outcomeText({ ok: false, reason: 'failed', problems: [] }))
+        setReason(FAILED)
         go('not-saved')
       }
     }
     let sent: Promise<RenameOutcome>
     try {
       sent = onRename(text)
-    } catch {
-      fail()
+    } catch (error) {
+      fail(error)
       return
     }
     void sent.then((outcome) => {

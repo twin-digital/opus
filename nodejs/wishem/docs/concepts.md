@@ -449,7 +449,7 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 A **view** is content of the product. A renderer supplies the code that loads, mounts, and runs views.
 
 - Each renderer provides its own kind of view. Wishem does not define one set of visual components for all renderers.
-- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the hub never loads it, and a view changes no state.
+- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the hub never loads it, and a view changes state only through the inputs that it sends with `wishem`. The store changes the state.
 - A sidecar attaches a view to its component type by the ID of the component type. A component type that has no view is not drawn.
 - The fields in the component type definition are the source. The types of the props of a view are generated.
 - A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. A field of the type `reference` gives the view the picture of the entity that it names. An entity that a component with a view names is held: the renderer draws it only in the picture of its holder, and a reference to an entity on the path draws nothing.

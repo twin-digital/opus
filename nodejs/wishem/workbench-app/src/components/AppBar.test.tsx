@@ -288,26 +288,34 @@ describe('AppBar that edits its title', () => {
   })
 
   it('shows the line of a general failure when the rename function rejects', async () => {
-    const onRename = vi.fn(() => Promise.reject<RenameOutcome>(new Error('x')))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const error = new Error('x')
+    const onRename = vi.fn(() => Promise.reject<RenameOutcome>(error))
     draw({ title: 'Wishem', onRename })
     open()
     type('Offline')
     press('Enter')
     await flush()
+    expect(log).toHaveBeenCalledWith(error)
+    log.mockRestore()
     expect(alert()?.textContent).toBe('The title is not saved. The workbench failed to apply the change.')
     expect(field()?.value).toBe('Offline')
     expect(field()?.readOnly).toBe(false)
   })
 
   it('shows the line of a general failure when the rename function throws', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const error = new Error('x')
     const onRename = vi.fn((): Promise<RenameOutcome> => {
-      throw new Error('x')
+      throw error
     })
     draw({ title: 'Wishem', onRename })
     open()
     type('Offline')
     press('Enter')
     await flush()
+    expect(log).toHaveBeenCalledWith(error)
+    log.mockRestore()
     expect(alert()?.textContent).toBe('The title is not saved. The workbench failed to apply the change.')
     expect(field()?.value).toBe('Offline')
     expect(field()?.readOnly).toBe(false)

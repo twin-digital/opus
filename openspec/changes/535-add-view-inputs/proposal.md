@@ -33,6 +33,8 @@ None.
 - `wishem/renderer-html/views`: the reserved prop `wishem`, its outcomes, the test of a view with no hub, and the prop of a reference field.
 - `wishem/renderer-html/view-types`: the types of the new fields, the type `Values`, the member `wishem`, and the reserved names.
 - `wishem/renderer-html/page`: the page attaches an output subsystem and an input subsystem, and the source of its inputs is the same for one load of the page.
+- `wishem/hub/link`: a client keeps one ID for each subsystem for its life, and makes new IDs only after `id-in-use`.
+- `wishem/renderer-pixi/page`: the subsystem IDs of the PixiJS page stay the same across links, and change only after `id-in-use`.
 - `wishem/design-system/component-catalog`: the app bar with a title that the designer can change, and its states.
 - `wishem/architecture/diagrams`: the entity diagram shows the relationship from a field value to an entity, and the component diagram of the page shows that the renderer sends inputs.
 
@@ -42,5 +44,7 @@ None.
 - `nodejs/wishem/renderer-react`: `Renderer.tsx`, `collect-views.ts`, `field-names.ts`, `view-warnings.ts`, `view-types.ts`, a new `view-tools.ts`, `index.ts`, their tests, and the README.
 - `nodejs/wishem/workbench-app`: `src/hub-client.ts`, `src/main.tsx`, `src/Page.tsx`, `src/components/AppBar.tsx`, `src/views/AppBar.tsx`, `src/views/AppBar.view.gen.ts`, a new `src/views/outcome-text.ts`, the style guide, the screenshot baselines, the Playwright tests, and the README.
 - Documents: `nodejs/wishem/docs/architecture/` (README, `render.mjs`, the SVG files of the entity diagram and of the component diagram of the page), `glossary.md`, and `concepts.md`.
-- No change to the link protocol, the hub, `host-nodejs`, `clock`, or `workbench`.
+- `nodejs/wishem/hub`: `connectLink` keeps one ID for each subsystem for the life of the client (Decision 15), with its tests and README. The link protocol does not change.
+- `nodejs/wishem/pixi-page`: no code change. The IDs of its link are stable, because it uses `connectLink`.
+- No change to `host-nodejs`, `clock`, or `workbench`.
 - Not in this change: the panel that lists the entities of the product and its form (#537), a list of references, a field that a person can clear, and a control for undo.
