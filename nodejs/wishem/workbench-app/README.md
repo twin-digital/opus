@@ -13,7 +13,7 @@ pnpm --filter @thrashplay/wishem-workbench-app start
 
 The script starts one construct and the page server in one Node.js process. It prints the model folder, the address of the link (for example `ws://127.0.0.1:4747/link`), and the address of the page. Open the address of the page in a web browser. Press Ctrl+C to stop both.
 
-The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket at `/link` of the page address to the server of the construct, with the `Origin` header of the page. It passes no other path. The page uses the client of the hub (`connectHub`) to open its link at `/link` on the origin of the page. After each `welcome`, the client gives the remote port of the new link to `onPort`, and the page draws from that port.
+The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket at `/link` of the page address to the server of the construct, with the `Origin` header of the page. It passes no other path. The page uses the client of the hub (`connectHub`) to open its link at `/link` on the origin of the page. The link has two subsystems: the output subsystem `page-<hex>` and the input subsystem `page-<hex>-input`. The client makes `<hex>` one time, and uses it for each link of the page load. It makes a new `<hex>` only after the hub refuses a link with `id-in-use`. The source of each input of the page is the ID of the input subsystem, so it is the same for the whole load. After each `welcome`, the client gives the two remote ports of the new link to `onPorts({ output, input })`. The page draws from `output`, and the views send inputs through `input`.
 
 | Option            | Default                                            | Meaning                                         |
 | ----------------- | -------------------------------------------------- | ----------------------------------------------- |
@@ -95,7 +95,7 @@ A view has three files in `src/views/`. The files have one base name, for exampl
 
 - `AppBar.tsx`: the view file.
 - `AppBar.view.json`: the sidecar. It holds the kind of the view and the ID of its component type: `{ "kind": "react", "componentType": "ct_..." }`.
-- `AppBar.view.gen.ts`: the generated types. It exports the type `Props`, with one read-only member for each field of the component type.
+- `AppBar.view.gen.ts`: the generated types. It exports the type `Values`, with one member for each field of the component type, and the type `Props`. `Props` has one read-only member for each field, and the member `wishem` that sends inputs.
 
 The name of a prop comes from the label of its field. The rule divides the label into words at each run of characters that are not ASCII letters or digits. The first word starts with a lower case letter. Each other word starts with an upper case letter. For example, the label `Max health` gives the prop `maxHealth`.
 
@@ -124,6 +124,29 @@ pnpm --filter @thrashplay/wishem-workbench-app generate --check
 ```
 
 A relative `--model` or `--views` path starts from the folder where you run the command.
+
+## Change the title in the page
+
+The title of the app bar is a button with the tooltip `Change the title`. To change the title:
+
+1. Select the title with the mouse, or move to it with Tab and press Enter or Space. A text field opens with the title, and all its text is selected.
+2. Type the new title. The field shows the case that you type. Enter saves it. A move of the focus out of the field also saves it.
+3. To cancel, press Escape. The field closes and the title does not change.
+
+A new text that is empty or the same as the title closes the field and sends no input. While the app bar waits for the answer of the workbench, the field is read-only and the label `SAVING` shows beside it. After the workbench accepts the change, the field closes and the focus goes to the title.
+
+When the workbench does not accept the change, the field stays open with your text. A line below the bar shows `The title is not saved.` and the reason. A new Enter sends the change again. A move of the focus does not send it again.
+
+The file `src/views/outcome-text.ts` makes the text of the reason:
+
+| Reason                                    | Text                                                                          |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| `not-running`                             | `The workbench does not run. Start it, and try again.`                        |
+| `unknown`                                 | `The connection ended before an answer. Look at the title after it connects.` |
+| `not-permitted`                           | `This page cannot send changes.`                                              |
+| `invalid` with a problem                  | The message of the first problem.                                             |
+| `invalid` with no problem, `unknown-type` | `The workbench refused the change.`                                           |
+| `failed`                                  | `The workbench failed to apply the change.`                                   |
 
 ## Start the style guide
 
@@ -215,7 +238,7 @@ A component uses roles only. A role gives the purpose of a color, for example `b
 
 `src/components/` holds the components. Each component takes all its content as props.
 
-- `AppBar` (`title`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis.
+- `AppBar` (`title`, `onRename`, `initial`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis. With `onRename`, the title is a button. `initial` sets the first state of the edit, for the style guide and the tests.
 - `ZeroState` (`label`, `message`): a mono label and one line of text in the center of the space that it gets. Both texts use `fg-muted`.
 
 A new component goes in the Components section of the style guide, in each of its states, in the same change. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.

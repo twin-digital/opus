@@ -31,6 +31,11 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the page imports the renderer from `@thrashplay/wishem-renderer-react`, and the workbench process imports the generator from `@thrashplay/wishem-renderer-react/view-types`
 - **THEN** the container diagram shows the container `renderer-react` as a TypeScript package, and a relationship from the page and from the workbench process to `renderer-react`, each with the label "Builds on [import]"
 
+#### Scenario: The React renderer package builds on the hub package
+
+- **WHEN** `@thrashplay/wishem-renderer-react` imports the value `LinkClosedError` of `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows a relationship from `renderer-react` to `hub` with the label "Builds on [import]"
+
 #### Scenario: The clock package builds on the hub package
 
 - **WHEN** `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`

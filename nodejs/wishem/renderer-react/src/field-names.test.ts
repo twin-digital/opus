@@ -54,6 +54,15 @@ describe('propNames', () => {
     expect(result.problems).toEqual([{ kind: 'name-starts-with-digit', field: 'fld_0', name: '2ndLine' }])
   })
 
+  it('reports a reserved name, and gives no prop for the field', () => {
+    const result = propNames(definition('title', 'Wishem', 'Key'))
+    expect(result.problems).toEqual([
+      { kind: 'reserved-name', field: 'fld_1', name: 'wishem' },
+      { kind: 'reserved-name', field: 'fld_2', name: 'key' },
+    ])
+    expect(result.props.map((prop) => prop.name)).toEqual(['title'])
+  })
+
   it('reports a name that starts with the digit 0', () => {
     const result = propNames(definition('0th line'))
     expect(result.problems).toEqual([{ kind: 'name-starts-with-digit', field: 'fld_0', name: '0thLine' }])

@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { storeInputs } from '@thrashplay/wishem-core'
-import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
+import { hubInputs, openLink, webSocketChannel, type RecordedInput } from '@thrashplay/wishem-hub'
 import { modelFolder } from '@thrashplay/wishem-workbench'
 
 const ENTITY = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
@@ -31,6 +31,29 @@ const writeState = (text: string) => writeFile(statePath, text)
 const heading = (page: Page, title: string) => page.getByRole('heading', { name: title })
 
 const theme = ['light', 'dark'] as const
+
+/** Opens a link whose input port records each input that the hub applies. */
+const watchLink = async () => {
+  const link = await openLink(await webSocketChannel(new WebSocket('ws://127.0.0.1:4180/link')), [
+    { id: 'e2e-watch', kind: 'input' },
+  ])
+  const port = link.ports['e2e-watch']
+  const applied: RecordedInput[] = []
+  port.subscribe((event) => {
+    if (event.type === 'applied') {
+      applied.push(event.input)
+    }
+  })
+  return { link, port, applied }
+}
+
+/** Selects the title with the mouse, types the new title, and presses Enter. */
+const renameInPage = async (page: Page, from: string, to: string) => {
+  await heading(page, from).click()
+  await expect(page.getByRole('textbox', { name: 'Title' })).toBeFocused()
+  await page.keyboard.type(to)
+  await page.keyboard.press('Enter')
+}
 
 test.beforeEach(async ({ page }) => {
   // The definition first, so that each state of the files in between is correct.
@@ -169,6 +192,49 @@ test('an input through the link shows on the page and in state.json', async ({ p
   }
 })
 
+test.describe('a change of the title in the page', () => {
+  test('shows on the page and in state.json, and the hub applies it from the input subsystem of the page', async ({
+    page,
+  }) => {
+    const { link, applied } = await watchLink()
+    try {
+      await renameInPage(page, 'Wishem', 'Wishem studio')
+      await expect(heading(page, 'Wishem studio')).toBeVisible()
+      await expect(page.getByRole('textbox')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Wishem studio' })).toBeFocused()
+      await expect.poll(() => readFile(statePath, 'utf8')).toContain('Wishem studio')
+      const input = applied.find((recorded) => recorded.type === 'store/set-field')
+      expect(input?.source).toMatch(/^page-[0-9a-f]{16}-input$/)
+    } finally {
+      link.close()
+    }
+  })
+
+  test('is followed by a hand edit', async ({ page }) => {
+    await renameInPage(page, 'Wishem', 'Wishem studio')
+    await expect(heading(page, 'Wishem studio')).toBeVisible()
+    await writeState(stateOf({ id: ENTITY, title: 'Hand edit' }))
+    await expect(heading(page, 'Hand edit')).toBeVisible()
+  })
+
+  test('is undone by a rewind through a client of the link', async ({ page }) => {
+    const { link, port, applied } = await watchLink()
+    try {
+      await renameInPage(page, 'Wishem', 'Wishem studio')
+      await expect(heading(page, 'Wishem studio')).toBeVisible()
+      await expect.poll(() => applied.some((recorded) => recorded.type === 'store/set-field')).toBe(true)
+      const change = applied.find((recorded) => recorded.type === 'store/set-field')
+      const result = await port.submit(hubInputs.rewind((change?.seq ?? 1) - 1))
+      expect(result.ok).toBe(true)
+      await expect(heading(page, 'Wishem')).toBeVisible()
+      await expect.poll(() => readFile(statePath, 'utf8')).not.toContain('Wishem studio')
+      expect(await readFile(statePath, 'utf8')).toContain('"Wishem"')
+    } finally {
+      link.close()
+    }
+  })
+})
+
 test('the mark does not change the layout', async ({ page }) => {
   const box = await page.locator('header').boundingBox()
   expect(box).toEqual({ x: 0, y: 0, width: 1280, height: 48 })
@@ -190,7 +256,7 @@ for (const colorScheme of theme) {
 
 test('an edit to the view of the app bar shows with no restart', async ({ page }) => {
   const original = await readFile(viewPath, 'utf8')
-  const edited = original.replace("<AppBar title={title ?? ''} />", "<AppBar title='Edited view' />")
+  const edited = original.replace("title={title ?? ''}", "title='Edited view'")
   expect(edited).not.toBe(original)
   try {
     await writeFile(viewPath, edited)

@@ -76,7 +76,7 @@ Example: before the agent adds a `docile` status, it asks which behaviors read t
 
 Entities relate to each other. A room contains the entities in it. An entity can be attached to another, as a held item is attached to the hero.
 
-A relation is a declared field that refers to another entity. It is part of a snapshot, and the registry reports it, in the same way as any other field.
+A relation is a field of the type `reference`. Its value is the ID of an entity of the same model. The store refuses the removal of an entity that a reference of a different entity names. It is part of a snapshot, and the registry reports it, in the same way as any other field.
 
 Which relations exist in every product, and which a product adds, is an open question.
 
@@ -95,7 +95,7 @@ The ways that exist now:
 The cases to list in the brainstorm:
 
 - a reference to a different component of the same entity
-- a reference to a different entity
+- a reference to a different entity, in one store: a `reference` field (settled)
 - a reference to a component of a different entity
 - each of these when the two components are in the same subsystem, and when they are in different subsystems
 
@@ -450,10 +450,10 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 A **view** is content of the product. A renderer supplies the code that loads, mounts, and runs views.
 
 - Each renderer provides its own kind of view. Wishem does not define one set of visual components for all renderers.
-- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the hub never loads it, and a view changes no state.
+- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the hub never loads it, and a view changes state only through the inputs that it sends with `wishem`. The store changes the state.
 - A sidecar attaches a view to its component type by the ID of the component type. A component type that has no view is not drawn.
 - The fields in the component type definition are the source. The types of the props of a view are generated.
-- A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. References are **Open**.
+- A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. A field of the type `reference` gives the view the picture of the entity that it names. An entity that a component with a view names is held: the renderer draws it only in the picture of its holder, and a reference to an entity on the path draws nothing.
 - A view is a pure function of its props. A view holds no state.
 - A renderer imports the model. The model never imports a renderer (rule R1).
 

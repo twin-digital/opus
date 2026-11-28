@@ -10,6 +10,7 @@ export type {
   Snapshot,
   ValidationResult,
 } from './model.js'
+export { FIELD_TYPES } from './model.js'
 export { ModelError } from './errors.js'
 export { validateModel } from './validate-model.js'
 export { isEqual } from './equality.js'

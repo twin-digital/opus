@@ -1,7 +1,7 @@
 // Writes the types of the props of each React view from the sidecars and the definitions.
 import { readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { ComponentTypeDefinition, Id } from '@thrashplay/wishem-core'
+import type { ComponentTypeDefinition, FieldType, Id } from '@thrashplay/wishem-core'
 import { propNames, type NameProblem } from './field-names.js'
 import { parseSidecar, REACT_KIND } from './sidecar.js'
 
@@ -32,32 +32,62 @@ export interface ViewTypesResult {
 const SIDECAR_SUFFIX = '.view.json'
 const GENERATED_SUFFIX = '.view.gen.ts'
 
-/** The text of a generated file. No definition gives a `Props` type with no member. */
+/** The TypeScript type of the value of a field. */
+const valueType = (type: FieldType): string => (type === 'reference' ? 'string' : type)
+
+/** The TypeScript type of a prop. A reference gives the picture of its entity. */
+const propType = (type: FieldType): string => (type === 'reference' ? 'ReactNode' : `${type} | undefined`)
+
+/** The text of a generated file. No definition gives `Props` with only `wishem`, and `Values` with no member. */
 export const renderViewTypes = (
   sidecarFile: string,
   componentType: Id,
   command: string,
   definition?: ComponentTypeDefinition,
 ): string => {
+  const hasReference = definition?.fields.some(({ type }) => type === 'reference') === true
   const header =
     `// Generated from ${sidecarFile} and the definition of its component type. Do not edit.\n` +
-    `// To write this file again: ${command}\n\n`
+    `// To write this file again: ${command}\n\n` +
+    "import type { ViewTools } from '@thrashplay/wishem-renderer-react'\n" +
+    (hasReference ? "import type { ReactNode } from 'react'\n" : '') +
+    '\n'
+  const wishem = '  /** Sends inputs for this component. */\n  readonly wishem: ViewTools<Values>\n'
   if (!definition) {
-    return `${header}export type Props = object\n`
+    return `${header}export type Values = object\n\nexport interface Props {\n${wishem}}\n`
   }
   const quote = (text: string) => JSON.stringify(text).replaceAll('*/', '*\\/')
-  const members = propNames(definition).props.map(
-    ({ name, field }) =>
-      `  /** The field ${quote(field.label)} (${field.id}). */\n  readonly ${name}: string | undefined\n`,
+  const props = propNames(definition).props
+  const doc = (label: string, id: string) => `  /** The field ${quote(label)} (${id}). */\n`
+  const values = props.map(
+    ({ name, field }) => `${doc(field.label, field.id)}  readonly ${name}: ${valueType(field.type)}\n`,
   )
+  const members = props.map(({ name, field }) => {
+    const comment =
+      field.type === 'reference' ?
+        `  /** The picture of the entity that the field ${quote(field.label)} (${field.id}) names. */\n`
+      : doc(field.label, field.id)
+    return `${comment}  readonly ${name}: ${propType(field.type)}\n`
+  })
+  const component = `${quote(definition.label)} (${componentType})`
   return (
-    `${header}/** The fields of the component type ${quote(definition.label)} (${componentType}). */\n` +
-    `export interface Props {\n${members.join('')}}\n`
+    `${header}/** The values that \`wishem.setField\` takes for the component type ${component}. */\n` +
+    `export interface Values {\n${values.join('')}}\n\n` +
+    `/** The fields of the component type ${component}. */\n` +
+    `export interface Props {\n${members.join('')}${wishem}}\n`
   )
 }
 
-/** The names of the members in the text of a generated file. */
-const readPropNames = (text: string): string[] => [...text.matchAll(/^ {2}readonly (\w+): /gm)].map((match) => match[1])
+/** The names of the field members of `Props` in the text of a generated file. */
+const readPropNames = (text: string): string[] => {
+  const start = text.indexOf('export interface Props {')
+  if (start < 0) {
+    return []
+  }
+  const end = text.indexOf('\n}', start)
+  const body = text.slice(start, end < 0 ? undefined : end)
+  return [...body.matchAll(/^ {2}readonly (\w+): /gm)].map((match) => match[1]).filter((name) => name !== 'wishem')
+}
 
 const describeProblem = (sidecar: string, componentType: Id, problem: NameProblem): string => {
   const where = `${sidecar}: `
@@ -66,6 +96,8 @@ const describeProblem = (sidecar: string, componentType: Id, problem: NameProble
       return `${where}the fields ${problem.fields[0]} and ${problem.fields[1]} of the component type ${componentType} give the same name "${problem.name}"`
     case 'empty-name':
       return `${where}the label of the field ${problem.field} of the component type ${componentType} gives an empty name`
+    case 'reserved-name':
+      return `${where}the label of the field ${problem.field} of the component type ${componentType} gives the reserved name "${problem.name}"`
     case 'name-starts-with-digit':
       return `${where}the label of the field ${problem.field} of the component type ${componentType} gives the name "${problem.name}", which starts with a digit`
   }

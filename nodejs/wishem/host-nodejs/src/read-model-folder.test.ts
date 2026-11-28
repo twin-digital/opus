@@ -94,7 +94,7 @@ describe('readModelFolder', () => {
   })
 
   it('names the definition file for a problem in a definition', async () => {
-    await write(`definitions/${CT}.json`, definition('number'))
+    await write(`definitions/${CT}.json`, definition('date'))
     await write('state.json', state)
     const result = await readModelFolder(folder)
     const validation = validateModel(result.data)
@@ -144,7 +144,7 @@ describe('readModelFolder', () => {
 
   it('names the second definition file for a problem in the second definition', async () => {
     await write('definitions/a.json', definition())
-    await write('definitions/b.json', { ...definition('number'), id: 'ct_9a9a9a9a-0000-4000-8000-000000000000' })
+    await write('definitions/b.json', { ...definition('date'), id: 'ct_9a9a9a9a-0000-4000-8000-000000000000' })
     await write('state.json', { entities: [] })
     const result = await readModelFolder(folder)
     const validation = validateModel(result.data)
