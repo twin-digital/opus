@@ -73,8 +73,8 @@ const main = async () => {
       closeAndExit(construct)
     }
   }
-  process.once('SIGINT', stop)
-  process.once('SIGTERM', stop)
+  process.on('SIGINT', stop)
+  process.on('SIGTERM', stop)
 
   try {
     const started = await startConstruct({
