@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ProductCodeCheck } from '@thrashplay/wishem-construct-manager/node'
 import type { Construct } from '@thrashplay/wishem-host-nodejs'
 
 vi.mock('@thrashplay/wishem-host-nodejs', () => ({
@@ -9,6 +10,7 @@ vi.mock('@thrashplay/wishem-host-nodejs', () => ({
 vi.mock('@thrashplay/wishem-construct-manager', () => ({ createConstructList: vi.fn(() => ({ id: 'constructs' })) }))
 vi.mock('@thrashplay/wishem-construct-manager/node', () => ({
   attachConstructManager: vi.fn(),
+  checkProductCode: vi.fn(),
   childProcessLauncher: vi.fn(() => 'launcher'),
 }))
 
@@ -203,6 +205,29 @@ describe('the stop signal during the start of the wishem command', () => {
       expect(options?.log).toBeTypeOf('function')
     })
 
+    it('exits with code 0 and starts no construct after a stop signal during the check of the product code', async () => {
+      const { checkProductCode } = await import('@thrashplay/wishem-construct-manager/node')
+      let endCheck: (result: ProductCodeCheck) => void = () => undefined
+      vi.mocked(checkProductCode).mockReturnValue(
+        new Promise((resolve) => {
+          endCheck = resolve
+        }),
+      )
+      const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
+      vi.mocked(startConstruct).mockClear()
+      const loaded = load(['--product', '/product', '--product-code', '/code.mjs'])
+      await vi.waitFor(() => {
+        expect(vi.mocked(checkProductCode)).toHaveBeenCalled()
+      })
+      expect(handlers.get('SIGINT')).toBeDefined()
+      expect(handlers.get('SIGTERM')).toBeDefined()
+      handlers.get('SIGINT')?.()
+      endCheck({ ok: true, count: 1 })
+      await loaded
+      expect(exitCodes).toEqual([0])
+      expect(startConstruct).not.toHaveBeenCalled()
+    })
+
     it('attaches no manager when a stop signal comes before the start ends', async () => {
       const loaded = load(['--product', '/product'])
       await vi.waitFor(() => {
@@ -226,6 +251,34 @@ describe('the stop signal during the start of the wishem command', () => {
       finish(construct())
       await loaded
       handlers.get(signal)?.()
+      await vi.waitFor(() => {
+        expect(exitCodes).toEqual([0])
+      })
+      expect(calls).toEqual(['manager', 'construct'])
+    })
+
+    it('starts the close of the construct only after the close of the manager ends', async () => {
+      let endManagerClose: () => void = () => undefined
+      managerClose.mockImplementation(() => {
+        calls.push('manager')
+        return new Promise<void>((resolve) => {
+          endManagerClose = resolve
+        })
+      })
+      const loaded = load(['--product', '/product'])
+      await vi.waitFor(() => {
+        expect(output).toContain('wishem: product /product')
+      })
+      finish(construct())
+      await loaded
+      handlers.get('SIGINT')?.()
+      await vi.waitFor(() => {
+        expect(calls).toEqual(['manager'])
+      })
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(calls).toEqual(['manager'])
+      expect(exitCodes).toEqual([])
+      endManagerClose()
       await vi.waitFor(() => {
         expect(exitCodes).toEqual([0])
       })

@@ -76,27 +76,6 @@ const main = async () => {
     say(`wishem: product ${path.resolve(product)}`)
   }
 
-  let productCodeUrl: string | undefined
-  if (productCode !== undefined) {
-    say(`wishem: product code ${productCode}`)
-    try {
-      productCodeUrl =
-        isPathValue(productCode) ? pathToFileURL(path.resolve(productCode)).href : import.meta.resolve(productCode)
-    } catch (error) {
-      console.error(`wishem: the product code ${productCode} cannot be loaded: ${errorText(error)}`)
-      process.exit(1)
-    }
-    const check = await checkProductCode(productCodeUrl)
-    if (!check.ok) {
-      console.error(
-        check.reason === 'behaviors' ?
-          `wishem: the product code has no correct list behaviors: ${check.message}`
-        : `wishem: the product code ${productCode} cannot be loaded: ${check.message}`,
-      )
-      process.exit(1)
-    }
-  }
-
   let construct: Construct | undefined
   let manager: ConstructManager | undefined
   const stopState = { requested: false }
@@ -120,6 +99,7 @@ const main = async () => {
       },
     )
   }
+  const stopRequested = () => stopState.requested
   const stop = () => {
     if (stopState.requested) {
       return
@@ -131,6 +111,31 @@ const main = async () => {
   }
   process.on('SIGINT', stop)
   process.on('SIGTERM', stop)
+
+  let productCodeUrl: string | undefined
+  if (productCode !== undefined) {
+    say(`wishem: product code ${productCode}`)
+    try {
+      productCodeUrl =
+        isPathValue(productCode) ? pathToFileURL(path.resolve(productCode)).href : import.meta.resolve(productCode)
+    } catch (error) {
+      console.error(`wishem: the product code ${productCode} cannot be loaded: ${errorText(error)}`)
+      process.exit(1)
+    }
+    const check = await checkProductCode(productCodeUrl)
+    if (!check.ok) {
+      console.error(
+        check.reason === 'behaviors' ?
+          `wishem: the product code has no correct list behaviors: ${check.message}`
+        : `wishem: the product code ${productCode} cannot be loaded: ${check.message}`,
+      )
+      process.exit(1)
+    }
+  }
+  if (stopRequested()) {
+    process.exit(0)
+    return
+  }
 
   try {
     const started = await startConstruct({
@@ -148,7 +153,7 @@ const main = async () => {
       },
     })
     construct = started
-    if (stopState.requested) {
+    if (stopRequested()) {
       closeAndExit(started)
       return
     }
