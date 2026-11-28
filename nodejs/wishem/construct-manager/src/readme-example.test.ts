@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+// The README example imports from '@thrashplay/wishem-construct-manager' and its entry 'node'.
 import { createStore, type Model } from '@thrashplay/wishem-core'
 import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
 import { createHub } from '@thrashplay/wishem-hub'

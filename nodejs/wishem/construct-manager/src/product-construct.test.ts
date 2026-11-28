@@ -1,4 +1,5 @@
-import { createServer } from 'node:http'
+import { createServer, Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -10,7 +11,7 @@ import { readModelFolder, serveHub } from '@thrashplay/wishem-host-nodejs'
 import { createHub, hubInputs, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { HubServer } from '@thrashplay/wishem-host-nodejs'
 import type { Hub, ModelSubsystem, RemoteLink } from '@thrashplay/wishem-hub'
-import { afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { startProductConstruct } from './product-construct.js'
 import type { ProductConstruct, ProductConstructOptions } from './product-construct.js'
 
@@ -199,6 +200,29 @@ describe('startProductConstruct', () => {
     }
     await expect(start(clock, { wrapStore: failing })).rejects.toThrow('the rules failed')
     expect(clock.active).toBe(0)
+  })
+
+  it('rejects when the clock fails to start, and releases the port', async () => {
+    const clock = await setup()
+    const ports: number[] = []
+    const address = vi.spyOn(Server.prototype, 'address')
+    try {
+      const timer: ClockTimer = {
+        start: () => {
+          for (const result of address.mock.results) {
+            ports.push((result.value as AddressInfo).port)
+          }
+          throw new Error('the timer failed')
+        },
+      }
+      await expect(start(clock, { timer })).rejects.toThrow('the timer failed')
+    } finally {
+      address.mockRestore()
+    }
+    expect(ports).toHaveLength(1)
+    expect(await canListen(ports[0])).toBe(true)
+    const next = await serveHub(createHub({ subsystems: [createStore({ model })] }), { port: ports[0] })
+    servers.push(next)
   })
 
   it('stops the clock, gives stopping to each link, releases the port, and gives the same promise', async () => {

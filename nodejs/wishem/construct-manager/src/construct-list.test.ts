@@ -82,6 +82,15 @@ describe('constructs/start', () => {
     await rig.client.submit(constructInputs.start('play', { running: false }))
     expect(rig.part().constructs.play).toEqual({ want: 'running', startTime: 'paused', status: 'pending' })
   })
+
+  it('sets pending and removes the message of a failed entry after a stop', async () => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'failed', message: 'broken' }))
+    await rig.client.submit(constructInputs.stop('play'))
+    await rig.client.submit(constructInputs.start('play'))
+    expect(rig.part().constructs.play).toEqual({ want: 'running', startTime: 'running', status: 'pending' })
+  })
 })
 
 describe('constructs/stop', () => {

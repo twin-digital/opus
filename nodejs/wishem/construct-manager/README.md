@@ -54,3 +54,63 @@ import { productChanges } from '@thrashplay/wishem-construct-manager'
 
 const inputs = productChanges(before, after, 'product')
 ```
+
+## The construct manager
+
+`attachConstructManager({ hub, wrapStore, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The hub must have the parts `product` and `constructs`.
+
+```ts
+import { fileURLToPath } from 'node:url'
+import { createStore } from '@thrashplay/wishem-core'
+import type { Model } from '@thrashplay/wishem-core'
+import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
+import { createHub } from '@thrashplay/wishem-hub'
+import { wrapStore } from '@thrashplay/wishem-sample-product'
+import { constructInputs, createConstructList } from '@thrashplay/wishem-construct-manager'
+import type { ConstructList } from '@thrashplay/wishem-construct-manager'
+import { attachConstructManager } from '@thrashplay/wishem-construct-manager/node'
+
+const eventually = async (check: () => boolean) => {
+  while (!check()) {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+}
+
+const folder = fileURLToPath(new URL('../../sample-product/model', import.meta.url))
+const model = (await readModelFolder(folder)).data as Model
+const hub = createHub({
+  subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
+})
+hub.start()
+const manager = attachConstructManager({ hub, wrapStore, log: (line) => console.log(line) })
+const client = hub.attach({ id: 'client', kind: 'input' })
+const entry = () => (hub.read().constructs as ConstructList).constructs.play
+
+await client.submit(constructInputs.start('play'))
+await eventually(() => entry().status === 'running')
+await client.submit(constructInputs.send('play', { type: 'time/set-running', payload: { running: false } }))
+await eventually(() => entry().time === 'paused')
+await client.submit(constructInputs.stop('play'))
+await eventually(() => entry().status === 'stopped')
+await manager.close()
+hub.stop()
+```
+
+The construct manager attaches the input port `construct-manager` and the output port `construct-manager-reader` to `hub`. It also attaches the same two ports to the hub of each product construct. `attachConstructManager` throws when `hub` uses one of these IDs.
+
+A product construct (`startProductConstruct`) holds:
+
+- a hub with the parts `time` and `store`, and the product rules from `wrapStore`
+- a link server on a port that the system selects (`linkUrl`, for example `ws://127.0.0.1:41377/link`)
+- a clock on the port `clock`
+
+Only the source `construct-manager` can rewind the hub of a product construct. The construct manager rewinds it when a client sends the input `hub/rewind` with `constructs/send`.
+
+The construct manager gives each product construct the changes of the model `product` as inputs. It reports `running`, `stopped`, or `failed` for each construct with `constructs/report`. A `failed` construct stays `failed` until a client sends `constructs/stop` and then `constructs/start`.
+
+The construct manager writes these log lines:
+
+- `wishem: construct <id> runs, link at <link>`
+- `wishem: construct <id> stopped`
+- `wishem: construct <id> failed: <message>`
+- `wishem: construct <id>: the change of the product was refused: <message>`

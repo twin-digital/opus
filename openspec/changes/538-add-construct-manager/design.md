@@ -122,9 +122,9 @@ The `start` script of the workbench page has the option `--product-code <module>
 1. It makes a hub with `createTime({ running })` first and `wrapStore(createStore({ model }))` second, and the option `rewindSources: ['construct-manager']`.
 2. It calls `serveHub(hub, { port: 0 })`. The system selects the port.
 3. It starts the hub, attaches the input subsystem `clock`, and calls `startClock` with the default step of 50 milliseconds.
-4. It attaches the input subsystem `construct-manager` and the output subsystem `construct-manager-reader`.
+4. It returns the product construct. The construct manager then attaches the input subsystem `construct-manager` and the output subsystem `construct-manager-reader` to `construct.hub`.
 
-`close()` stops the clock, closes the three ports, and closes the server, which stops the hub. Each link gets `stopping`. When a step fails, the function closes each part that it made and rejects.
+`close()` stops the clock, closes the port `clock`, and closes the server, which stops the hub. The construct manager closes its two ports on the hub of the construct before it calls `close()`. Each link gets `stopping`. When a step fails, the function closes each part that it made and rejects.
 
 - The store has the ID `store`, as #536 Decision 1 says: a product construct is a construct of the product.
 - The store starts from the product model at the start: the start of the record holds it. Reason: a rewind to 0 then gives the product at the start, not an empty store. The construct manager sends each later change as inputs (the glossary term **Construct manager**).

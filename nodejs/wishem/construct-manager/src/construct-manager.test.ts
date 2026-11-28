@@ -249,6 +249,26 @@ describe('attachConstructManager', () => {
     expect(reports()).toHaveLength(1)
   })
 
+  it('starts a failed construct again after a stop and a start', async () => {
+    let calls = 0
+    setup({
+      wrapStore: (store) => {
+        calls += 1
+        if (calls === 1) {
+          throw new Error('the rules failed')
+        }
+        return wrapStore(store)
+      },
+    })
+    await start()
+    expect(entry('play')).toMatchObject({ want: 'running', status: 'failed' })
+    expect((await tester.submit(constructInputs.stop('play'))).ok).toBe(true)
+    expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
+    await eventually(() => entry('play')?.status === 'running')
+    expect(entry('play')?.link).toMatch(/^ws:\/\/127\.0\.0\.1:\d+\/link$/)
+    expect(manager.running.has('play')).toBe(true)
+  })
+
   it('sends one set-field for a changed value, and keeps the count that the ticks advanced', async () => {
     setup()
     await start()
