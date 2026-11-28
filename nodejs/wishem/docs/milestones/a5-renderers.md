@@ -95,7 +95,7 @@ wishem: the page connects to ws://127.0.0.1:4750/link
 
 Open `http://127.0.0.1:5175/`.
 
-Result with no construct: the status line says "The construct is not reachable. The page tries again." The terminal 2 prints one line: `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again`. It prints the line again only after a link succeeds.
+Result with no construct: the status line says "The construct is not reachable. The page tries again." The terminal 2 prints one line: `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again`. It prints the line again only after a link succeeds. When the construct resets an open link, the terminal prints `wishem: the link to ws://127.0.0.1:4750/link closed; the page connects again` in place of that line. A browser that closes its own link prints nothing. A plain HTTP request to `/link` gets status 502.
 
 Start the construct of section 1 (terminal 1).
 
@@ -119,7 +119,7 @@ wishem: the page connects to ws://127.0.0.1:4750/link
 
 Open `http://127.0.0.1:5174/` in a second tab.
 
-Result with no construct: after a few seconds, the status line says "The construct is not reachable. The page tries again." In the first second it can say "Connecting to the construct."
+Result with no construct: after a few seconds, the status line says "The construct is not reachable. The page tries again." In the first second it can say "Connecting to the construct." The terminal 3 prints one line: `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again`.
 
 Start the construct of section 1 (terminal 1).
 
@@ -218,7 +218,7 @@ The PixiJS page has no key for a rewind. The sample construct refuses a rewind f
 
 ## 9. A stop and a start of the construct
 
-1. Terminal 1: press Ctrl+C. Result: the command ends. `echo $?` gives `0`. In less than 5 seconds, the two pages keep their last color and say "The construct is not reachable. The page tries again." Terminal 4 prints `wishem-godot: the hub is not reachable. Godot tries again.` one time and no new shot.
+1. Terminal 1: press Ctrl+C. Result: the command ends. `echo $?` gives `0`. In less than 5 seconds, the two pages keep their last color and say "The construct is not reachable. The page tries again." Terminals 2 and 3 each print `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again` one time. Terminal 4 prints `wishem-godot: the hub is not reachable. Godot tries again.` one time and no new shot.
 2. Terminal 1: run the command of section 1 again. Result: in less than 10 seconds, the React page says "Connected (link 2).", the PixiJS page says "Connected (link 2). Space: pause or run. Period: one step.", and terminal 4 prints `connected (link 2)` and `shot ... seq 0 color #1d4ed8`. Each picture is blue again. Neither page reloaded. The writer put a marker in each page (`window.__marker`) before the stop, and read it after the start.
 3. Terminal 5, with terminal 1 running:
 
