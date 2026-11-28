@@ -1,0 +1,118 @@
+# @thrashplay/wishem-construct-manager
+
+## 0.1.0
+
+### Minor Changes
+
+- d823333: Add the construct manager, the product construct (the entry `node`), the construct list, and the changes of a product model.
+- 421d784: The input `constructs/rewind` steps a product construct back by a number of ticks. The step back keeps the pause and the changes of the authored state.
+- 421d784: The part `time` of a product construct holds its step length.
+- f90da5b: New option `port` of `startProductConstruct` sets the port of the link.
+- f70b6b9: The construct manager sends a removed value of the product model to a running product construct as `store/clear-field`. The live values of the construct stay.
+- 964d4aa: Add `checkProductCode`, which loads and checks product code in a child process.
+- 964d4aa: Each product construct runs in its own process. BREAKING: `attachConstructManager` takes the option `launch` with the launchers `childProcessLauncher` and `inProcessLauncher`.
+- df7c5ea: Send an added or removed entity to a running product construct as `add-entity` and `remove-entity`, so the live values of the other entities stay.
+- d04cdf9: Each product construct runs the behaviors of the product code in the update subsystem.
+
+### Patch Changes
+
+- 214862c: Keep the live value of a list that does not change at a change of the model.
+- 9708c13: The count of the sample product is a number. The count rule adds 1 to each count that is a number.
+- 964d4aa: A product construct whose clock cannot start closes its clock port.
+- f52907f: A `constructs/stop` and a `constructs/start` that the workbench applies in one pass start the product construct again. Each entry of the construct list holds `startSeq`.
+- 0e5a720: Test the ID of a behavior that throws in a pass of `time/advance` by its problem path.
+- 2562f8e: Test the step back of a product construct: the errors, the log of a refused change, and the product after a rewind of the workbench.
+- 2c23c78: Add a test that an unchanged value of a component is not sent when another value of the component changes.
+- aa8e881: Add tests for the child process launcher, the IPC channel, the product construct process, and the construct manager.
+- 2acbfc9: Test: the order of the `clear-field` inputs for the removed values of one component.
+- 29d2f44: Add tests for the entity inputs of `productChanges`, found by a break-test.
+- 1202240: A step back while a product construct runs keeps the construct running.
+- 2e13b7d: The tests of the construct list and the construct manager are stronger. The package has no change of behavior.
+- Updated dependencies [5ea9a44]
+- Updated dependencies [5ea9a44]
+- Updated dependencies [5ea9a44]
+- Updated dependencies [139b3cd]
+- Updated dependencies [139b3cd]
+- Updated dependencies [139b3cd]
+- Updated dependencies [d823333]
+- Updated dependencies [d823333]
+- Updated dependencies [421d784]
+- Updated dependencies [ced6862]
+- Updated dependencies [ced6862]
+- Updated dependencies [d107430]
+- Updated dependencies [ea8b458]
+- Updated dependencies [ea8b458]
+- Updated dependencies [ea8b458]
+- Updated dependencies [ea8b458]
+- Updated dependencies [f972a42]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [f70b6b9]
+- Updated dependencies [f70b6b9]
+- Updated dependencies [b36bb42]
+- Updated dependencies [b36bb42]
+- Updated dependencies [58e0189]
+- Updated dependencies [a9f747a]
+- Updated dependencies [909ae54]
+- Updated dependencies [df7c5ea]
+- Updated dependencies [46d64c9]
+- Updated dependencies [46d64c9]
+- Updated dependencies [68b689d]
+- Updated dependencies [3adc5a1]
+- Updated dependencies [64efce8]
+- Updated dependencies [51689f8]
+- Updated dependencies [a6b3ba2]
+- Updated dependencies [bb32932]
+- Updated dependencies [19f055c]
+- Updated dependencies [96c1755]
+- Updated dependencies [b19239f]
+- Updated dependencies [2562f8e]
+- Updated dependencies [dacd357]
+- Updated dependencies [0cba44c]
+- Updated dependencies [f92552b]
+- Updated dependencies [046306c]
+- Updated dependencies [73432e7]
+- Updated dependencies [52d739c]
+- Updated dependencies [37070eb]
+- Updated dependencies [fcf369e]
+- Updated dependencies [bdbc697]
+- Updated dependencies [86b2e37]
+- Updated dependencies [5888d4b]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [274f162]
+- Updated dependencies [21aa38f]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [b655a01]
+- Updated dependencies [07144f1]
+- Updated dependencies [05b6331]
+- Updated dependencies [28aa975]
+- Updated dependencies [99dfd5c]
+- Updated dependencies [343bf6e]
+- Updated dependencies [c05d7b6]
+- Updated dependencies [e540990]
+- Updated dependencies [86b2e37]
+- Updated dependencies [274f162]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [b7d80d7]
+- Updated dependencies [24b02f3]
+- Updated dependencies [cbbd4e9]
+- Updated dependencies [24fbcff]
+- Updated dependencies [3197928]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [b655a01]
+- Updated dependencies [511b905]
+- Updated dependencies [d04cdf9]
+  - @thrashplay/wishem-hub@0.1.0
+  - @thrashplay/wishem-core@0.1.0
+  - @thrashplay/wishem-host-nodejs@0.1.0
+  - @thrashplay/wishem-clock@0.1.0
+  - @thrashplay/wishem-update@0.1.0

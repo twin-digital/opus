@@ -1,5 +1,11 @@
 # @twin-digital/bookify-render-api
 
+## 0.1.12
+
+### Patch Changes
+
+- 68dacfc: Build the pandoc image with no provenance attestation, so that Lambda accepts the image.
+
 ## 0.1.11
 
 ### Patch Changes

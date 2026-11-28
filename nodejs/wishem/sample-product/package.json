@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/wishem-sample-product",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The sample product of Wishem: a model with a color and a count, and the behavior that makes the clock advance the count. Runs with no Node.js API.",
   "type": "module",
   "exports": {

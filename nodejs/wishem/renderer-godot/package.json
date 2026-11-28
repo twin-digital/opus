@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/wishem-renderer-godot",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The Godot renderer of Wishem: a Godot project that draws a construct through the link, and the runner that runs it in Docker.",
   "type": "module",
   "exports": {
