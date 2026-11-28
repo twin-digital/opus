@@ -204,17 +204,17 @@ pnpm --filter @thrashplay/wishem-renderer-godot godot [--hub-port <number>]
 
 ### The lines
 
-| Line                                                                 | When                                    |
-| -------------------------------------------------------------------- | --------------------------------------- |
-| `wishem-godot: connecting to <url>`                                  | The application starts.                 |
-| `wishem-godot: connected (link <n>)`                                 | After each `welcome`. `n` starts at 1.  |
-| `wishem-godot: the hub is not reachable. Godot tries again.`         | One time for each loss of the link.     |
-| `wishem-godot: shot <n> seq <seq> color <#rrggbb> file <local path>` | After each picture that has a new part. |
+| Line                                                                          | When                                    |
+| ----------------------------------------------------------------------------- | --------------------------------------- |
+| `wishem-godot: connecting to <url>`                                           | The application starts.                 |
+| `wishem-godot: connected (link <n>)`                                          | After each `welcome`. `n` starts at 1.  |
+| `wishem-godot: the hub is not reachable. Godot tries again.`                  | One time for each loss of the link.     |
+| `wishem-godot: shot <n> seq <seq> color <#rrggbb> file <absolute local path>` | After each picture that has a new part. |
 
 ### The screenshots
 
 - After a `welcome` and after each new part `store`, the application writes the image of the viewport to a PNG file with a number that goes up by 1.
-- The command copies each file to `shots/` of the package. It empties `shots/` at its start.
+- The command copies each file to `shots/` of the package. The line gives the absolute path of the copy. It empties `shots/` at its start.
 - `<#rrggbb>` is the pixel at the center of the image.
 - An event that leaves the part `store` the same gives no screenshot.
 

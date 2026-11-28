@@ -20,5 +20,7 @@ server.on('error', (error) => {
   process.exit(1)
 })
 server.listen(port, '127.0.0.1')
+// Reads stdin while idle, so that its end is seen. Idle data is dropped.
+process.stdin.resume()
 process.stdin.on('end', () => process.exit(0))
 process.stdin.on('error', () => process.exit(0))

@@ -235,4 +235,12 @@ describe('startRelay', () => {
     expect(inners.length).toBe(count)
     expect(inners.every((child) => (child as unknown as { exitCode: number | null }).exitCode !== null)).toBe(true)
   })
+
+  it('ends an idle inner relay in less than the kill time when it closes', async () => {
+    const { relay } = await setup()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    const started = Date.now()
+    await relay.close()
+    expect(Date.now() - started).toBeLessThan(700)
+  })
 })

@@ -27,7 +27,7 @@ export interface GodotRun {
   close(): Promise<void>
 }
 
-const SHOT_LINE = /^wishem-godot: shot \d+ .* file (\/out\/[^/\s]+)$/
+const SHOT_LINE = /^wishem-godot: shot (\d+) .* file (\/out\/[^/\s]+)$/
 
 const emptyFolder = (dir: string) => {
   mkdirSync(dir, { recursive: true })
@@ -123,9 +123,12 @@ const startRun = (options: RunGodotOptions): GodotRun => {
       log(line)
       return
     }
-    const remote = shot[1]
+    const remote = shot[2]
     const local = join(shotsDir, remote.slice('/out/'.length))
-    docker.run(['cp', `${container}:${remote}`, local])
+    if (docker.run(['cp', `${container}:${remote}`, local]) === undefined) {
+      log(`wishem-godot: shot ${shot[1]} could not be copied`)
+      return
+    }
     log(line.slice(0, line.length - remote.length) + local)
   }
   for (const input of [child.stdout, child.stderr]) {

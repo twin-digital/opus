@@ -53,6 +53,7 @@ describe('runGodot', () => {
   let lines: string[]
   let runs: GodotRun[]
   let infoWorks: boolean
+  let cpWorks: boolean
 
   beforeEach(() => {
     shotsDir = mkdtempSync(join(tmpdir(), 'wishem-godot-shots-'))
@@ -61,6 +62,7 @@ describe('runGodot', () => {
     lines = []
     runs = []
     infoWorks = true
+    cpWorks = true
   })
 
   afterEach(async () => {
@@ -73,6 +75,9 @@ describe('runGodot', () => {
       events.push(`run ${args.join(' ')}`)
       if (args[0] === 'info') {
         return infoWorks ? 'ok' : undefined
+      }
+      if (args[0] === 'cp' && args[1].includes(':/out/') && !cpWorks) {
+        return undefined
       }
       if (args[0] === 'ps') {
         return 'old1\nold2\n'
@@ -147,6 +152,15 @@ describe('runGodot', () => {
     expect(lines.find((line) => line.includes('shot 1'))).toBe(
       `wishem-godot: shot 1 seq 0 color #1d4ed8 file ${join(shotsDir, '0001.png')}`,
     )
+  })
+
+  it('logs an error and no shot line when the copy of a shot fails', async () => {
+    cpWorks = false
+    await start()
+    children[0].stdout.write('wishem-godot: shot 1 seq 0 color #1d4ed8 file /out/0001.png\n')
+    await eventually(() => lines.some((line) => line.includes('could not be copied')))
+    expect(lines).toContain('wishem-godot: shot 1 could not be copied')
+    expect(lines.some((line) => line.includes('seq 0'))).toBe(false)
   })
 
   it('empties the shots folder at the start', async () => {

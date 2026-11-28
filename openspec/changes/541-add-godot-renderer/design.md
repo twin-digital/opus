@@ -126,7 +126,7 @@ A Godot view is a file `<name>.gd` that extends `RefCounted` and has `create() -
 
 ### 8. The application writes a screenshot when the picture changes
 
-`main.gd` reads `--link` and `--shots`. It opens one link with one output subsystem with the prefix `godot-screen`. After each `welcome`, it stops the renderer of the old link and starts a renderer on the new port. After each drawing that follows a `welcome` or a new part `store`, it waits for `RenderingServer.frame_post_draw`, takes the image of the viewport, writes `/out/<4-digit number>.png`, and prints `wishem-godot: shot <n> seq <seq> color <#rrggbb of the center pixel> file /out/<file>`. The runner replaces the path in the line with the local path.
+`main.gd` reads `--link` and `--shots`. It opens one link with one output subsystem with the prefix `godot-screen`. After each `welcome`, it stops the renderer of the old link and starts a renderer on the new port. After each drawing that follows a `welcome` or a new part `store`, it waits for `RenderingServer.frame_post_draw`, takes the image of the viewport, writes `/out/<4-digit number>.png`, and prints `wishem-godot: shot <n> seq <seq> color <#rrggbb of the center pixel> file /out/<file>`. The runner replaces the path in the line with the absolute local path.
 
 - Reason: the screenshot is the proof of the issue. The color in the line lets a person and a test see the result with no image program.
 - The lines `wishem-godot: connecting to <url>`, `wishem-godot: connected (link <n>)`, and `wishem-godot: the hub is not reachable. Godot tries again.` show the state of the link.
@@ -551,7 +551,7 @@ wishem-godot: image wishem-godot:4.7.2-3f9a0c1d22be is ready
 wishem-godot: container wishem-godot-7c41e09a started
 wishem-godot: connecting to ws://127.0.0.1:4749/link
 wishem-godot: connected (link 1)
-wishem-godot: shot 1 seq 0 color #1d4ed8 file nodejs/wishem/renderer-godot/shots/0001.png
+wishem-godot: shot 1 seq 0 color #1d4ed8 file /workspace/opus/nodejs/wishem/renderer-godot/shots/0001.png
 ```
 
 A step from a third terminal, with the program of the test guide:
@@ -564,7 +564,7 @@ result: {"ok":true,"seq":1}
 The second terminal then shows:
 
 ```
-wishem-godot: shot 2 seq 1 color #b91c1c file nodejs/wishem/renderer-godot/shots/0002.png
+wishem-godot: shot 2 seq 1 color #b91c1c file /workspace/opus/nodejs/wishem/renderer-godot/shots/0002.png
 ```
 
 With no Docker:
@@ -621,7 +621,7 @@ The Godot application is a proof of the renderer, not a screen of the workbench.
 +--------------------------------------------------+
 terminal of the runner:
 wishem-godot: connected (link 1)
-wishem-godot: shot 1 seq 0 color #1d4ed8 file .../shots/0001.png
+wishem-godot: shot 1 seq 0 color #1d4ed8 file /workspace/opus/nodejs/wishem/renderer-godot/shots/0001.png
 ```
 
 - States: connecting (the default clear color of Godot, no screenshot), connected (the color of the construct, a screenshot for each change), down (the last picture stays, the terminal shows the loss), a value that is not a color (the default clear color of Godot).
@@ -669,7 +669,7 @@ What a person needs: the checkout, Node.js 24, pnpm, and Docker (local or remote
 1. `pnpm install`, then `pnpm build --filter "@thrashplay/wishem-renderer-godot..."`. Result: the build ends with no error. The build also makes `nodejs/wishem/hub/dist/` and `nodejs/wishem/clock/dist/`, which the programs of the guide use.
 2. `pnpm --filter @thrashplay/wishem-renderer-godot godot:image`. Result: `wishem-godot: image wishem-godot:4.7.2-<12 hex> is ready`. A second run prints the same line in a few seconds and builds nothing.
 3. In terminal 2: `pnpm --filter @thrashplay/wishem-renderer-godot godot`. Result: `wishem-godot: connecting to ws://127.0.0.1:4749/link`, then one time `wishem-godot: the hub is not reachable. Godot tries again.` No construct runs yet.
-4. In terminal 1: `pnpm --filter @thrashplay/wishem-renderer-godot start --paused`. Result: terminal 1 shows `wishem: the time of the construct starts paused` and `wishem: link at ws://127.0.0.1:4749/link`. Within 5 seconds terminal 2 shows `wishem-godot: connected (link 1)` and `wishem-godot: shot 1 seq 0 color #1d4ed8 file .../shots/0001.png`.
+4. In terminal 1: `pnpm --filter @thrashplay/wishem-renderer-godot start --paused`. Result: terminal 1 shows `wishem: the time of the construct starts paused` and `wishem: link at ws://127.0.0.1:4749/link`. Within 5 seconds terminal 2 shows `wishem-godot: connected (link 1)` and `wishem-godot: shot 1 seq 0 color #1d4ed8 file /workspace/opus/nodejs/wishem/renderer-godot/shots/0001.png`.
 5. Open `nodejs/wishem/renderer-godot/shots/0001.png` in an image viewer. Result: an image of 640 by 360 pixels, all blue.
 6. In terminal 3: `node nodejs/wishem/docs/milestones/a5-renderers/time-client.mjs step`. Result: `result: {"ok":true,"seq":1}`. Terminal 2 shows `shot 2 seq 1 color #b91c1c`.
 7. Wait 5 seconds. Result: terminal 2 shows no new shot. The construct is paused.
