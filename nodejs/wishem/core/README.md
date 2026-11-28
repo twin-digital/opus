@@ -55,7 +55,7 @@ The store applies seven inputs.
 | Input type               | Payload                                       | Effect                                                                                                                 |
 | ------------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `store/replace-model`    | `{ model }`                                   | Replaces the model.                                                                                                    |
-| `store/add-entity`       | `{ entity }`                                  | Adds the entity at the end of the list. The ID must be new.                                                            |
+| `store/add-entity`       | `{ entity, index? }`                          | Adds the entity at `index`, or at the end with no `index`. The ID must be new.                                         |
 | `store/remove-entity`    | `{ entity }`, the ID of the entity            | Removes the entity.                                                                                                    |
 | `store/set-field`        | `{ entity, componentType, field, value }`     | Sets the value. Adds the component when the entity has none.                                                           |
 | `store/clear-field`      | `{ entity, componentType, field }`            | Removes the value. Keeps the component. Keeps the same part when the field has no value to remove.                     |
@@ -64,7 +64,7 @@ The store applies seven inputs.
 
 The key `reference` is the ID of an entity. `add-reference` refuses an ID that no entity has. An input that changes nothing keeps the same part object. This applies to an `add-reference` of an ID that the list holds, and to a `remove-reference` of an ID that the list does not hold. Both inputs refuse a field that does not have the type `reference-list`.
 
-`storeInputs(id)` gives the functions that make these inputs: `replaceModel`, `addEntity`, `removeEntity`, `setField`, `clearField`, `addReference`, and `removeReference`.
+`storeInputs(id)` gives the functions that make these inputs: `replaceModel`, `addEntity(entity, index?)`, `removeEntity`, `setField`, `clearField`, `addReference`, and `removeReference`.
 
 The store applies an input only when the model after the input is correct. Otherwise, the store refuses the input with problems. Each problem has a `message` and a `path`. The part and the record of the hub do not change. An input that changes nothing keeps the same part object. Each part is frozen. An entity that an input does not change is the same object in the new part.
 

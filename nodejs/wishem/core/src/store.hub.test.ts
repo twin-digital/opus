@@ -235,6 +235,29 @@ describe('add-reference in a hub', () => {
   })
 })
 
+describe('add-entity with an index in a hub', () => {
+  const ids = (hub: { read: () => Record<string, unknown> }) => (hub.read().store as Model).entities.map((e) => e.id)
+
+  it('refuses a bad index with the reason invalid and keeps the record', async () => {
+    const { hub, form } = start()
+    const result = await form.submit({
+      type: 'store/add-entity',
+      payload: { entity: { id: ENT2, components: {} }, index: 5 },
+    })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.record()).toEqual([])
+    expect(ids(hub)).toEqual([ENT])
+  })
+
+  it('removes an entity that was added at the index 0 with a rewind', async () => {
+    const { hub, form } = start()
+    expect(await form.submit(storeInputs().addEntity({ id: ENT2, components: {} }, 0))).toEqual({ ok: true, seq: 1 })
+    expect(ids(hub)).toEqual([ENT2, ENT])
+    expect(await form.submit(hubInputs.rewind(0))).toMatchObject({ ok: true })
+    expect(ids(hub)).toEqual([ENT])
+  })
+})
+
 describe('the record of a hub', () => {
   it('gives the same model in a second hub that gets the inputs in order', async () => {
     const first = start()

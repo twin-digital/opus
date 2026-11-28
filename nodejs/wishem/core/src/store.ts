@@ -18,6 +18,8 @@ export interface ReplaceModelPayload {
 
 export interface AddEntityPayload {
   entity: Entity
+  /** The position of the entity, an integer from 0 to the number of entities. Default: the end. */
+  index?: number
 }
 
 export interface RemoveEntityPayload {
@@ -57,7 +59,7 @@ export interface ReferencePayload {
 
 export interface StoreInputs {
   replaceModel(model: Model): Input
-  addEntity(entity: Entity): Input
+  addEntity(entity: Entity, index?: number): Input
   removeEntity(entity: Id): Input
   setField(payload: SetFieldPayload): Input
   clearField(payload: ClearFieldPayload): Input
@@ -114,7 +116,7 @@ const check = (next: unknown): Model => {
 }
 
 const addEntity = (part: Model, payload: unknown): Model => {
-  const { entity } = requirePayload(payload)
+  const { entity, index } = requirePayload(payload)
   if (!isRecord(entity)) {
     return refuse('The payload has no "entity" object', ['payload', 'entity'])
   }
@@ -125,17 +127,26 @@ const addEntity = (part: Model, payload: unknown): Model => {
   if (!isRecord(entity.components)) {
     problems.push({ message: 'The entity has no "components" object', path: ['payload', 'entity', 'components'] })
   }
+  const count = part.entities.length
+  const position = index === undefined ? count : index
+  if (typeof position !== 'number' || !Number.isInteger(position) || position < 0 || position > count) {
+    problems.push({ message: `The index is not an integer from 0 to ${count}`, path: ['payload', 'index'] })
+  }
   if (problems.length > 0) {
     throw new InputRefusedError(problems)
   }
   if (part.entities.some((existing) => existing.id === entity.id)) {
     return refuse(`An entity has the ID "${String(entity.id)}"`, ['payload', 'entity', 'id'])
   }
-  const checked = check({ definitions: part.definitions, entities: [...part.entities, entity] })
-  const added = checked.entities.at(-1)
+  const at = position as number
+  const checked = check({
+    definitions: part.definitions,
+    entities: [...part.entities.slice(0, at), entity, ...part.entities.slice(at)],
+  })
+  const added = checked.entities.at(at)
   return deepFreeze({
     definitions: part.definitions,
-    entities: added === undefined ? part.entities : [...part.entities, added],
+    entities: added === undefined ? part.entities : [...part.entities.slice(0, at), added, ...part.entities.slice(at)],
   })
 }
 
@@ -324,7 +335,10 @@ export const createStore = (options: StoreOptions = {}): ModelSubsystem<Model> =
 /** The functions that make the inputs of a store. Default ID: `store`. */
 export const storeInputs = (id = 'store'): StoreInputs => ({
   replaceModel: (model) => ({ type: `${id}/replace-model`, payload: { model } }),
-  addEntity: (entity) => ({ type: `${id}/add-entity`, payload: { entity } }),
+  addEntity: (entity, index) => ({
+    type: `${id}/add-entity`,
+    payload: index === undefined ? { entity } : { entity, index },
+  }),
   removeEntity: (entity) => ({ type: `${id}/remove-entity`, payload: { entity } }),
   setField: (payload) => ({ type: `${id}/set-field`, payload }),
   clearField: (payload) => ({ type: `${id}/clear-field`, payload }),
