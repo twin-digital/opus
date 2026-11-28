@@ -65,6 +65,8 @@ If the page port is in use, the command prints `wishem: port <n> is in use` and 
 
 The page shows a box of 640 by 360 pixels and one status line. The view `ClearColor` fills the box with the color of the `Color` component of the sample construct. The color changes two times each second.
 
+The color is a text of the form `#rrggbb`, with upper or lower case digits. The view draws it in lower case. When the color has no value, or has any other value, the view fills the box with the fallback color `#ff00ff`. The view is never empty.
+
 | Status line                                           | When                           |
 | ----------------------------------------------------- | ------------------------------ |
 | Connecting to the construct.                          | Before the first link.         |
