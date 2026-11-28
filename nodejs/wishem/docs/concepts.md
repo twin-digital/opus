@@ -404,13 +404,14 @@ The workbench is its own construct. It does not hold the subsystems of the produ
 These items are **Proposed**:
 
 - The workbench construct has the store `store` for the model of the workbench. It has the store `product` for the **mounted** product. The store `product` validates the product model alone, and the product model refers to nothing of the workbench.
-- The workbench construct has a model subsystem that holds the list of the product constructs that must run.
+- The workbench construct has the model subsystem `constructs`, which holds the list of the product constructs that must run.
 - The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
-  - It starts and stops the product constructs.
+  - It starts and stops the product constructs. A product construct is a hub in the process of the workbench, with the parts `time` and `store`, the rules of the product, a clock, and its own link.
   - It gives each product construct the product model.
   - It sends each later change of the product model to the product construct as an input.
   - It reports the status of each product construct to the workbench hub as inputs.
 - To a product construct, the construct manager is also an output subsystem and an input subsystem. A hub does not connect to a hub.
+- Only the construct manager can rewind a product construct. A rewind of the workbench is an undo of the authored state, and the product construct follows it.
 - The agent connects to the workbench construct through a link.
 - The workbench construct has no clock. It has the record, so it has undo and rewind.
 

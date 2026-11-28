@@ -5,14 +5,24 @@ import { createServer, connect, type Server } from 'node:net'
 import { networkInterfaces, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { constructInputs } from '@thrashplay/wishem-construct-manager'
 import { storeInputs } from '@thrashplay/wishem-core'
 import type { startConstruct } from '@thrashplay/wishem-host-nodejs'
-import { hubInputs, openLink, webSocketChannel, type Hub } from '@thrashplay/wishem-hub'
+import { hubInputs, openLink, webSocketChannel, type Hub, type HubEvent } from '@thrashplay/wishem-hub'
+import { COUNT_FIELD } from '@thrashplay/wishem-sample-product'
 import { startWorkbench, StartError } from '../scripts/start.js'
 
 const vite = vi.hoisted(() => ({ createServer: vi.fn() }))
 
 const hostModule = vi.hoisted(() => ({ startConstruct: vi.fn() }))
+
+const managerModule = vi.hoisted(() => ({ attachConstructManager: vi.fn() }))
+
+vi.mock('@thrashplay/wishem-construct-manager/node', async (importActual) => {
+  const actual = await importActual<typeof import('@thrashplay/wishem-construct-manager/node')>()
+  managerModule.attachConstructManager.mockImplementation(actual.attachConstructManager)
+  return { ...actual, attachConstructManager: managerModule.attachConstructManager }
+})
 
 vi.mock('vite', () => ({ createServer: vite.createServer }))
 vi.mock('@thrashplay/wishem-host-nodejs', async (importActual) => {
@@ -130,6 +140,7 @@ describe('the start script of the workbench', () => {
     vite.createServer.mockReset()
     vite.createServer.mockRejectedValue(new Error('plugin failed'))
     hostModule.startConstruct.mockClear()
+    managerModule.attachConstructManager.mockClear()
     folder = mkdtempSync(join(tmpdir(), 'workbench-start-'))
     model = join(folder, 'model')
     cpSync(baseModel, model, { recursive: true })
@@ -374,6 +385,106 @@ describe('the start script of the workbench', () => {
     },
   )
 
+  describe('a manager that cannot close', () => {
+    let product = ''
+
+    /** Makes the manager close with an error. */
+    const breakManagerClose = () => {
+      const actualAttach = managerModule.attachConstructManager.getMockImplementation()
+      managerModule.attachConstructManager.mockImplementationOnce((options: never) => {
+        const manager = (actualAttach as (options: never) => { close(): Promise<void> })(options)
+        const close = manager.close.bind(manager)
+        return {
+          ...manager,
+          close: async () => {
+            await close()
+            throw new Error('manager failed')
+          },
+        }
+      })
+    }
+
+    beforeEach(() => {
+      product = join(folder, 'product')
+      cpSync(sampleProduct, product, { recursive: true })
+    })
+
+    it('closes the page server and the construct on close', { timeout: 30000 }, async () => {
+      const hubPort = await freePort()
+      const close = vi.fn(() => Promise.resolve())
+      vite.createServer.mockResolvedValue({
+        listen: () => Promise.resolve(),
+        httpServer: { address: () => ({ port: 5555 }) },
+        close,
+      })
+      breakManagerClose()
+      const workbench = await startWorkbench({
+        model,
+        product,
+        views,
+        viewTypes: false,
+        port: 0,
+        hubPort,
+        log: () => undefined,
+      })
+
+      await expect(workbench.close()).rejects.toThrow('manager failed')
+
+      expect(close).toHaveBeenCalledTimes(1)
+      expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    })
+
+    it(
+      'closes the manager, the page server, and the construct when the keeper cannot stop',
+      { timeout: 30000 },
+      async () => {
+        const hubPort = await freePort()
+        const actual = await vi.importActual<typeof import('vite')>('vite')
+        vite.createServer.mockImplementation(async (config) => {
+          const server = await actual.createServer(config)
+          server.watcher.off = () => {
+            throw new Error('keeper failed')
+          }
+          return server
+        })
+        let managerClosed = false
+        const actualAttach = managerModule.attachConstructManager.getMockImplementation()
+        managerModule.attachConstructManager.mockImplementationOnce((options: never) => {
+          const manager = (actualAttach as (options: never) => { close(): Promise<void> })(options)
+          const close = manager.close.bind(manager)
+          return {
+            ...manager,
+            close: async () => {
+              managerClosed = true
+              await close()
+            },
+          }
+        })
+        const workbench = await startWorkbench({ model, product, views, port: 0, hubPort, log: () => undefined })
+
+        await expect(workbench.close()).rejects.toThrow('keeper failed')
+
+        expect(managerClosed).toBe(true)
+        expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+      },
+    )
+
+    it(
+      'closes the construct and reports the start error when the page server cannot start',
+      { timeout: 30000 },
+      async () => {
+        const hubPort = await freePort()
+        breakManagerClose()
+
+        await expect(
+          startWorkbench({ model, product, views, viewTypes: false, port: 0, hubPort, log: () => undefined }),
+        ).rejects.toThrow('plugin failed')
+
+        expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+      },
+    )
+  })
+
   it('sends each line to the log option, and stops both parts on close', { timeout: 30000 }, async () => {
     const hubPort = await freePort()
     const close = vi.fn(() => Promise.resolve())
@@ -451,7 +562,7 @@ describe('the start script of the workbench', () => {
     })
 
     it(
-      'prints the product folder after the model folder and gives the link the parts store and product',
+      'prints the product folder after the model folder and gives the link the parts store, product, and constructs',
       { timeout: 30000 },
       async () => {
         const run = start(['--port', '0', '--hub-port', '0', '--product', product])
@@ -466,7 +577,7 @@ describe('the start script of the workbench', () => {
           expect(run.output()).toMatch(
             new RegExp(`^wishem: model ${escaped(model)}\\nwishem: product ${escaped(product)}\\n`),
           )
-          expect(Object.keys(reader.read()).sort()).toEqual(['product', 'store'])
+          expect(Object.keys(reader.read()).sort()).toEqual(['constructs', 'product', 'store'])
           expect(JSON.stringify(reader.read().product)).toContain('#1d4ed8')
         } finally {
           link.close()
@@ -543,6 +654,274 @@ describe('the start script of the workbench', () => {
 
       expect(text).toContain(`wishem: product ${product}\n`)
     })
+  })
+
+  describe('the construct manager with a mounted product', () => {
+    const SAMPLE_CODE = '@thrashplay/wishem-sample-product'
+    let product = ''
+    const fakeServer = () =>
+      vite.createServer.mockResolvedValue({
+        listen: () => Promise.resolve(),
+        httpServer: { address: () => ({ port: 5555 }) },
+        close: () => Promise.resolve(),
+      })
+    const countOf = (store: unknown) => Number(new RegExp(`"${COUNT_FIELD}":"(\\d+)"`).exec(JSON.stringify(store))?.[1])
+    const codeFile = (name: string, text: string) => {
+      const path = join(folder, name)
+      writeFileSync(path, text)
+      return path
+    }
+    const productAddress = (lines: string[]) =>
+      /link at (ws:\/\/\S+)/.exec(lines.find((line) => line.includes('construct play runs')) ?? '')?.[1] ?? ''
+    const base = () => ({ model, views, viewTypes: false, port: 0, hubPort: 0 })
+
+    beforeEach(() => {
+      product = join(folder, 'product')
+      cpSync(sampleProduct, product, { recursive: true })
+      fakeServer()
+    })
+
+    it(
+      'prints the product code after the product, and runs a product construct whose count advances',
+      {
+        timeout: 30000,
+      },
+      async () => {
+        const lines: string[] = []
+        const workbench = await startWorkbench({
+          ...base(),
+          product,
+          productCode: SAMPLE_CODE,
+          log: (line) => lines.push(line),
+        })
+        const { link: workbenchLink, tester, reader } = await openTestLink(workbench.linkUrl)
+        try {
+          expect(lines.slice(0, 3)).toEqual([
+            `wishem: model ${model}`,
+            `wishem: product ${product}`,
+            `wishem: product code ${SAMPLE_CODE}`,
+          ])
+          expect(Object.keys(reader.read()).sort()).toEqual(['constructs', 'product', 'store'])
+
+          expect(await tester.submit(constructInputs.start('play'))).toMatchObject({ ok: true })
+          await vi.waitFor(() => {
+            expect(productAddress(lines)).not.toBe('')
+          })
+          const viewer = await openTestLink(productAddress(lines))
+          const first = countOf(viewer.reader.read().store)
+          await vi.waitFor(() => {
+            expect(countOf(viewer.reader.read().store)).toBeGreaterThan(first)
+          })
+          viewer.link.close()
+        } finally {
+          workbenchLink.close()
+          await workbench.close()
+        }
+      },
+    )
+
+    it('gives stopping to the link of a product construct before the workbench stops', { timeout: 30000 }, async () => {
+      const lines: string[] = []
+      const workbench = await startWorkbench({
+        ...base(),
+        product,
+        productCode: SAMPLE_CODE,
+        log: (line) => lines.push(line),
+      })
+      const { link: workbenchLink, tester, reader } = await openTestLink(workbench.linkUrl)
+      await tester.submit(constructInputs.start('play'))
+      await vi.waitFor(() => {
+        expect(productAddress(lines)).not.toBe('')
+      })
+      const viewer = await openTestLink(productAddress(lines))
+      const order: string[] = []
+      viewer.reader.subscribe((event: HubEvent) => event.type === 'stopping' && order.push('product'))
+      reader.subscribe((event: HubEvent) => event.type === 'stopping' && order.push('workbench'))
+
+      await workbench.close()
+
+      expect(order).toEqual(['product', 'workbench'])
+      viewer.link.close()
+      workbenchLink.close()
+    })
+
+    it('gives the link no part constructs when no product is mounted', { timeout: 30000 }, async () => {
+      const workbench = await startWorkbench({ ...base(), log: () => undefined })
+      const { link, reader } = await openTestLink(workbench.linkUrl)
+      try {
+        expect('constructs' in reader.read()).toBe(false)
+      } finally {
+        link.close()
+        await workbench.close()
+      }
+    })
+
+    it('loads a product code that a path names', { timeout: 30000 }, async () => {
+      const path = codeFile('code.mjs', 'export const wrapStore = (store) => store\n')
+      const lines: string[] = []
+      const workbench = await startWorkbench({
+        ...base(),
+        product,
+        productCode: path,
+        log: (line) => lines.push(line),
+      })
+      await workbench.close()
+      expect(lines).toContain(`wishem: product code ${path}`)
+    })
+
+    it('prints that the product code needs a product, and starts nothing', { timeout: 30000 }, async () => {
+      const hubPort = await freePort()
+      const lines: string[] = []
+
+      await expect(
+        startWorkbench({
+          ...base(),
+          hubPort,
+          productCode: SAMPLE_CODE,
+          log: (line) => lines.push(line),
+        }),
+      ).rejects.toThrow(StartError)
+
+      expect(lines).toEqual(['wishem: --product-code needs --product'])
+      expect(hostModule.startConstruct).not.toHaveBeenCalled()
+      expect(vite.createServer).not.toHaveBeenCalled()
+      expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    })
+
+    it(
+      'prints the reason, serves no page, and frees the hub port when the module cannot be loaded',
+      {
+        timeout: 30000,
+      },
+      async () => {
+        const hubPort = await freePort()
+        const lines: string[] = []
+
+        await expect(
+          startWorkbench({
+            ...base(),
+            hubPort,
+            product,
+            productCode: './missing.mjs',
+            log: (line) => lines.push(line),
+          }),
+        ).rejects.toThrow(StartError)
+
+        expect(lines[2]).toBe('wishem: product code ./missing.mjs')
+        expect(lines[3]).toMatch(/^wishem: the product code \.\/missing\.mjs cannot be loaded: .*missing\.mjs/)
+        expect(lines).toHaveLength(4)
+        expect(vite.createServer).not.toHaveBeenCalled()
+        expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+      },
+    )
+
+    it('prints that the module has no function wrapStore, and starts nothing', { timeout: 30000 }, async () => {
+      const path = codeFile('no-wrap.mjs', 'export const other = 1\nexport const wrapStore = 5\n')
+      const hubPort = await freePort()
+      const lines: string[] = []
+
+      await expect(
+        startWorkbench({
+          ...base(),
+          hubPort,
+          product,
+          productCode: path,
+          log: (line) => lines.push(line),
+        }),
+      ).rejects.toThrow(StartError)
+
+      expect(lines.at(-1)).toBe('wishem: the product code has no function wrapStore')
+      expect(vite.createServer).not.toHaveBeenCalled()
+      expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    })
+
+    it('frees the hub port when the page server cannot start', { timeout: 30000 }, async () => {
+      vite.createServer.mockRejectedValue(new Error('plugin failed'))
+      const hubPort = await freePort()
+
+      await expect(
+        startWorkbench({
+          ...base(),
+          hubPort,
+          product,
+          productCode: SAMPLE_CODE,
+          log: () => undefined,
+        }),
+      ).rejects.toThrow('plugin failed')
+
+      expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    })
+
+    it(
+      'prints that --product-code needs --product with the script, and stops with exit code 1',
+      {
+        timeout: 30000,
+      },
+      async () => {
+        const run = start(['--product-code', SAMPLE_CODE, '--port', '0', '--hub-port', '0'])
+
+        expect(await run.exit).toBe(1)
+        expect(run.output()).toBe('wishem: --product-code needs --product\n')
+      },
+    )
+
+    it('prints that --product-code must be a module for an empty value', { timeout: 30000 }, async () => {
+      const run = start(['--product', product, '--product-code', '', '--port', '0', '--hub-port', '0'])
+
+      expect(await run.exit).toBe(1)
+      expect(run.output()).toBe('wishem: --product-code must be a module\n')
+    })
+
+    it('resolves a relative --product-code against INIT_CWD', { timeout: 30000 }, async () => {
+      codeFile('code.mjs', 'export const wrapStore = (store) => store\n')
+      const args = ['--model', model, '--product', product, '--product-code', './code.mjs', '--views', views]
+      const child = spawn('node', [script, ...args, '--port', '0', '--hub-port', '0'], {
+        env: { ...process.env, INIT_CWD: folder },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+      children.push(child)
+      let text = ''
+      child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()))
+      child.stderr.on('data', (chunk: Buffer) => (text += chunk.toString()))
+
+      await until(
+        () => text.includes('wishem: workbench at') || child.exitCode !== null,
+        () => text,
+      )
+
+      expect(text).toContain('wishem: product code ./code.mjs\n')
+      expect(text).toContain('wishem: workbench at')
+    })
+
+    it(
+      'stops with exit code 0 on an interrupt and closes the address of a product construct',
+      {
+        timeout: 40000,
+      },
+      async () => {
+        const run = start(['--port', '0', '--hub-port', '0', '--product', product, '--product-code', SAMPLE_CODE])
+        await until(
+          () => run.output().includes('wishem: workbench at') || run.child.exitCode !== null,
+          () => run.output(),
+        )
+        const link = /wishem: link at (ws:\/\/127\.0\.0\.1:\d+\/link)/.exec(run.output())?.[1] ?? ''
+        const { link: open, tester } = await openTestLink(link)
+        await tester.submit(constructInputs.start('play'))
+        await until(
+          () => run.output().includes('construct play runs'),
+          () => run.output(),
+        )
+        const found = /construct play runs, link at (ws:\/\/127\.0\.0\.1:\d+\/link)/.exec(run.output())
+        const port = Number(new URL(found?.[1] ?? '').port)
+        expect(await refuses('127.0.0.1', port)).toBe(false)
+
+        run.child.kill('SIGINT')
+
+        expect(await run.exit).toBe(0)
+        expect(await refuses('127.0.0.1', port)).toBe(true)
+        open.close()
+      },
+    )
   })
 
   describe('the generated files of the views', () => {

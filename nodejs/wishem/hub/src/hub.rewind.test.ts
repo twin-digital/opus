@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { HubConfigurationError } from './errors.js'
 import { createHub } from './hub.js'
 import { hubInputs, REWIND_INPUT_TYPE } from './names.js'
 import type { Hub, HubEvent, HubOptions, ModelSubsystem } from './types.js'
@@ -294,6 +295,57 @@ describe('the hub rejects a rewind that it cannot do', () => {
   it('rejects an input type of the hub that is not known with unknown-type', async () => {
     const { keyboard } = running()
     expect(await keyboard.submit({ type: 'hub/undo' })).toMatchObject({ ok: false, reason: 'unknown-type' })
+  })
+})
+
+describe('a hub can limit the sources of a rewind', () => {
+  const limited = (rewindSources: readonly string[] = ['construct-manager']) => {
+    const { hub, keyboard } = running({ rewindSources })
+    const manager = hub.attach({ id: 'construct-manager', kind: 'input' })
+    return { hub, keyboard, manager }
+  }
+
+  it('accepts a rewind from a source in the list', async () => {
+    const { hub, keyboard, manager } = limited()
+    await send(keyboard, 3)
+    expect(await manager.submit(hubInputs.rewind(1))).toEqual({ ok: true, seq: 4 })
+    expect(count(hub)).toBe(1)
+  })
+
+  it('rejects a rewind from a source that is not in the list, and changes nothing', async () => {
+    const { hub, keyboard } = limited()
+    await send(keyboard, 3)
+    const events: HubEvent[] = []
+    hub.attach({ id: 'screen', kind: 'output' }).subscribe((event) => events.push(event))
+    const state = hub.read()
+    const record = hub.record()
+    expect(await keyboard.submit(hubInputs.rewind(1))).toEqual({ ok: false, reason: 'not-permitted', problems: [] })
+    expect(hub.read()).toBe(state)
+    expect(hub.record()).toEqual(record)
+    expect(hub.seq).toBe(3)
+    expect(events).toEqual([])
+  })
+
+  it('accepts time/advance from a source that is not in the list', async () => {
+    const time: ModelSubsystem<number> = { id: 'time', inputs: ['time/advance'], initial: 0, apply: (part) => part + 1 }
+    const hub = createHub({ subsystems: [time], rewindSources: ['construct-manager'] })
+    const keys = hub.attach({ id: 'keys', kind: 'input' })
+    hub.start()
+    expect(await keys.submit({ type: 'time/advance' })).toEqual({ ok: true, seq: 1 })
+  })
+
+  it('throws a configuration error that names a source that is not an ID', () => {
+    const make = () => createHub({ subsystems: [label], rewindSources: ['Bad Source'] })
+    expect(make).toThrow(HubConfigurationError)
+    expect(make).toThrow(/Bad Source/)
+  })
+
+  it('rejects each rewind for an empty list', async () => {
+    const { hub, keyboard, manager } = limited([])
+    await send(keyboard, 2)
+    expect(await keyboard.submit(hubInputs.rewind(1))).toMatchObject({ ok: false, reason: 'not-permitted' })
+    expect(await manager.submit(hubInputs.rewind(1))).toMatchObject({ ok: false, reason: 'not-permitted' })
+    expect(hub.seq).toBe(2)
   })
 })
 
