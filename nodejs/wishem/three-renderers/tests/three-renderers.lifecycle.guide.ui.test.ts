@@ -5,6 +5,7 @@ import { chromium } from '@playwright/test'
 import type { Browser, Page } from '@playwright/test'
 import { timeInputs } from '@thrashplay/wishem-clock'
 import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
+import type { RemoteLink } from '@thrashplay/wishem-hub'
 import { COLORS } from '@thrashplay/wishem-sample-product'
 import {
   GODOT_DIR,
@@ -49,6 +50,8 @@ await test('the parts wait for the construct, survive its stop, and end on SIGIN
   let godot: Child | undefined
   let workbench: Child | undefined
   let browser: Browser | undefined
+  let link: RemoteLink | undefined
+  let check: RemoteLink | undefined
   try {
     // Steps 3-5: the pages and Godot start with no construct.
     reactPage = spawnNode(['scripts/react-page.ts', '--port', '0', ...hubArgs])
@@ -124,10 +127,11 @@ await test('the parts wait for the construct, survive its stop, and end on SIGIN
 
     // Step 14: a step to red, then SIGINT of the construct. Exit code 0, and each picture keeps red.
     const inputId = 'e2e-lifecycle'
-    const link = await openLink(await webSocketChannel(new WebSocket(linkUrl)), [{ id: inputId, kind: 'input' }])
+    link = await openLink(await webSocketChannel(new WebSocket(linkUrl)), [{ id: inputId, kind: 'input' }])
     assert.equal((await link.ports[inputId].submit(timeInputs.advance(500))).ok, true, 'the step is applied')
     await colors(RED, POLL_MS)
     link.close()
+    link = undefined
     const lostAt = godot.lines.length
     assert.equal(await interrupt(construct), 0, 'the construct ends with exit code 0 on SIGINT')
     await waitForStatus('React', reactTab, UNREACHABLE)
@@ -182,17 +186,23 @@ await test('the parts wait for the construct, survive its stop, and end on SIGIN
     // Step 19: the pages end with exit code 0, and the construct still runs.
     assert.equal(await interrupt(pixiPage), 0, 'the PixiJS page ends with exit code 0 on SIGINT')
     assert.equal(await interrupt(reactPage), 0, 'the React page ends with exit code 0 on SIGINT')
-    const check = await openLink(await webSocketChannel(new WebSocket(linkUrl)), [{ id: inputId, kind: 'input' }])
+    check = await openLink(await webSocketChannel(new WebSocket(linkUrl)), [{ id: inputId, kind: 'input' }])
     assert.equal((await check.ports[inputId].submit(timeInputs.advance(500))).ok, true, 'the construct still runs')
     check.close()
+    check = undefined
 
     // Step 20: the construct ends with exit code 0.
     assert.equal(await interrupt(construct), 0, 'the construct ends with exit code 0 on SIGINT')
   } finally {
+    link?.close()
+    check?.close()
     await browser?.close().catch(() => undefined)
     for (const child of [workbench, second, godot, construct, reactPage, pixiPage]) {
       await stopChild(child)
     }
   }
+})
+
+await test('no container of Godot is left after the lifecycle test', () => {
   assert.deepEqual(godotContainers(), [], 'no container of Godot is left after the test')
 })

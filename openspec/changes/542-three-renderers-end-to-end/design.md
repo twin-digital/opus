@@ -604,7 +604,7 @@ What a person needs: the checkout, Node.js 24, pnpm, Docker (local or remote thr
 
 ### 10. The tests that need Docker
 
-21. `pnpm --filter @thrashplay/wishem-three-renderers test:ui`. Result: the test passes. It prints each step, and `docker ps -a` shows no container of the test after it ends.
+21. `pnpm --filter @thrashplay/wishem-three-renderers test:ui`. Result: the test passes. It prints the name of each test, and `docker ps -a` shows no container of the test after it ends.
 22. `pnpm --filter @thrashplay/wishem-pixi-page test:ui`. Result: the tests pass against the baselines, with no change to `tests/__screenshots__/`.
 23. `pnpm --filter @thrashplay/wishem-renderer-godot test:ui`. Result: the GDScript tests end with `0 failed`, and the screenshot test passes.
 

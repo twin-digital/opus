@@ -6,6 +6,8 @@ The sample construct (**Proposed** term) is the product construct of the sample 
 
 ## Start the sample construct
 
+The commands need the builds of their dependencies: `pnpm build --filter "@thrashplay/wishem-three-renderers..."`.
+
 ```
 pnpm --filter @thrashplay/wishem-three-renderers construct [--paused] [--hub-port <number>]
 ```

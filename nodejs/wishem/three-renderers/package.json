@@ -41,7 +41,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@thrashplay/wishem-clock": "workspace:*",
     "@thrashplay/wishem-construct-manager": "workspace:*",
     "@thrashplay/wishem-core": "workspace:*",
     "@thrashplay/wishem-host-nodejs": "workspace:*",
@@ -54,6 +53,7 @@
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@playwright/test": "catalog:",
+    "@thrashplay/wishem-clock": "workspace:*",
     "@thrashplay/wishem-pixi-page": "workspace:*",
     "@thrashplay/wishem-renderer-godot": "workspace:*",
     "@thrashplay/wishem-workbench-app": "workspace:*",

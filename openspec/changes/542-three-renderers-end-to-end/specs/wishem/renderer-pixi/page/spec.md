@@ -50,6 +50,25 @@ The page SHALL have one PixiJS view, `ClearColor`, attached to the component typ
 - **WHEN** a test reads `src/views/ClearColor.view.json`
 - **THEN** it has the kind `pixi` and the component type `ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512`
 
+### Requirement: The page connects again after the process stops
+
+When the link ends because the sample construct stops, the page SHALL keep the last picture, and SHALL try to open a new link after 500 milliseconds, then after a delay that doubles each time, at most 5 seconds. When a new link opens, the page SHALL draw the joined state of the new link, with no reload of the page.
+
+#### Scenario: The process stops
+
+- **WHEN** the page has a link and the sample construct stops
+- **THEN** the canvas keeps the last color, and the status line says "The construct is not reachable. The page tries again."
+
+#### Scenario: The process starts again
+
+- **WHEN** the sample construct stopped, the page stays open, and the sample construct starts again
+- **THEN** within 5 seconds the status line says "Connected (link 2). Space: pause or run. Period: one step.", and the canvas has the color of the new construct
+
+#### Scenario: A rewind from a different client
+
+- **WHEN** the page has a link and a different client of the link sends `hub/rewind` to the sample construct
+- **THEN** the sample construct refuses the rewind with `not-permitted`, and the canvas keeps its color
+
 ### Requirement: A screenshot test proves that the picture follows the construct through the link
 
 A screenshot test SHALL start the sample construct, paused, and the real command of the page server, and open the page in the pinned web browser with no window. It SHALL take a screenshot of the canvas before a step, after one step, and after a wait while paused. The first two screenshots SHALL be different, and each SHALL agree with a committed baseline. The third screenshot SHALL be equal to the second. After the space key, a later screenshot SHALL be different from the second.

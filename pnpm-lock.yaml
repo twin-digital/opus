@@ -3843,9 +3843,6 @@ importers:
 
   nodejs/wishem/three-renderers:
     dependencies:
-      '@thrashplay/wishem-clock':
-        specifier: workspace:*
-        version: link:../clock
       '@thrashplay/wishem-construct-manager':
         specifier: workspace:*
         version: link:../construct-manager
@@ -3877,6 +3874,9 @@ importers:
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.65.1
+      '@thrashplay/wishem-clock':
+        specifier: workspace:*
+        version: link:../clock
       '@thrashplay/wishem-pixi-page':
         specifier: workspace:*
         version: link:../pixi-page

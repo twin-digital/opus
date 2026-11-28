@@ -739,7 +739,7 @@ const cSample = el(
   2044,
   'sample-product',
   '[Container: TypeScript package]',
-  'Holds the example model folder and the count behavior.',
+  'Holds the example model folder and the count and color behaviors.',
 )
 
 const cSampleProcess = el(
