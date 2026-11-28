@@ -57,7 +57,7 @@ wishem: React page at http://127.0.0.1:5175/
 wishem: the page connects to ws://127.0.0.1:4750/link
 ```
 
-The page server starts also when no construct runs. The page then shows "The construct is not reachable. The page tries again." and connects when the construct starts.
+The page server starts also when no construct runs. The page then shows "The construct is not reachable. The page tries again." and connects when the construct starts. While no construct runs, the page server prints one line, for example `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again`. It prints the line again only after a link succeeds. When the construct resets an open link, the server prints `wishem: the link to ws://127.0.0.1:4750/link closed; the page connects again` in place of that line. A browser that closes its own link prints nothing. A plain HTTP request to `/link` gets status 502.
 
 If the page port is in use, the command prints `wishem: port <n> is in use` and ends with exit code 1. A value of `--port` or `--hub-port` that is not a number from 0 to 65535 also gives exit code 1. `SIGINT` and `SIGTERM` stop the page server and end the command with exit code 0. The command does not stop the sample construct.
 
