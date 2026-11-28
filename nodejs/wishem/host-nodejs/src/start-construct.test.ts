@@ -635,6 +635,16 @@ describe('startConstruct with a product', () => {
       expect(JSON.parse(await readFile(productFile(), 'utf8'))).toEqual(productState('0'))
     })
 
+    it('gives the failure of the product watch to onWatchError', async () => {
+      const onWatchError = vi.fn()
+      await start({ onWatchError })
+      const index = vi.mocked(watch).mock.calls.findIndex(([target]) => String(target).startsWith(productFolder))
+      const watcher = vi.mocked(watch).mock.results[index]?.value as FSWatcher
+      const failure = new Error('product watch failed')
+      watcher.emit('error', failure)
+      expect(onWatchError).toHaveBeenCalledWith(failure)
+    })
+
     it('keeps the count of the product after a stop and a start', async () => {
       const first = await start()
       await setCount(client(first), '9')
@@ -739,9 +749,39 @@ describe('startConstruct with a product', () => {
       )
       expect((error as ModelError).problems[0]?.source).toBe(productFile())
     })
+
+    it('names the absolute path for a relative product folder that does not exist', async () => {
+      const missing = path.join('wishem-no-such-product', 'model')
+      const error: unknown = await start({ product: missing }).catch((caught: unknown) => caught)
+      expect(error).toBeInstanceOf(ModelError)
+      expect((error as ModelError).problems[0]?.source).toBe(path.resolve(missing))
+    })
   })
 
   describe('The construct closes each part', () => {
+    it('closes the storage subsystem of the model folder when the product storage cannot attach', async () => {
+      const closed: string[] = []
+      vi.mocked(createHub).mockImplementationOnce((options) => {
+        const hub = actualCreateHub(options)
+        const attach = hub.attach.bind(hub)
+        hub.attach = (request: Parameters<Hub['attach']>[0]) => {
+          if (request.id === PRODUCT_FILES_WRITER_ID) {
+            throw new Error('no product writer')
+          }
+          const port = attach(request)
+          const close = port.close.bind(port)
+          port.close = () => {
+            closed.push(request.id)
+            close()
+          }
+          return port
+        }
+        return hub
+      })
+      await expect(start()).rejects.toThrow('no product writer')
+      expect([...closed].sort()).toEqual([FILES_ID, 'files-writer', PRODUCT_FILES_ID].sort())
+    })
+
     it('gives one promise for close() called two times and closes each port of the four subsystems one time', async () => {
       const closed = trackClosedPorts()
       const started = await start()
