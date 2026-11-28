@@ -29,6 +29,8 @@ No command installs Godot on your computer. Each command that needs Godot uses t
 - Use `assert_equal(actual, expected, message)` and `assert_true(condition, message)`.
 - `godot/tests/run.gd` runs each test and prints `PASS` or `FAIL` for each one, then `wishem-godot tests: <passed> passed, <failed> failed`.
 - The runner ends with exit code 1 when a test fails or when it finds no test.
+- `test:godot` reads each line of the output of Godot. When a line has `SCRIPT ERROR`, it prints `wishem-godot tests: SCRIPT ERROR in the output` and ends with exit code 1, also when Godot ends with exit code 0.
+- A test that needs an invalid file writes it at run time into a folder under `user://` and removes the folder at the end. Do not commit an invalid file.
 
 ## The remote port in GDScript
 

@@ -10,6 +10,7 @@ export const DOCKER_REQUIRED_MESSAGE = 'wishem-godot: Docker is required. `docke
 export interface ChildProcessLike {
   readonly stdin: NodeJS.WritableStream
   readonly stdout: NodeJS.ReadableStream
+  readonly stderr: NodeJS.ReadableStream
   kill(): void
   once(event: 'exit', listener: (code: number | null) => void): void
 }
@@ -33,7 +34,7 @@ export const createDockerCli = (): DockerCli => ({
       return undefined
     }
   },
-  spawn: (args) => spawn('docker', [...args], { stdio: ['pipe', 'pipe', 'inherit'] }),
+  spawn: (args) => spawn('docker', [...args], { stdio: ['pipe', 'pipe', 'pipe'] }),
 })
 
 const listFiles = (dir: string): string[] =>

@@ -1,6 +1,7 @@
 import { createInterface } from 'node:readline'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { hasScriptError } from '../src/runner/script-error.ts'
 import { createDockerCli, ensureImage, type DockerCli } from '../src/runner/docker.ts'
 
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -16,7 +17,7 @@ const fail = (error: unknown): never => {
   process.exit(1)
 }
 
-/** Runs the GDScript tests in a container. Gives the exit code of Godot. */
+/** Runs the GDScript tests in a container. Gives 1 when the output has a script error, else the exit code of Godot. */
 const runGdscriptTests = async (docker: DockerCli, tag: string): Promise<number> => {
   const container = `wishem-godot-test-${process.pid}`
   if (
@@ -45,10 +46,21 @@ const runGdscriptTests = async (docker: DockerCli, tag: string): Promise<number>
         resolve(code ?? 1)
       })
     })
-    for await (const line of createInterface({ input: child.stdout })) {
-      log(line)
+    const watch = async (input: NodeJS.ReadableStream, write: (line: string) => void) => {
+      let found = false
+      for await (const line of createInterface({ input })) {
+        write(line)
+        found ||= hasScriptError(line)
+      }
+      return found
     }
-    return await exited
+    const found = await Promise.all([watch(child.stdout, log), watch(child.stderr, console.error)])
+    const code = await exited
+    if (found.some(Boolean)) {
+      log('wishem-godot tests: SCRIPT ERROR in the output')
+      return 1
+    }
+    return code
   } finally {
     docker.run(['rm', '--force', container])
   }

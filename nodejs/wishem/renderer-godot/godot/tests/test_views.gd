@@ -6,6 +6,30 @@ const CT2 := "ct_00000000-0000-4000-8000-000000000002"
 const FOLDER := "res://tests/views/"
 
 
+const RING_VIEW := """extends RefCounted
+
+
+func create() -> Node:
+	return Node.new()
+
+
+func update(_node: Node, _props: Dictionary, _viewport: Vector2) -> void:
+	pass
+"""
+
+
+func _write(path: String, text: String) -> void:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(text)
+	file.close()
+
+
+func _remove_folder(folder: String) -> void:
+	for name in DirAccess.get_files_at(folder):
+		DirAccess.remove_absolute(folder.path_join(name))
+	DirAccess.remove_absolute(folder)
+
+
 func _definition(labels: Array) -> Dictionary:
 	var fields: Array = []
 	for index in labels.size():
@@ -92,7 +116,13 @@ func test_collect_views_reports_a_missing_view_file_and_keeps_the_other_views() 
 
 
 func test_collect_views_reports_a_sidecar_that_is_not_json() -> void:
-	var result := Views.collect_views(FOLDER + "bad_json")
+	var folder := "user://wishem-test-bad-json"
+	DirAccess.make_dir_recursive_absolute(folder)
+	_write(folder + "/Box.view.json", "{ not json")
+	_write(folder + "/Ring.view.json", '{ "kind": "godot", "componentType": "%s" }' % CT2)
+	_write(folder + "/Ring.gd", RING_VIEW)
+	var result := Views.collect_views(folder)
+	_remove_folder(folder)
 	assert_equal(result["errors"].size(), 1)
 	assert_true(_errors_mention(result, "Box.view.json"), "the error names Box.view.json")
 	assert_equal(result["views"].keys(), [CT2])
