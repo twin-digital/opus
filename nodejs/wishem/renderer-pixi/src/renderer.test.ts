@@ -1,5 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { createStore, storeInputs } from '@thrashplay/wishem-core'
 import type { Entity, Model } from '@thrashplay/wishem-core'
 import { createChannelPair, createHub, openLink, serveLink } from '@thrashplay/wishem-hub'
@@ -911,6 +911,9 @@ describe('startRenderer: warnings through a link', () => {
     const [clientChannel, hubChannel] = createChannelPair()
     serveLink(hub, hubChannel)
     const link = await openLink(clientChannel, [{ id: 'remote-screen', kind: 'output' }])
+    onTestFinished(() => {
+      link.close()
+    })
     const stage = new Container()
 
     startRenderer({ port: link.ports['remote-screen'], views, stage, viewport: VIEWPORT })
@@ -935,7 +938,6 @@ describe('startRenderer: warnings through a link', () => {
       expect(objectsOf(stage)).toHaveLength(1)
     })
     expect(warn).toHaveBeenCalledTimes(1)
-    link.close()
   })
 
   it('warns one time for two labels with one name, and not again after an input or a model without the second field', async () => {
@@ -957,6 +959,9 @@ describe('startRenderer: warnings through a link', () => {
     const [clientChannel, hubChannel] = createChannelPair()
     serveLink(hub, hubChannel)
     const link = await openLink(clientChannel, [{ id: 'remote-screen', kind: 'output' }])
+    onTestFinished(() => {
+      link.close()
+    })
     const view = makeView()
 
     startRenderer({
@@ -986,6 +991,5 @@ describe('startRenderer: warnings through a link', () => {
       expect(view.update.mock.calls.at(-1)?.[1]).toEqual({ color: RED })
     })
     expect(warn).toHaveBeenCalledTimes(1)
-    link.close()
   })
 })
