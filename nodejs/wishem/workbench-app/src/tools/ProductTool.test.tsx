@@ -1,6 +1,6 @@
 import type { Model } from '@thrashplay/wishem-core'
 import { createStore, storeInputs } from '@thrashplay/wishem-core'
-import { createHub, type Hub, type Port } from '@thrashplay/wishem-hub'
+import { createHub, LinkClosedError, type Hub, type Port } from '@thrashplay/wishem-hub'
 import type { InputPort } from '@thrashplay/wishem-renderer-react'
 import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
 import { act } from 'react'
@@ -143,7 +143,7 @@ describe('ProductTool', () => {
 
   it('names the value in the text for the outcome unknown', async () => {
     const { output } = setup()
-    const input: InputPort = { submit: () => Promise.resolve({ ok: false, reason: 'unknown', problems: [] }) }
+    const input: InputPort = { submit: () => Promise.reject(new LinkClosedError()) }
     draw(output, input)
     select(0)
     type(textbox('count'), '7')

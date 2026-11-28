@@ -27,7 +27,7 @@ The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket
 
 For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`. A relative `--model` or `--product` path starts from the folder where you run the command, not from the package folder.
 
-With `--product`, the script mounts the model of that folder as the store `product` of the construct. It prints `wishem: product <absolute path>` after the model line. The page ignores the part `product`. To start the workbench with the sample product, from the root of the repository:
+With `--product`, the script mounts the model of that folder as the store `product` of the construct. It prints `wishem: product <absolute path>` after the model line. The page shows the part `product` in the product panel (see "The product panel"). To start the workbench with the sample product, from the root of the repository:
 
 ```
 pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sample-product/model
@@ -137,7 +137,7 @@ A new text that is empty or the same as the title closes the field and sends no 
 
 When the workbench does not accept the change, the field stays open with your text. A line below the bar shows `The title is not saved.` and the reason. A new Enter sends the change again. A move of the focus does not send it again.
 
-The file `src/views/outcome-text.ts` makes the text of the reason:
+The file `src/outcome-text.ts` makes the text of the reason:
 
 | Reason                                    | Text                                                                          |
 | ----------------------------------------- | ----------------------------------------------------------------------------- |
@@ -147,6 +147,20 @@ The file `src/views/outcome-text.ts` makes the text of the reason:
 | `invalid` with a problem                  | The message of the first problem.                                             |
 | `invalid` with no problem, `unknown-type` | `The workbench refused the change.`                                           |
 | `failed`                                  | `The workbench failed to apply the change.`                                   |
+
+## The product panel
+
+With the part `product` in the joined state of the link, the page shows the product panel below the pictures of the views. Without that part, the page shows the zero state. `ProductTool` in `src/tools/` reads the part with `usePart` and gives it to `ProductPanel` of the catalog. The tool is not a view. The `Renderer` still reads only the part `store`.
+
+- The list shows each entity with its name and the first 10 characters of its ID. Select an entity to see its inspector. The selection is state of the page. A reload clears it.
+- The inspector shows one group for each component of the entity, and one row for each field. A text field changes a `string` or a `number`. A check box changes a `boolean`. A select changes a `reference`.
+- Enter or a move of the focus commits a text field. Escape restores the value of the part. A text that is not a number gives the alert `Type a number.` and sends no input.
+- A commit sends one `product/set-field` input through the input port of the page. The record of the hub holds the source `page-<hex>-input`. The storage subsystem of the product writes the `state.json` of the product folder.
+- A reason why the workbench does not accept the change shows below the row, with the text of `src/outcome-text.ts`.
+- A hand edit of the `state.json` of the product folder shows in the panel with no reload. A rewind of the hub restores the value in the panel and in the file.
+- When a hand edit removes the selected entity, the panel clears the selection. If the focus was in the inspector, the focus moves to the list.
+
+The browser tests of the panel are in the Playwright project `product` (`tests/product.spec.ts`). `scripts/e2e-server.ts --product` starts a second workbench on port 4181. It mounts a copy of the sample product from `.e2e-product/` and uses the model folder copy `.e2e-product-model/`. Both folders are git-ignored. It loads no product code.
 
 ## Start the style guide
 
@@ -185,12 +199,13 @@ When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the scrip
 
 ## Browser tests of the workbench page
 
-`playwright.config.ts` has two projects:
+`playwright.config.ts` has three projects:
 
 - `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
 - `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
+- `product` runs `tests/product.spec.ts`. The browser opens the page of the workbench with the sample product at `127.0.0.1:4181`.
 
-The `webServer` option of the config runs `scripts/e2e-server.ts` on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, hub port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
+The `webServer` option of the config runs `scripts/e2e-server.ts` (and `scripts/e2e-server.ts --product`) on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, hub port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
 
 The browser is in the container and has no network path to the test runner. The connection of the `workbench` project has `exposeNetwork: '<loopback>'`. The browser then sends each request to a loopback address through the control connection to the test runner. The WebSocket of the link at `/link` passes through the same connection.
 
@@ -204,7 +219,7 @@ The default export of a view file is a React component, and the renderer mounts 
 
 ### Baselines of the page
 
-`tests/__screenshots__/workbench-light.png` and `workbench-dark.png` hold the screenshots of the page. The browser takes them from the Vite development server, in the pinned browser image.
+`tests/__screenshots__/workbench-light.png` and `workbench-dark.png` hold the screenshots of the page. `product-light.png` and `product-dark.png` hold the screenshots of the page with the sample entity selected. The browser takes them from the Vite development server, in the pinned browser image.
 
 ## Update the baselines
 

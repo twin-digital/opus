@@ -467,7 +467,7 @@ A component of a renderer can hold **transient state**. State is transient when 
 2. No other part of the page, and no behavior, reads it.
 3. The agent does not need it to know what the designer did.
 
-Examples of transient state: hover, focus, the open state of a select, the scroll position, the caret, and text in a control before the designer commits it. The text in the prompt box is transient now.
+Examples of transient state: hover, focus, the open state of a select, the scroll position, the caret, and text in a control before the designer commits it. The text in the prompt box is transient now. The selection of the product panel is also transient state.
 
 Each other state is in the model. An event in a view sends an input to the hub.
 
@@ -617,7 +617,7 @@ An expectation states, in natural language, something that must stay true. It is
 The designer sees the product through tools: a view of the screen, an inspector, tables of the registered kinds, a world map. The workbench holds the tools. See the wireframe in `examples/`.
 
 - Tools are built as the project needs them. Each project can have tools that only it uses. (**Agreed**)
-- A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**)
+- A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**) The product panel of the workbench page is the first inspector (#537).
 - A toolkit exists so that the agent can add a tool without building an editor from nothing. (**Agreed** as an expected part of the base)
 
 ### Recognized names in text (**Proposed**)
