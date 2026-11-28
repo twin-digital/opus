@@ -9,6 +9,14 @@ import { usePart } from './use-part.js'
 /** The input types of the store `product`. */
 export const PRODUCT_SET_FIELD = 'product/set-field'
 export const PRODUCT_CLEAR_FIELD = 'product/clear-field'
+export const PRODUCT_ADD_REFERENCE = 'product/add-reference'
+export const PRODUCT_REMOVE_REFERENCE = 'product/remove-reference'
+
+const INPUT_TYPES = {
+  'set-field': PRODUCT_SET_FIELD,
+  'add-reference': PRODUCT_ADD_REFERENCE,
+  'remove-reference': PRODUCT_REMOVE_REFERENCE,
+} as const
 
 export interface ProductToolProps {
   port: PortReader
@@ -69,7 +77,7 @@ export const ProductTool = ({ port, input }: ProductToolProps): ReactNode => {
         onChange={
           input &&
           (async (change) => {
-            const outcome = await sendInput(input, { type: PRODUCT_SET_FIELD, payload: change })
+            const outcome = await sendInput(input, { type: INPUT_TYPES[change.operation], payload: change.payload })
             return toChange(outcome)
           })
         }

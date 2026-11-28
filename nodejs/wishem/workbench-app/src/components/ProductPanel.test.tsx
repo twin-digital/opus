@@ -114,10 +114,58 @@ describe('ProductPanel', () => {
       await Promise.resolve()
     })
     expect(onChange).toHaveBeenCalledExactlyOnceWith({
-      entity: SAMPLE_ENTITY,
-      componentType: COUNTER_TYPE,
-      field: COUNT_FIELD,
-      value: 3,
+      operation: 'set-field',
+      payload: { entity: SAMPLE_ENTITY, componentType: COUNTER_TYPE, field: COUNT_FIELD, value: 3 },
+    })
+  })
+
+  describe('a reference-list field', () => {
+    const LIST_TYPE = 'ct_deck'
+    const CARDS_FIELD = 'fld_cards'
+    const DECK = 'e_deck'
+    const CARD = 'e_card'
+    const deckModel: Model = {
+      definitions: [
+        { id: LIST_TYPE, label: 'Deck', fields: [{ id: CARDS_FIELD, label: 'Cards', type: 'reference-list' }] },
+        { id: COLOR_TYPE, label: 'Color', fields: [{ id: COLOR_FIELD, label: 'color', type: 'string' }] },
+      ],
+      entities: [
+        { id: DECK, components: { [LIST_TYPE]: { [CARDS_FIELD]: [CARD] } } },
+        { id: CARD, components: { [COLOR_TYPE]: { [COLOR_FIELD]: 'red' } } },
+      ],
+    }
+    const drawDeck = (onChange: ProductPanelProps['onChange']) => {
+      act(() => {
+        root.render(<ProductPanel model={deckModel} selected={DECK} onSelect={() => undefined} onChange={onChange} />)
+      })
+    }
+    const press = async (selector: string) => {
+      act(() => {
+        container.querySelector<HTMLButtonElement>(selector)?.click()
+      })
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
+
+    it('calls onChange with add-reference and the four keys', async () => {
+      const onChange = vi.fn(() => Promise.resolve({ saved: true as const }))
+      drawDeck(onChange)
+      await press('[role="group"] button:not([aria-label])')
+      expect(onChange).toHaveBeenCalledExactlyOnceWith({
+        operation: 'add-reference',
+        payload: { entity: DECK, componentType: LIST_TYPE, field: CARDS_FIELD, reference: DECK },
+      })
+    })
+
+    it('calls onChange with remove-reference and the four keys', async () => {
+      const onChange = vi.fn(() => Promise.resolve({ saved: true as const }))
+      drawDeck(onChange)
+      await press('button[aria-label^="Remove Color"]')
+      expect(onChange).toHaveBeenCalledExactlyOnceWith({
+        operation: 'remove-reference',
+        payload: { entity: DECK, componentType: LIST_TYPE, field: CARDS_FIELD, reference: CARD },
+      })
     })
   })
 

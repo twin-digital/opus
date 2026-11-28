@@ -1,14 +1,19 @@
-import type { ClearFieldPayload, Id, Model, SetFieldPayload } from '@thrashplay/wishem-core'
+import type { ClearFieldPayload, Id, Model, ReferencePayload, SetFieldPayload } from '@thrashplay/wishem-core'
 import { entityName, shortId } from './entity-name.js'
 import { EntityInspector, type InspectedComponent } from './EntityInspector.js'
 import { EntityList } from './EntityList.js'
 import type { ChangeOutcome, ReferenceOption } from './FieldRow.js'
 
+/** A change that the panel sends: the operation of the store input and its payload. */
+export type ProductChange =
+  | { operation: 'set-field'; payload: SetFieldPayload }
+  | { operation: 'add-reference' | 'remove-reference'; payload: ReferencePayload }
+
 export interface ProductPanelProps {
   model: Model
   selected?: Id
   onSelect: (id: Id) => void
-  onChange?: (change: SetFieldPayload) => Promise<ChangeOutcome>
+  onChange?: (change: ProductChange) => Promise<ChangeOutcome>
   onClear?: (change: ClearFieldPayload) => Promise<ChangeOutcome>
 }
 
@@ -45,7 +50,18 @@ export const ProductPanel = ({ model, selected, onSelect, onChange, onClear }: P
         onChange={
           onChange &&
           entity &&
-          ((componentType, field, value) => onChange({ entity: entity.id, componentType, field, value }))
+          ((componentType, field, change) =>
+            onChange(
+              change.operation === 'set-field' ?
+                {
+                  operation: 'set-field',
+                  payload: { entity: entity.id, componentType, field, value: change.value },
+                }
+              : {
+                  operation: change.operation,
+                  payload: { entity: entity.id, componentType, field, reference: change.reference },
+                },
+            ))
         }
         onClear={onClear && entity && ((componentType, field) => onClear({ entity: entity.id, componentType, field }))}
       />

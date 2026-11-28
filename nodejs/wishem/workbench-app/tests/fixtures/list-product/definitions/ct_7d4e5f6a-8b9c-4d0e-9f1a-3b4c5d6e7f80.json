@@ -1,0 +1,5 @@
+{
+  "id": "ct_7d4e5f6a-8b9c-4d0e-9f1a-3b4c5d6e7f80",
+  "label": "Card",
+  "fields": [{ "id": "fld_8e5f6a7b-9c0d-4e1f-8a2b-4c5d6e7f8091", "label": "Title", "type": "string" }]
+}
