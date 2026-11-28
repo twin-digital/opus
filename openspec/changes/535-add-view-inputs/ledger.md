@@ -59,9 +59,25 @@ Task 3: minor (deferred): in a diamond with a cycle, the warning names the back 
 Task 3: complete (commits 2785da9..20c7f07, review clean)
 Ruling: Task 4 waits for the merge of #540, and then does the path of Decision 15 (connectLink in hub keeps one ID for the life of a client) — #540 is at its last task, and Task 4 done now on hub-client.ts must be done again after #540 merges — cost if wrong: the 535 apply waits about one hour. The order is a "blocked by" relation from #535 to #540, removed when #540 merges.
 
+#540 is merged (ced6862a); the relation "blocked by #540" is removed. Main merged (1973b30d, subagent: conflicts in field-names.test.ts and view-types.test.ts with the tests of break-test #596; two tests of main changed to the new form of the generated file; renderer-react 198 tests, core, workbench-app pass; generate gives no change).
+Task 4: the path of Decision 15 (connectLink of hub keeps one ID for the life of a client). The test of #540 "each ID is new for each link" changes on purpose. Task 4: dispatched (implementer: sonnet), base 1973b30d.
+
+Task 4: implementer DONE_WITH_CONCERNS, commit 274e51b7 (hub, workbench-app: lint, typecheck, test pass; pixi-page typecheck and test pass, lint fails). Concerns: pixi-page lint fails with no-unnecessary-type-assertion at src/views/ClearColor.test.ts:49 (`5 as unknown as string`), because FieldValue of Task 1 accepts a number; an optional `suffix` of LinkClientSubsystem so that each subsystem of one client shares one hex (`page-<hex>` and `page-<hex>-input`); the test of the suffix and the shared hex was not seen to fail first; Page.test.tsx uses a stand-in view (AppBar does not call wishem until Task 5); main.test.tsx does not check that the page gets the new input port; `eslint --fix` once outside the lock.
+Ruling: the lint failure of pixi-page is a fault of this branch (the wider FieldValue makes the cast unnecessary) and a check of the pull request fails, so it is corrected in Task 4: remove the cast and keep the meaning of the test — cost if wrong: one test line of a different package. The test of the suffix is shown to fail with the code reverted for a moment. Fixed before the review.
+Task 4: fix dispatched (new implementer, sonnet), base 274e51b7.
+
+Task 4: correction, commit 18b542a6 (the cast of ClearColor.test.ts removed; pixi-page lint, typecheck, test pass, 89; the test of the suffix failed with the code reverted, 1 of 32, and passes after the restore). Review dispatched (sonnet), range 1973b30d..18b542a6.
+
+Task 4: review (sonnet): quality Approved, no Critical or Important; spec ❌ — S1: step 4.2 asks main.test.tsx to show that a second `welcome` gives the ports of the new link to the page, but the test compares only the IDs of the two `hello` messages, and `input={input}` of main.tsx has no test. Items it could not verify: the test of the real app bar with an input (Task 5 adds it); the changeset of workbench-app (the finish adds it, as the workflow follow-up says).
+Task 4: minor (deferred): the test title "inside onPortss"; no blank line between two tests in Page.test.tsx; the README bullet of connectLink says "for each link" (say "for the life of the client"); the label "Send inputs [wishem]" overlaps "Mounts with props" by 2 px in the component diagram; the option `suffix` goes a little beyond Decision 15 (accepted by the review).
+Task 4: fix round 1 dispatched (new implementer, sonnet), base 18b542a6, for S1.
+
+Task 4: fix round 1/5 (1 addressed, 0 open — S1; commits 18b542a..ad53b89; the test "gives the input port of the new link to the views" fails with input={undefined} and passes; workbench-app 255 tests). Re-review (sonnet): no new breakage.
+Task 4: complete (commits 1973b30..ad53b89, review clean)
+
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 4, after #540 is merged: merge main first, then the path of Decision 15. Then Task 5.
+- NEXT STEP: Task 5 (the title of the app bar is a control). Then the final review.
 
 ## For the review issue of the milestone A3
 
