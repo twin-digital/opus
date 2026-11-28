@@ -414,6 +414,7 @@ describe('connectLink', () => {
       await flush(1000)
       expect(env.sockets).toHaveLength(3)
       expect(downs).toBe(1)
+      expect(refusals).toHaveLength(0)
       await waitForLinks(1)
     })
 
@@ -569,6 +570,21 @@ describe('connectLink', () => {
       expect(errors.map((cause) => (cause as Error).message)).toEqual(['listener'])
     })
 
+    it('onError: a throw changes nothing, and the client tries again', async () => {
+      connect({
+        onDown: () => {
+          throw new Error('down')
+        },
+        onError: () => {
+          throw new Error('error')
+        },
+      })
+      await waitForLinks(1)
+      env.last().drop()
+      await flush(500)
+      await waitForLinks(2)
+    })
+
     it('onRefused: gives the error to onError, and tries again', async () => {
       const stopped = startHub()
       stopped.stop()
@@ -600,6 +616,31 @@ describe('connectLink', () => {
       const client = connect()
       await waitForLinks(1)
       client.close()
+      const calls = env.last().closeCalls
+      client.close()
+      expect(env.last().closeCalls).toBe(calls)
+    })
+
+    it('does nothing the second time while a socket opens', async () => {
+      env.plan = ['manual']
+      const client = connect()
+      await flush()
+      client.close()
+      client.close()
+      expect(env.last().closeCalls).toBe(1)
+    })
+
+    it('during a wait: does not close the socket of the failed attempt again', async () => {
+      env.plan = ['fail']
+      const client = connect()
+      await flush()
+      expect(env.last().closeCalls).toBe(0)
+      client.close()
+      expect(env.last().closeCalls).toBe(0)
+    })
+
+    it('during a wait after a link ended: does not close the old socket again', async () => {
+      const client = await connectAndDrop()
       const calls = env.last().closeCalls
       client.close()
       expect(env.last().closeCalls).toBe(calls)
