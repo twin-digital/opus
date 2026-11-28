@@ -1,9 +1,10 @@
 import { Container, Sprite, Texture } from 'pixi.js'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { createStore, storeInputs } from '@thrashplay/wishem-core'
 import type { Entity, Model } from '@thrashplay/wishem-core'
 import { createChannelPair, createHub, openLink, serveLink } from '@thrashplay/wishem-hub'
 import type { HubEvent, JoinedState, ModelSubsystem, Port } from '@thrashplay/wishem-hub'
+import { collectViews } from './collect-views.js'
 import { startRenderer } from './renderer.js'
 import type { PixiView, PortReader, ViewProps, ViewTable, Viewport } from './types.js'
 
@@ -193,6 +194,7 @@ describe('startRenderer: drawing', () => {
   })
 
   it('adds no object and reports no error for a joined state with no part store', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const { port } = fakePort(() => ({}))
     const onError = vi.fn()
     const stage = new Container()
@@ -201,6 +203,7 @@ describe('startRenderer: drawing', () => {
 
     expect(objectsOf(stage)).toHaveLength(0)
     expect(onError).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('draws each component that has a view, in the order of the definitions', () => {
@@ -254,6 +257,7 @@ describe('startRenderer: props and viewport', () => {
   })
 
   it('gives the value of the first field when two labels have one name', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const model: Model = {
       definitions: [
         {
@@ -273,6 +277,11 @@ describe('startRenderer: props and viewport', () => {
     startRenderer({ port: screen, views: tableOf(view), stage: new Container(), viewport: VIEWPORT })
 
     expect(view.update.mock.calls[0][1]).toEqual({ color: BLUE })
+    expect(warn.mock.calls).toEqual([
+      [
+        `wishem: the sidecar ClearColor.view.json: the fields ${COLOR_FIELD} and ${SECOND_FIELD} of the component type ${CLEAR_COLOR} give the same name "color". The prop has the value of the first field.`,
+      ],
+    ])
   })
 
   it('reads the viewport at each update', async () => {
@@ -884,5 +893,103 @@ describe('startRenderer: warnings', () => {
 
       expect(warn.mock.calls).toEqual([[lineOf(SECOND_FIELD)], [lineOf(THIRD_FIELD)]])
     })
+  })
+})
+
+describe('startRenderer: warnings through a link', () => {
+  const MISSING_TYPE = 'ct_8d2b3a0f-2c58-4e1b-8f62-7d3a8b2c1e46'
+  const LINE = `wishem: the sidecar ClearColor.view.json names the component type ${MISSING_TYPE}, which no definition has. No view is drawn for it.`
+
+  it('warns one time for a component type with no definition, and not again after an input or the new definition', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const views = collectViews(
+      { './ClearColor.view.json': { default: { kind: 'pixi', componentType: MISSING_TYPE } } },
+      { './ClearColor.ts': { default: makeView() } },
+    )
+    const model = modelOf(entity(E1, BLUE))
+    const { hub, editor } = makeHub(model)
+    const [clientChannel, hubChannel] = createChannelPair()
+    serveLink(hub, hubChannel)
+    const link = await openLink(clientChannel, [{ id: 'remote-screen', kind: 'output' }])
+    onTestFinished(() => {
+      link.close()
+    })
+    const stage = new Container()
+
+    startRenderer({ port: link.ports['remote-screen'], views, stage, viewport: VIEWPORT })
+
+    expect(warn.mock.calls).toEqual([[LINE]])
+    expect(objectsOf(stage)).toHaveLength(0)
+
+    await editor.submit(
+      storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: RED }),
+    )
+    await vi.waitFor(() => {
+      expect(link.ports['remote-screen'].read().store).not.toBe(model)
+    })
+    expect(warn).toHaveBeenCalledTimes(1)
+
+    const defined: Model = {
+      definitions: [...model.definitions, { id: MISSING_TYPE, label: 'Missing', fields: [] }],
+      entities: [{ id: E1, components: { [MISSING_TYPE]: {} } }],
+    }
+    await editor.submit(storeInputs().replaceModel(defined))
+    await vi.waitFor(() => {
+      expect(objectsOf(stage)).toHaveLength(1)
+    })
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('warns one time for two labels with one name, and not again after an input or a model without the second field', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const model: Model = {
+      definitions: [
+        {
+          id: CLEAR_COLOR,
+          label: 'Clear color',
+          fields: [
+            { id: COLOR_FIELD, label: 'Color', type: 'string' },
+            { id: SECOND_FIELD, label: 'color', type: 'string' },
+          ],
+        },
+      ],
+      entities: [{ id: E1, components: { [CLEAR_COLOR]: { [COLOR_FIELD]: BLUE, [SECOND_FIELD]: RED } } }],
+    }
+    const { hub, editor } = makeHub(model)
+    const [clientChannel, hubChannel] = createChannelPair()
+    serveLink(hub, hubChannel)
+    const link = await openLink(clientChannel, [{ id: 'remote-screen', kind: 'output' }])
+    onTestFinished(() => {
+      link.close()
+    })
+    const view = makeView()
+
+    startRenderer({
+      port: link.ports['remote-screen'],
+      views: tableOf(view),
+      stage: new Container(),
+      viewport: VIEWPORT,
+    })
+
+    expect(warn.mock.calls).toEqual([
+      [
+        `wishem: the sidecar ClearColor.view.json: the fields ${COLOR_FIELD} and ${SECOND_FIELD} of the component type ${CLEAR_COLOR} give the same name "color". The prop has the value of the first field.`,
+      ],
+    ])
+    expect(view.update.mock.calls.at(-1)?.[1]).toEqual({ color: BLUE })
+
+    await editor.submit(
+      storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: GREEN }),
+    )
+    await vi.waitFor(() => {
+      expect(view.update.mock.calls.at(-1)?.[1]).toEqual({ color: GREEN })
+    })
+    expect(warn).toHaveBeenCalledTimes(1)
+
+    await editor.submit(storeInputs().replaceModel(modelOf(entity(E1, RED))))
+    await vi.waitFor(() => {
+      expect(view.update.mock.calls.at(-1)?.[1]).toEqual({ color: RED })
+    })
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 })
