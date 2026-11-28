@@ -326,6 +326,7 @@ describe('the storage subsystem for files', () => {
       const before = hub.record().at(-1)?.seq ?? 0
       expect((await setTitle('Hello')).ok).toBe(true)
       await eventually(async () => (await fileTitle()) === 'Hello')
+      await pause(250)
 
       expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
 
