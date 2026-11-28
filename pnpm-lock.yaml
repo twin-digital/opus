@@ -3874,6 +3874,15 @@ importers:
       '@eslint/js':
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.65.1
+      '@thrashplay/wishem-pixi-page':
+        specifier: workspace:*
+        version: link:../pixi-page
+      '@thrashplay/wishem-renderer-godot':
+        specifier: workspace:*
+        version: link:../renderer-godot
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
@@ -3892,6 +3901,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
+      '@types/pngjs':
+        specifier: 'catalog:'
+        version: 6.0.5
       '@types/react':
         specifier: ^19.2.6
         version: 19.2.18
@@ -3919,6 +3931,9 @@ importers:
       jsdom:
         specifier: ^30.0.0
         version: 30.0.1
+      pngjs:
+        specifier: 'catalog:'
+        version: 7.0.0
       prettier:
         specifier: 'catalog:'
         version: 3.9.6

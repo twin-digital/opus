@@ -72,3 +72,23 @@ The page shows a box of 640 by 360 pixels and one status line. The view `ClearCo
 While the link is down, the box keeps the last picture. The page opens a new link after 500 milliseconds, then after a delay that doubles each time, at most 5 seconds. A new link draws its state with no reload.
 
 The page opens one link at `/link` of its own address, with one output subsystem and no input subsystem. It sends no input. The view declares its props by hand in `src/views/ClearColor.tsx`.
+
+## The test from end to end
+
+```
+pnpm --filter @thrashplay/wishem-three-renderers test:ui
+```
+
+The test needs Docker. Docker runs the pinned browser image and the Godot image. A run takes about 30 seconds.
+
+The test starts the sample construct paused, the React page, the PixiJS page, and the Godot application. It opens the two pages in a browser and opens a link of its own to the construct. Each step reads the joined state from the hub and compares the pixels of each renderer with the color of that state.
+
+| Step                            | Check                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| First picture                   | Each pixel of the three pictures is `#1d4ed8`.                                |
+| `time/advance` of 500           | Each picture is `#b91c1c` within 5 seconds, and the two pages changed.        |
+| Wait of 1500 ms                 | The two page pictures stay the same, and Godot makes no new shot.             |
+| `time/set-running` with `true`  | Each picture leaves `#b91c1c` within 5 seconds.                               |
+| `time/set-running` with `false` | Each picture has the color of the last tick within 2 seconds, and then stays. |
+
+The test stops the link, the browser, the Godot run, and the three child processes in a `finally` block. After the test, `docker ps -a` shows no container of the run.
