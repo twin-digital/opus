@@ -786,14 +786,6 @@ const cGodotApp = el(
   '[Container: GDScript, Docker]',
   'Draws the construct and writes screenshots.',
 )
-const cGodotProcess = el(
-  'container',
-  gx(RIGHT),
-  2610,
-  'Godot process',
-  '[Container: Node.js]',
-  'Runs the construct with a clock.',
-)
 
 /** Moves each item of a diagram down by `dy`. */
 const shiftY = (items, dy) =>
@@ -814,7 +806,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has twenty-one containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process serves the PixiJS page and passes its link to the sample construct process. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample construct process starts the product construct with the construct-manager package, runs the behaviors of the sample-product package, builds on the host-nodejs package, and reads the product model folder. The React page server serves the React page and passes its link to the sample construct process. The React page gets page code over HTTP and connects to the hub over a WebSocket link through the React page server, and builds on the renderer-react and hub packages. The designer starts the five processes and the Godot runner, edits the two folders, and looks at the three pages.',
+    'Wishem has twenty containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process serves the PixiJS page and passes its link to the sample construct process. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample construct process starts the product construct with the construct-manager package, runs the behaviors of the sample-product package, builds on the host-nodejs package, and reads the product model folder. The React page server serves the React page and passes its link to the sample construct process. The React page gets page code over HTTP and connects to the hub over a WebSocket link through the React page server, and builds on the renderer-react and hub packages. The designer starts the four processes and the Godot runner, edits the two folders, and looks at the three pages.',
   width: 2340,
   height: 3090,
   items: shiftY(
@@ -841,7 +833,6 @@ const containers = {
       cSample,
       cGodotRunner,
       cGodotApp,
-      cGodotProcess,
 
       // The primary path: a change to the model becomes a new picture
       rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [
@@ -1063,18 +1054,12 @@ const containers = {
         [1600, 744],
       ),
 
-      // The Godot construct
+      // The Godot application
       rel(
         'quiet',
         [top(cDesigner, 540), [540, -20], [1056, -20], [1056, 2370], right(cGodotRunner, 2370)],
         'Starts and stops [terminal]',
         [800, -20],
-      ),
-      rel(
-        'quiet',
-        [top(cDesigner, 600), [600, 30], [1040, 30], [1040, 2640], right(cGodotProcess, 2640)],
-        'Starts and stops [terminal]',
-        [900, 30],
       ),
       rel(
         'quiet',
@@ -1090,33 +1075,9 @@ const containers = {
       ),
       rel(
         'quiet',
-        [right(cGodotRunner, 2342), [770, 2342], top(cGodotProcess, 770)],
+        [right(cGodotRunner, 2342), [1930, 2342], [1930, 380], right(cSampleProcess, 380)],
         'Carries the link [TCP]',
-        [770, 2476],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 660), [660, 2796], [102, 2796], [102, 870], left(cHost, 870)],
-        'Serves the link with [import]',
-        [300, 2796],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 690), [690, 2842], [1105, 2842], [1105, 880], right(cCore, 880)],
-        'Builds on [import]',
-        [960, 2842],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 740), [740, 2796], [1090, 2796], [1090, 1290], right(cHub, 1290)],
-        'Builds on [import]',
-        [960, 2796],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 790), [790, 2750], [1075, 2750], [1075, 1475], right(cClock, 1475)],
-        'Builds on [import]',
-        [960, 2750],
+        [1930, 2200],
       ),
       {
         kind: 'legend',

@@ -6,12 +6,12 @@ import { createInterface } from 'node:readline'
 import { createDockerCli, ensureImage, type DockerCli } from './docker.ts'
 import { startRelay } from './relay.ts'
 
-const DEFAULT_HUB_PORT = 4749
+const DEFAULT_HUB_PORT = 4750
 
 const packageDir = join(import.meta.dirname, '..', '..')
 
 export interface RunGodotOptions {
-  /** Default 4749. */
+  /** Default 4750. */
   hubPort?: number
   /** Default `<package>/shots`. Emptied at the start. */
   shotsDir?: string

@@ -132,6 +132,12 @@ describe('runGodot', () => {
     expect(run.container).toMatch(/^wishem-godot-[0-9a-f]{8}$/)
   })
 
+  it('connects to the sample construct at port 4750 by default', async () => {
+    await start()
+    expect(commandOf('run create')).toContain('--link ws://127.0.0.1:4750/link --shots /out')
+    expect(commandOf('spawn exec')).toMatch(/node \/srv\/relay\.mjs 4750$/)
+  })
+
   it('gives each line of the application to log', async () => {
     await start()
     children[0].stdout.write('Godot Engine v4.7.2\nwishem-godot: connecting to x\n')

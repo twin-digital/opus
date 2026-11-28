@@ -3575,10 +3575,16 @@ importers:
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.11)(jsdom@30.0.1)(vite@8.3.4(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.44.1)(tsx@4.23.13)(yaml@2.9.1))
 
   nodejs/wishem/renderer-godot:
-    dependencies:
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
       '@thrashplay/wishem-clock':
         specifier: workspace:*
         version: link:../clock
+      '@thrashplay/wishem-construct-manager':
+        specifier: workspace:*
+        version: link:../construct-manager
       '@thrashplay/wishem-core':
         specifier: workspace:*
         version: link:../core
@@ -3588,10 +3594,9 @@ importers:
       '@thrashplay/wishem-hub':
         specifier: workspace:*
         version: link:../hub
-    devDependencies:
-      '@eslint/js':
-        specifier: 'catalog:'
-        version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      '@thrashplay/wishem-sample-product':
+        specifier: workspace:*
+        version: link:../sample-product
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
