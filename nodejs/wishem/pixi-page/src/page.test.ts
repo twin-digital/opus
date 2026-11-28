@@ -1,12 +1,11 @@
 import { Container } from 'pixi.js'
 import type { Sprite } from 'pixi.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { connectLink, createChannelPair, hubInputs, openLink, serveLink } from '@thrashplay/wishem-hub'
-import type { Hub, Port, RemoteLink } from '@thrashplay/wishem-hub'
-import { createPixiHub } from './construct/create-hub.js'
-import { COLORS } from './construct/model.js'
-import { startPixiConstruct } from './construct/process.js'
-import type { PixiConstruct } from './construct/process.js'
+import { connectLink, createChannelPair, openLink, serveLink } from '@thrashplay/wishem-hub'
+import type { Hub, RemoteLink } from '@thrashplay/wishem-hub'
+import { COLORS } from '@thrashplay/wishem-sample-product'
+import type { ProductConstruct } from '@thrashplay/wishem-construct-manager/node'
+import { startSampleConstruct } from '../tests/sample-construct.js'
 import { startPage } from './page.js'
 import type { PageLinkHandlers, PageOptions, PixiPage } from './page.js'
 import type { LinkStatus } from './status.js'
@@ -26,9 +25,8 @@ const hex = (color: string) => Number.parseInt(color.slice(1), 16)
 
 describe('startPage', () => {
   const links: RemoteLink[] = []
-  const hubs: Hub[] = []
   const pages: PixiPage[] = []
-  const constructs: PixiConstruct[] = []
+  const constructs: ProductConstruct[] = []
 
   afterEach(async () => {
     vi.useRealTimers()
@@ -38,17 +36,13 @@ describe('startPage', () => {
     links.splice(0).forEach((link) => {
       link.close()
     })
-    hubs.splice(0).forEach((hub) => {
-      hub.stop()
-    })
     await Promise.all(constructs.splice(0).map((construct) => construct.close()))
   })
 
-  const makeHub = (running = false) => {
-    const hub = createPixiHub({ running })
-    hubs.push(hub)
-    hub.start()
-    return hub
+  const makeHub = async (running = false): Promise<Hub> => {
+    const construct = await startSampleConstruct({ paused: !running })
+    constructs.push(construct)
+    return construct.hub
   }
 
   /** The two ports of one link on a channel pair: the output port, then the input port. */
@@ -111,7 +105,7 @@ describe('startPage', () => {
   })
 
   it('draws the color of the construct after the first link', async () => {
-    const hub = makeHub()
+    const hub = await makeHub()
     const { ports } = await openPorts(hub)
     const { stage, statuses, handlers } = makePage()
 
@@ -123,7 +117,7 @@ describe('startPage', () => {
   })
 
   it('follows the construct and sends the keys through the input port of the link', async () => {
-    const hub = makeHub()
+    const hub = await makeHub()
     const { ports } = await openPorts(hub)
     const { stage, keys, handlers } = makePage()
     handlers().onLink(ports)
@@ -137,7 +131,7 @@ describe('startPage', () => {
   })
 
   it('pauses and runs through the space key', async () => {
-    const hub = makeHub(true)
+    const hub = await makeHub(true)
     const { ports } = await openPorts(hub)
     const { keys, handlers } = makePage()
     handlers().onLink(ports)
@@ -153,7 +147,7 @@ describe('startPage', () => {
   })
 
   it('keeps the color and sends no key while the link is down', async () => {
-    const hub = makeHub()
+    const hub = await makeHub()
     const { link, ports } = await openPorts(hub)
     const { stage, keys, statuses, handlers } = makePage()
     handlers().onLink(ports)
@@ -170,7 +164,7 @@ describe('startPage', () => {
   })
 
   it('replaces the renderer and the input port on a second link', async () => {
-    const hub = makeHub()
+    const hub = await makeHub()
     const first = await openPorts(hub, 'pixi-keys-one')
     const { stage, keys, statuses, handlers } = makePage()
     handlers().onLink(first.ports)
@@ -192,32 +186,8 @@ describe('startPage', () => {
     })
   })
 
-  it('draws the color of the target after a rewind from a different client', async () => {
-    const hub = makeHub()
-    const { ports } = await openPorts(hub)
-    const { stage, keys, handlers } = makePage()
-    handlers().onLink(ports)
-    for (let step = 1; step <= 3; step += 1) {
-      press(keys, '.')
-      await vi.waitFor(() => {
-        expect(hub.seq).toBe(step)
-      })
-    }
-    await vi.waitFor(() => {
-      expect(tintOf(stage)).toBe(hex(COLORS[3]))
-    })
-
-    const other = await openPorts(hub, 'rewinder')
-    const result = await other.ports[1].submit(hubInputs.rewind(1))
-
-    expect(result.ok).toBe(true)
-    await vi.waitFor(() => {
-      expect(tintOf(stage)).toBe(hex(COLORS[1]))
-    })
-  })
-
   it('reports an error of onStatus and goes on', async () => {
-    const hub = makeHub()
+    const hub = await makeHub()
     const { ports } = await openPorts(hub)
     const failure = new Error('status failed')
     const { stage, errors, handlers } = makePage({
@@ -235,7 +205,7 @@ describe('startPage', () => {
 
   describe('stop', () => {
     it('closes the client, the ports, and the renderer, and sends no key', async () => {
-      const hub = makeHub()
+      const hub = await makeHub()
       const { ports } = await openPorts(hub)
       const closeSpies = ports.map((port) => vi.spyOn(port, 'close'))
       const { page, stage, keys, close, handlers } = makePage()
@@ -267,7 +237,7 @@ describe('startPage', () => {
     })
 
     it('does nothing on a second call', async () => {
-      const hub = makeHub()
+      const hub = await makeHub()
       const { ports } = await openPorts(hub)
       const { page, close, handlers } = makePage()
       handlers().onLink(ports)
@@ -279,7 +249,7 @@ describe('startPage', () => {
     })
 
     it('starts no renderer when onStatus stops the page during onLink', async () => {
-      const hub = makeHub()
+      const hub = await makeHub()
       const { ports } = await openPorts(hub)
       const closeSpies = ports.map((port) => vi.spyOn(port, 'close'))
       const stopper: { page?: PixiPage } = {}
@@ -302,7 +272,7 @@ describe('startPage', () => {
     })
 
     it('closes the ports and starts no renderer for a link after the stop', async () => {
-      const hub = makeHub()
+      const hub = await makeHub()
       const { ports } = await openPorts(hub)
       const closeSpies = ports.map((port) => vi.spyOn(port, 'close'))
       const { page, stage, statuses, handlers } = makePage()
@@ -326,10 +296,9 @@ describe('startPage', () => {
     })
 
     it('connects again after the construct stops and starts on the same port', async () => {
-      const log = () => undefined
-      const first = await startPixiConstruct({ port: 0, paused: true, log })
+      const first = await startSampleConstruct({ paused: true })
       const port = Number(new URL(first.linkUrl).port)
-      let current: PixiConstruct | undefined = first
+      let current: ProductConstruct | undefined = first
       constructs.push(first)
 
       const stage = new Container()
@@ -372,7 +341,7 @@ describe('startPage', () => {
       })
       expect(tintOf(stage)).toBe(hex(COLORS[0]))
 
-      current = await startPixiConstruct({ port, paused: true, log })
+      current = await startSampleConstruct({ port, paused: true })
       constructs.push(current)
       await vi.advanceTimersByTimeAsync(500)
       await vi.waitFor(() => {

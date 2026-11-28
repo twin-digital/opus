@@ -3500,18 +3500,12 @@ importers:
       '@thrashplay/wishem-core':
         specifier: workspace:*
         version: link:../core
-      '@thrashplay/wishem-host-nodejs':
-        specifier: workspace:*
-        version: link:../host-nodejs
       '@thrashplay/wishem-hub':
         specifier: workspace:*
         version: link:../hub
       '@thrashplay/wishem-renderer-pixi':
         specifier: workspace:*
         version: link:../renderer-pixi
-      '@thrashplay/wishem-update':
-        specifier: workspace:*
-        version: link:../update
       pixi.js:
         specifier: 'catalog:'
         version: 8.23.0
@@ -3522,6 +3516,15 @@ importers:
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.65.1
+      '@thrashplay/wishem-construct-manager':
+        specifier: workspace:*
+        version: link:../construct-manager
+      '@thrashplay/wishem-host-nodejs':
+        specifier: workspace:*
+        version: link:../host-nodejs
+      '@thrashplay/wishem-sample-product':
+        specifier: workspace:*
+        version: link:../sample-product
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
