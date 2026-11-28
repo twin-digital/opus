@@ -151,7 +151,8 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     const inputs: Input[] = [
       hubInputs.rewind(first.seq - 1),
       ...productChanges(first.given, item.given),
-      ...(timeStateOf(item.construct) === 'paused' ? [{ type: 'time/set-running', payload: { running: false } }] : []),
+      // The rewind restores the old `running` value: set the current value again.
+      { type: 'time/set-running', payload: { running: timeStateOf(item.construct) === 'running' } },
     ]
     // No await between the calls: the hub queues them in order, and no tick comes between them.
     const pending = inputs.map((next) => item.input.submit(next).catch((error: unknown) => messageOf(error)))

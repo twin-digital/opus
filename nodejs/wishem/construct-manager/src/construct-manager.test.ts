@@ -1161,6 +1161,25 @@ describe('attachConstructManager', () => {
       await eventually(() => timeOf(construct('play').hub).ticks === 5)
     })
 
+    it('keeps running after a step back across a paused stretch', async () => {
+      setup()
+      await start()
+      clock.fire(50)
+      await send({ type: 'time/set-running', payload: { running: false } })
+      await send({ type: 'time/advance', payload: { ms: 50 } })
+      await send({ type: 'time/advance', payload: { ms: 50 } })
+      await send({ type: 'time/set-running', payload: { running: true } })
+      for (let i = 0; i < 3; i++) {
+        clock.fire(50)
+      }
+      await eventually(() => timeOf(construct('play').hub).ticks === 6)
+      await back(4)
+      expect(timeOf(construct('play').hub).running).toBe(true)
+      expect(entry('play')?.time).toBe('running')
+      clock.fire(50)
+      await eventually(() => timeOf(construct('play').hub).ticks === 3)
+    })
+
     it('sends only the difference of the product after a rewind of the workbench past a step back', async () => {
       setup()
       await runPaused(4)
