@@ -11,7 +11,7 @@ const { values } = parseArgs({ options: { product: { type: 'boolean' } } })
 const withProduct = values.product === true
 
 /** The port of the page. `playwright.config.ts` uses the same numbers. */
-const PAGE_PORT = withProduct ? 4181 : 4180
+const PAGE_PORT = withProduct ? 4182 : 4180
 const root = resolve(import.meta.dirname, '..')
 const copy = resolve(root, withProduct ? '.e2e-product-model' : '.e2e-model')
 const productCopy = resolve(root, '.e2e-product')
