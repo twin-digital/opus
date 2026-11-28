@@ -8,6 +8,8 @@ import counter from '../model/definitions/ct_6af38bd9-a91d-49d9-9370-fa4e6c04769
 import state from '../model/state.json' with { type: 'json' }
 import { countBehavior } from './count-behavior.js'
 import { COLOR_FIELD, COLOR_TYPE, COUNTER_TYPE, COUNT_FIELD, SAMPLE_ENTITY } from './ids.js'
+import { COLORS, colorBehavior } from './color-behavior.js'
+import * as rootEntry from './index.js'
 import { behaviors } from './index.js'
 
 const ID_A = 'e_11111111-1111-4111-8111-111111111111'
@@ -58,6 +60,12 @@ describe('behaviors', () => {
     expect(countBehavior.id).toBe('sample-product/count')
     expect(countBehavior.componentType).toBe(COUNTER_TYPE)
   })
+
+  it('exports the behaviors and the colors from the root entry', () => {
+    expect(rootEntry.countBehavior).toBe(countBehavior)
+    expect(rootEntry.colorBehavior).toBe(colorBehavior)
+    expect(rootEntry.COLORS).toBe(COLORS)
+  })
 })
 
 describe('countBehavior', () => {
@@ -65,6 +73,12 @@ describe('countBehavior', () => {
     const hub = startHub()
     await tick(hub, 3)
     expect(counts(hub)).toEqual([3])
+  })
+
+  it('adds 1 at each of ten ticks', async () => {
+    const hub = startHub()
+    await tick(hub, 10)
+    expect(counts(hub)).toEqual([10])
   })
 
   it('continues from a count that a person set', async () => {
@@ -83,6 +97,7 @@ describe('countBehavior', () => {
     [-1, 0],
     [0, 1],
     [1.5, 2.5],
+    [1_000_000, 1_000_001],
   ])('adds 1 to the count %s', async (value, expected) => {
     const hub = startHub(modelOf(entity(SAMPLE_ENTITY, value)))
     await tick(hub, 1)
@@ -149,6 +164,11 @@ describe('countBehavior', () => {
     hub.start()
     await tick(hub, 2)
     expect(counts(hub, 'product')).toEqual([2])
+  })
+
+  it('keeps the other fields of the component and changes only the count', () => {
+    const fields = { [COUNT_FIELD]: 1, other: 'kept' }
+    expect(countBehavior.update(fields, { ms: 100, ticks: 1, now: 100 })).toEqual({ [COUNT_FIELD]: 2, other: 'kept' })
   })
 
   it('returns the same fields object for a count that is not a number', () => {
