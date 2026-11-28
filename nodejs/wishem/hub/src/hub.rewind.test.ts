@@ -340,6 +340,14 @@ describe('a hub can limit the sources of a rewind', () => {
     expect(make).toThrow(/Bad Source/)
   })
 
+  it('keeps the list that it got when the caller changes the list later', async () => {
+    const sources = ['construct-manager']
+    const { keyboard } = running({ rewindSources: sources })
+    sources.push('keyboard')
+    await send(keyboard, 2)
+    expect(await keyboard.submit(hubInputs.rewind(1))).toMatchObject({ ok: false, reason: 'not-permitted' })
+  })
+
   it('rejects each rewind for an empty list', async () => {
     const { hub, keyboard, manager } = limited([])
     await send(keyboard, 2)
