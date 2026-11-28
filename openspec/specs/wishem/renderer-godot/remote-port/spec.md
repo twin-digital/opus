@@ -22,7 +22,7 @@ The remote port SHALL use protocol version 1 of `nodejs/wishem/hub/LINK.md`. It 
 
 ### Requirement: The remote port opens a link with its subsystems
 
-The remote port SHALL send `hello` with one or more subsystems, each an output or an input subsystem. The ID of each subsystem SHALL be `<prefix>-<16 lowercase hex digits>`, new for each link. The remote port SHALL send no other message before `welcome`. After `welcome`, it SHALL give one port for each subsystem, in the order of the subsystems.
+The remote port SHALL send `hello` with one or more subsystems, each an output or an input subsystem. The ID of each subsystem SHALL be `<prefix>-<16 lowercase hex digits>`. The remote port SHALL send no other message before `welcome`. After `welcome`, it SHALL give one port for each subsystem, in the order of the subsystems.
 
 #### Scenario: The welcome arrives
 

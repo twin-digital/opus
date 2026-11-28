@@ -475,6 +475,27 @@ describe('startRenderer: a view that fails', () => {
     expect(object.tint).toBe(hex(GREEN))
   })
 
+  it('keeps the object hidden when the view hides it on the update after a failure', async () => {
+    const view = makeView()
+    view.update.mockImplementation((display, props) => {
+      if (props.color === RED) {
+        throw BOOM
+      }
+      display.visible = false
+    })
+    const { editor, screen } = makeHub(modelOf(entity(E1, RED)))
+    const stage = new Container()
+    startRenderer({ port: screen, views: tableOf(view), stage, viewport: VIEWPORT, onError: vi.fn() })
+    const object = objectsOf(stage)[0] as Sprite
+
+    await editor.submit(
+      storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: GREEN }),
+    )
+
+    expect(view.update).toHaveBeenCalledTimes(2)
+    expect(object.visible).toBe(false)
+  })
+
   it('adds no object for a view whose create throws, and reports the error one time', () => {
     const view = makeView()
     view.create.mockImplementation(() => {
