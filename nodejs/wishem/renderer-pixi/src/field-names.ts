@@ -14,7 +14,7 @@ export type NameProblem =
   | { kind: 'same-name'; name: string; fields: [Id, Id] }
 
 export interface PropNames {
-  /** One entry for each name, in the order of the definition. For two fields with one name, the first field. */
+  /** One entry for each name, in the order of the definition. For two fields with one name, the first field. A field with an empty name has no entry. */
   props: { name: string; field: FieldDefinition }[]
   problems: NameProblem[]
 }
@@ -28,14 +28,14 @@ export const propNames = (definition: ComponentTypeDefinition): PropNames => {
     const name = fieldName(field.label)
     if (name === '') {
       problems.push({ kind: 'empty-name', field: field.id })
-    } else if (/^[0-9]/.test(name)) {
+      continue
+    }
+    if (/^[0-9]/.test(name)) {
       problems.push({ kind: 'name-starts-with-digit', field: field.id, name })
     }
     const earlier = first.get(name)
     if (earlier) {
-      if (name !== '') {
-        problems.push({ kind: 'same-name', name, fields: [earlier.id, field.id] })
-      }
+      problems.push({ kind: 'same-name', name, fields: [earlier.id, field.id] })
       continue
     }
     first.set(name, field)
