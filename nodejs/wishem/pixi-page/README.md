@@ -4,7 +4,7 @@ The PixiJS page of Wishem. A page in a web browser draws the sample construct th
 
 ## What the page shows
 
-The page shows a canvas of 640 by 360 pixels and one status line. The canvas has the color of the `color` field of the `Color` component of the sample construct. The color changes two times each second while the time runs: blue, red, green, amber, and then blue again. The page holds no hub. It reads the hub of the sample construct through the link.
+The page shows a canvas of 640 by 360 pixels and one status line. The canvas has the color of the `color` field of the `Color` component of the sample construct. The color changes two times each second while the time runs: blue, red, green, amber, and then blue again. The canvas has that color only when the value is `#rrggbb`, with six hexadecimal digits. For a value that is missing or is not `#rrggbb`, the canvas has the color `#ff00ff`. The page holds no hub. It reads the hub of the sample construct through the link.
 
 ## Build the dependencies
 
