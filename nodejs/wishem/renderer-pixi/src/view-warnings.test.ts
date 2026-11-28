@@ -39,6 +39,37 @@ describe('viewWarnings', () => {
     expect(viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_B, '???')])).toEqual([])
   })
 
+  it('gives the warnings of a later view after a view with no definition', () => {
+    const table = new Map([
+      [TYPE_A, { sidecar: 'A.view.json', componentType: TYPE_A, view }],
+      [TYPE_B, { sidecar: 'B.view.json', componentType: TYPE_B, view }],
+    ])
+    const warnings = viewWarnings(table, [definition(TYPE_B, '???')])
+    expect(warnings.map((warning) => warning.componentType)).toEqual([TYPE_B])
+  })
+
+  it('sorts three warnings that the table gives in each order', () => {
+    const TYPE_C = 'ct_00000000-0000-4000-8000-00000000000c'
+    const entries: [string, string][] = [
+      ['A.view.json', TYPE_A],
+      ['B.view.json', TYPE_B],
+      ['C.view.json', TYPE_C],
+    ]
+    const definitions = [definition(TYPE_A, '???'), definition(TYPE_B, '???'), definition(TYPE_C, '???')]
+    const orders = [
+      [0, 1, 2],
+      [0, 2, 1],
+      [1, 0, 2],
+      [1, 2, 0],
+      [2, 0, 1],
+      [2, 1, 0],
+    ]
+    for (const order of orders) {
+      const warnings = viewWarnings(tableOf(...order.map((index) => entries[index])), definitions)
+      expect(warnings.map((warning) => warning.sidecar)).toEqual(['A.view.json', 'B.view.json', 'C.view.json'])
+    }
+  })
+
   it('sorts the warnings by sidecar and component type', () => {
     const table = new Map([
       [TYPE_A, { sidecar: 'B.view.json', componentType: TYPE_A, view }],
