@@ -10,6 +10,7 @@
 //   escape:<Component>.<field>              press Escape in the text field
 //   check:<Component>.<field>               click the check box
 //   choose:<Component>.<field>=<short ID>   select the option of the entity
+//   clear:<Component>.<field>               press the button Clear of the row, then wait for the row to leave "saving"
 //   run | stop | pause | resume | step | back
 //                                           click the run control, then wait until no control is busy
 //   waitfor:<text>                          wait at most 10 s for the text in the run area
@@ -21,6 +22,7 @@
 //   run: <status> tick <n> <time> [<names of the enabled controls>]
 //   stage: <name of each element with the role img>; <text of the stage>
 //   alert: <text>                           only when the page has no panel
+// A row that shows the text "no value" has the suffix " [no value]".
 // Exit code 0, or 1 with the line `error: <message>` when a step fails.
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
@@ -156,6 +158,9 @@ const readPanel = (page) =>
           field: label.textContent ?? '',
           value,
           saving: control.getAttribute('aria-busy') === 'true',
+          empty: [...(label.closest('div')?.querySelectorAll('*') ?? [])].some(
+            (element) => element.children.length === 0 && element.textContent === 'no value',
+          ),
         })
       }
     }
@@ -179,7 +184,7 @@ const formatState = (state) => {
   }
   const lines = [
     `entities: ${state.entities.map((entity) => `${entity.name} ${entity.shortId}${entity.selected ? ' [selected]' : ''}`).join('; ')}`,
-    ...state.rows.map((row) => `${row.group}.${row.field} = ${row.value}${row.saving ? ' [saving]' : ''}`),
+    ...state.rows.map((row) => `${row.group}.${row.field} = ${row.value}${row.saving ? ' [saving]' : ''}${row.empty ? ' [no value]' : ''}`),
     ...state.alerts.map((alert) => `alert: ${alert}`),
   ]
   if (state.inspector !== undefined) {
@@ -246,6 +251,19 @@ const runStep = async (page, step) => {
         throw new Error(`no option with "${right}"`)
       }
       await control.selectOption(value, { timeout: STEP_TIMEOUT })
+      await waitForSaved(page)
+      return
+    }
+    case 'clear': {
+      const { group, field } = parseRow(argument)
+      const button = page
+        .getByRole('group', { name: group, exact: true })
+        .getByRole('button', { name: `Clear ${field}`, exact: true })
+      await button.waitFor({ timeout: STEP_TIMEOUT })
+      if ((await button.getAttribute('aria-disabled')) === 'true') {
+        throw new Error(`the button Clear ${field} is disabled`)
+      }
+      await button.click({ timeout: STEP_TIMEOUT })
       await waitForSaved(page)
       return
     }
