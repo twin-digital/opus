@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createChannelPair, openLink, serveLink } from '@thrashplay/wishem-hub'
-import type { Hub, JoinedState, Port, RemoteLink } from '@thrashplay/wishem-hub'
+import type { JoinedState, Port, RemoteLink } from '@thrashplay/wishem-hub'
+import type { ProductConstruct } from '@thrashplay/wishem-construct-manager/node'
 import type { TimePart } from '@thrashplay/wishem-clock'
-import { createPixiHub } from './construct/create-hub.js'
-import { STEP_MS } from './construct/model.js'
-import { attachKeys } from './keys.js'
+import { startSampleConstruct } from '../tests/sample-construct.js'
+import { attachKeys, STEP_MS } from './keys.js'
 
 const press = (target: EventTarget, key: string) => {
   const event = Object.assign(new Event('keydown', { cancelable: true }), { key })
@@ -16,21 +16,20 @@ const timeOf = (port: Port) => port.read().time as TimePart
 
 describe('attachKeys', () => {
   const links: RemoteLink[] = []
-  const hubs: Hub[] = []
+  const constructs: ProductConstruct[] = []
 
-  afterEach(() => {
+  afterEach(async () => {
     links.splice(0).forEach((link) => {
       link.close()
     })
-    hubs.splice(0).forEach((hub) => {
-      hub.stop()
-    })
+    await Promise.all(constructs.splice(0).map((construct) => construct.close()))
   })
 
   const setup = async (running = true) => {
-    const hub = createPixiHub({ running })
-    hubs.push(hub)
-    hub.start()
+    const { hub } = await startSampleConstruct({ paused: !running }).then((construct) => {
+      constructs.push(construct)
+      return construct
+    })
     const [clientChannel, hubChannel] = createChannelPair()
     serveLink(hub, hubChannel)
     const link = await openLink(clientChannel, [

@@ -33,21 +33,20 @@
     "godot:image": "node scripts/godot.ts image",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "start": "exec node scripts/start.ts",
     "test": "opus-test",
     "test:godot": "exec node scripts/godot.ts test",
     "test:ui": "pnpm test:godot && node --test \"tests/*.test.ts\"",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@thrashplay/wishem-clock": "workspace:*",
-    "@thrashplay/wishem-core": "workspace:*",
-    "@thrashplay/wishem-host-nodejs": "workspace:*",
-    "@thrashplay/wishem-hub": "workspace:*"
-  },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@thrashplay/wishem-clock": "workspace:*",
+    "@thrashplay/wishem-construct-manager": "workspace:*",
+    "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-sample-product": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

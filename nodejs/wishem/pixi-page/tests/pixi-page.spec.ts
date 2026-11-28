@@ -1,4 +1,19 @@
 import { expect, test } from '@playwright/test'
+import type { ProductConstruct } from '@thrashplay/wishem-construct-manager/node'
+import { startSampleConstruct } from './sample-construct.js'
+
+const HUB_PORT = 4183
+
+let construct: ProductConstruct | undefined
+
+// The construct starts paused at tick 0.
+test.beforeAll(async () => {
+  construct = await startSampleConstruct({ port: HUB_PORT, paused: true })
+})
+
+test.afterAll(async () => {
+  await construct?.close()
+})
 
 test('the page draws the ticks of the construct and sends the keys through the link', async ({ page }) => {
   await page.goto('/')

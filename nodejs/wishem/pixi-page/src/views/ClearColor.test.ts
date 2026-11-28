@@ -1,6 +1,6 @@
 import { Sprite } from 'pixi.js'
 import { describe, expect, it } from 'vitest'
-import { CLEAR_COLOR_TYPE } from '../construct/model.js'
+import { COLOR_TYPE } from '@thrashplay/wishem-sample-product'
 import sidecar from './ClearColor.view.json'
 import view from './ClearColor.js'
 
@@ -58,7 +58,7 @@ describe('the ClearColor view', () => {
     expect(sprite.tint).toBe(0xb91c1c)
   })
 
-  it('belongs to the Clear color component type', () => {
-    expect(sidecar).toEqual({ kind: 'pixi', componentType: CLEAR_COLOR_TYPE })
+  it('belongs to the Color component type of the sample product', () => {
+    expect(sidecar).toEqual({ kind: 'pixi', componentType: COLOR_TYPE })
   })
 })
