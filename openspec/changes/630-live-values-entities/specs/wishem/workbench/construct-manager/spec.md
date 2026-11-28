@@ -2,7 +2,7 @@
 
 ### Requirement: The construct manager sends each change of the product model
 
-After each input that makes the part `product` of the workbench a different object, the construct manager SHALL send the change to each running product construct, with the source `construct-manager`. When only values of components that the two models both hold differ, it SHALL send one `store/set-field` for each changed or added value and one `store/clear-field` for each removed value. Each other value SHALL keep its live value.
+After each input that makes the part `product` of the workbench a different object, the construct manager SHALL send the change to each running product construct, with the source `construct-manager`. When only values of components that the two models both hold differ, it SHALL send one `store/set-field` for each changed or added value and one `store/clear-field` for each removed value. Each other value SHALL keep its live value. Each other change SHALL go as the requirements of entities give.
 
 #### Scenario: A hand edit of a value
 
@@ -78,6 +78,11 @@ A step back SHALL keep the `running` value that the product construct had before
 - **WHEN** `play` is paused after a step, an input subsystem sends `product/add-entity` with a second entity, and then `constructs/rewind` with `ticks` set to `1`
 - **THEN** the store of `play` holds the second entity after the sample entity, `play` gets `store/add-entity` after the `hub/rewind`, and the count of the sample entity is the count before the last tick
 
+#### Scenario: An added entity before a step back across the processes
+
+- **WHEN** `play` runs in a product construct process, is paused after 12 ticks, an input subsystem sends `product/add-entity` with a second entity, and then `constructs/rewind` with `ticks` set to `1`
+- **THEN** the part `time` of `play` has 11 ticks, the store of `play` holds the second entity after the sample entity, and the record of `play` has no `time/advance` between the `hub/rewind` and the `store/add-entity` of the step back
+
 ## ADDED Requirements
 
 ### Requirement: The construct manager sends an added or removed entity
@@ -116,7 +121,7 @@ When the definitions of the two product models are equal, and the entities that 
 
 ### Requirement: The inputs of an entity change are accepted in order
 
-The construct manager SHALL send the inputs of a change that adds or removes entities in an order in which a store that holds the earlier product model accepts each input, and after the last input holds the new product model. A reference to an entity that is not yet in the store SHALL go in a `store/set-field` after the `store/add-entity` of that entity. A reference between two removed entities SHALL be cleared before their removal.
+The construct manager SHALL send the inputs of a change that adds or removes entities in an order in which a store that holds the earlier product model accepts each input, and after the last input holds the new product model. A reference or a list of references that names an entity that is not yet in the store SHALL go in a `store/set-field` after the `store/add-entity` of that entity. A reference or a list between two removed entities SHALL be cleared before their removal.
 
 #### Scenario: A new entity that refers to an entity of the store
 
@@ -142,6 +147,21 @@ The construct manager SHALL send the inputs of a change that adds or removes ent
 
 - **WHEN** a reference field of the sample entity names the entity `a`, and one change removes `a`, adds the entity `b`, and sets the reference to `b`
 - **THEN** the construct gets `store/add-entity` of `b`, then `store/set-field` of the reference, and then `store/remove-entity` of `a`, and the store accepts each one
+
+#### Scenario: A list that holds a removed entity
+
+- **WHEN** a `reference-list` field of an entity of the store holds the IDs of `a` and `b`, and one change removes `a` and removes its ID from the list
+- **THEN** the construct gets one `store/set-field` of the full list with only the ID of `b`, and then `store/remove-entity` of `a`, and the store accepts each one
+
+#### Scenario: Two new entities in the lists of each other
+
+- **WHEN** one change adds the entities `a` and `b`, the `reference-list` field of `a` holds the ID of `b`, and the `reference-list` field of `b` holds the ID of `a`
+- **THEN** the construct gets `store/add-entity` of `a` with no value for the list, `store/add-entity` of `b` with its list, and then `store/set-field` of the list of `a`, and the store accepts each one
+
+#### Scenario: Two removed entities in the lists of each other
+
+- **WHEN** one change removes the entities `a` and `b`, and the `reference-list` field of each one holds the ID of the other
+- **THEN** the construct gets `store/clear-field` of each of the two lists, and then `store/remove-entity` of `a` and of `b`, and the store accepts each one
 
 #### Scenario: An entity that refers to itself
 
