@@ -1,5 +1,6 @@
 // Usage: node break-test-issue.mjs <change issue> <milestone number> --pr <pull request number> <file>...
 //    or: node break-test-issue.mjs <change issue> <milestone number> <commit range> <file>...
+// The script refuses a range that is not `<sha>..<sha>` or `<sha>~1..<sha>`, a file that does not exist at the end commit, and a number that is not a number.
 // With --pr, the script reads the merge commit of the merged pull request and uses the range `<sha>~1..<sha>`.
 // With --dry, the script prints the title and the body of the issue and creates nothing.
 // Creates the one break-test issue of a change, gives it the type Review, and adds it to the two projects. Prints its number.
@@ -16,12 +17,22 @@ const [change, milestone, ...rest] = positionals
 const rangeGiven = values.pr === undefined
 const files = rangeGiven ? rest.slice(1) : rest
 let range = rangeGiven ? rest[0] : undefined
-if (!change || !milestone || (rangeGiven && !range) || files.length === 0) {
-  console.error(
-    'usage: node break-test-issue.mjs <change issue> <milestone number> (--pr <pull request number> | <commit range>) [--dry] <file>...',
-  )
+const fail = (message) => {
+  console.error(message)
   process.exit(2)
 }
+const sha = '[0-9a-f]{7,40}'
+if (range !== undefined && !new RegExp(`^${sha}(~1)?\\.\\.${sha}$`).test(range)) {
+  fail(`not a commit range of the form <sha>..<sha> or <sha>~1..<sha>: ${range}`)
+}
+if (!change || !milestone || (rangeGiven && !range) || files.length === 0) {
+  fail(
+    'usage: node break-test-issue.mjs <change issue> <milestone number> (--pr <pull request number> | <commit range>) [--dry] <file>...',
+  )
+}
+if (!/^\d+$/.test(change)) fail(`the change issue is not a number: ${change}`)
+if (!/^\d+$/.test(milestone)) fail(`the milestone is not a number: ${milestone}`)
+if (!rangeGiven && !/^\d+$/.test(values.pr)) fail(`the pull request is not a number: ${values.pr}`)
 const env = { ...process.env, GH_ORG: 'twin-digital' }
 const gh = (args, input) => execFileSync('gh', args, { env, input, encoding: 'utf8' }).trim()
 const api = (method, path, body) =>
@@ -44,8 +55,13 @@ const byPackage = new Map()
 for (const file of files) {
   const pkg = /^nodejs\/wishem\/([^/]+)\//.exec(file)?.[1]
   if (!pkg) {
-    console.error(`not a file of a Wishem package: ${file}`)
-    process.exit(2)
+    fail(`not a file of a Wishem package: ${file}`)
+  }
+  const end = range.split('..')[1]
+  try {
+    execFileSync('git', ['cat-file', '-e', `${end}:${file}`], { stdio: 'ignore' })
+  } catch {
+    fail(`the file does not exist at commit ${end}: ${file}`)
   }
   byPackage.set(pkg, [...(byPackage.get(pkg) ?? []), file])
 }
