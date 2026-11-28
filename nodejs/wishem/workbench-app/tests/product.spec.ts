@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { hubInputs, openLink, webSocketChannel, type RecordedInput } from '@thrashplay/wishem-hub'
 import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
@@ -8,6 +8,11 @@ import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } fro
 const productFolder = join(import.meta.dirname, '..', '.e2e-product')
 const statePath = join(productFolder, 'state.json')
 const originalPath = join(import.meta.dirname, '..', '..', 'sample-product', 'model', 'state.json')
+
+const LINK_TYPE = 'ct_3a7b9c1d-2e4f-4a6b-8c0d-1e2f3a4b5c6d'
+const TARGET_FIELD = 'fld_5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a'
+const LINK_ENTITY = 'e_7c1e2f3a-4b5c-4d6e-8f7a-9b0c1d2e3f4a'
+const linkDefinitionPath = join(productFolder, 'definitions', `${LINK_TYPE}.json`)
 
 const theme = ['light', 'dark'] as const
 
@@ -43,6 +48,8 @@ const watchLink = async () => {
   })
   return { link, port, applied }
 }
+
+const clearCount = (page: Page) => page.getByRole('button', { name: 'Clear count' })
 
 const countField = (page: Page) => page.getByRole('group', { name: 'Counter' }).getByRole('textbox', { name: 'count' })
 
@@ -118,6 +125,78 @@ test('a rewind through a client of the link restores the value and the file', as
     await expect.poll(countInFile).toBe(0)
   } finally {
     link.close()
+  }
+})
+
+test('a press of Clear count clears the value in the page, in state.json, and in the record', async ({ page }) => {
+  const { link, applied } = await watchLink()
+  try {
+    await selectSample(page)
+    await clearCount(page).click()
+    await expect(countField(page)).toHaveValue('')
+    await expect(page.getByText('no value')).toBeVisible()
+    await expect(page.getByRole('alert')).toHaveCount(0)
+    await expect.poll(countInFile).toBeUndefined()
+    await expect.poll(() => applied.filter((recorded) => recorded.type === 'product/clear-field').length).toBe(1)
+    const input = applied.find((recorded) => recorded.type === 'product/clear-field')
+    expect(input?.source).toMatch(/^page-[0-9a-f]{16}-input$/)
+    await expect(clearCount(page)).toHaveAttribute('aria-disabled', 'true')
+    await expect(clearCount(page)).toBeFocused()
+    await clearCount(page).click({ force: true })
+    await page.waitForTimeout(500)
+    expect(applied.filter((recorded) => recorded.type === 'product/clear-field')).toHaveLength(1)
+  } finally {
+    link.close()
+  }
+})
+
+test('a rewind through a client of the link restores a cleared value and the file', async ({ page }) => {
+  const { link, port, applied } = await watchLink()
+  try {
+    await selectSample(page)
+    await clearCount(page).click()
+    await expect.poll(countInFile).toBeUndefined()
+    await expect.poll(() => applied.some((recorded) => recorded.type === 'product/clear-field')).toBe(true)
+    const change = applied.find((recorded) => recorded.type === 'product/clear-field')
+    const result = await port.submit(hubInputs.rewind((change?.seq ?? 1) - 1))
+    expect(result.ok).toBe(true)
+    await expect(countField(page)).toHaveValue('0')
+    await expect(page.getByText('no value')).toHaveCount(0)
+    await expect.poll(countInFile).toBe(0)
+  } finally {
+    link.close()
+  }
+})
+
+test('a reference blocks the removal of its entity until Clear target removes the reference', async ({ page }) => {
+  const { link, port } = await watchLink()
+  try {
+    await writeFile(
+      linkDefinitionPath,
+      JSON.stringify({
+        id: LINK_TYPE,
+        label: 'Link',
+        fields: [{ id: TARGET_FIELD, label: 'target', type: 'reference' }],
+      }),
+    )
+    const state = JSON.parse(await readFile(statePath, 'utf8')) as { entities: unknown[] }
+    state.entities.push({ id: LINK_ENTITY, components: { [LINK_TYPE]: { [TARGET_FIELD]: SAMPLE_ENTITY } } })
+    await writeFile(statePath, JSON.stringify(state))
+    await page.getByRole('button', { name: /^Link/ }).click()
+    await expect(page.getByRole('combobox', { name: 'target' })).toBeVisible()
+    const removal = { type: 'product/remove-entity', payload: { entity: SAMPLE_ENTITY } }
+    const refused = await port.submit(removal)
+    expect(refused.ok).toBe(false)
+    await page.getByRole('button', { name: 'Clear target' }).click()
+    await expect(page.getByRole('combobox', { name: 'target' })).toContainText('No value')
+    await expect(page.getByRole('button', { name: 'Clear target' })).toHaveAttribute('aria-disabled', 'true')
+    const accepted = await port.submit(removal)
+    expect(accepted.ok).toBe(true)
+    await expect(page.getByRole('button', { name: /Counter, Color/ })).toHaveCount(0)
+  } finally {
+    link.close()
+    await writeFile(statePath, await readFile(originalPath, 'utf8'))
+    await rm(linkDefinitionPath, { force: true })
   }
 })
 

@@ -406,6 +406,86 @@ describe('attachConstructManager', () => {
     expect(countOf(construct('play').hub)).toBe(3)
   })
 
+  it('sends clear-field for a removed value, and keeps the count that a send set', async () => {
+    setup()
+    await start('play', false)
+    await send(setCount('store', 25))
+    await tester.submit({
+      type: 'product/clear-field',
+      payload: { entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD },
+    })
+    await eventually(() =>
+      construct('play')
+        .hub.record()
+        .some((input) => input.type === 'store/clear-field'),
+    )
+    const record = construct('play').hub.record()
+    const clears = record.filter((input) => input.type === 'store/clear-field')
+    expect(clears).toHaveLength(1)
+    expect(clears[0]?.source).toBe(CONSTRUCT_MANAGER_ID)
+    expect(colorOf(construct('play').hub)).toBeUndefined()
+    expect(countOf(construct('play').hub)).toBe(25)
+  })
+
+  it('sends clear-field and no replace-model for a hand edit that removes the color', async () => {
+    setup()
+    await start('play', false)
+    const edited: Model = structuredClone(model)
+    const sample = edited.entities.find((e) => e.id === SAMPLE_ENTITY)
+    if (sample) {
+      const { [COLOR_FIELD]: _color, ...rest } = sample.components[COLOR_TYPE]
+      sample.components[COLOR_TYPE] = rest
+    }
+    await tester.submit({ type: 'product/replace-model', payload: { model: edited } })
+    await eventually(() =>
+      construct('play')
+        .hub.record()
+        .some((input) => input.type === 'store/clear-field'),
+    )
+    const record = construct('play').hub.record()
+    expect(record.some((input) => input.type === 'store/replace-model')).toBe(false)
+  })
+
+  it('sends set-field with the earlier value after a rewind past a clear', async () => {
+    setup()
+    await start()
+    const before = hub.seq
+    await tester.submit({
+      type: 'product/clear-field',
+      payload: { entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD },
+    })
+    await eventually(() => colorOf(construct('play').hub) === undefined)
+    await tester.submit(hubInputs.rewind(before))
+    await eventually(() => colorOf(construct('play').hub) !== undefined)
+    const sets = construct('play')
+      .hub.record()
+      .filter((input) => input.type === 'store/set-field')
+    expect(sets).toHaveLength(1)
+    expect((sets[0]?.payload as { value: unknown }).value).toBe(
+      model.entities.find((e) => e.id === SAMPLE_ENTITY)?.components[COLOR_TYPE]?.[COLOR_FIELD],
+    )
+  })
+
+  it('sends clear-field after a rewind past a set of a new value', async () => {
+    setup()
+    await start()
+    await tester.submit({
+      type: 'product/clear-field',
+      payload: { entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD },
+    })
+    await eventually(() => colorOf(construct('play').hub) === undefined)
+    const before = hub.seq
+    await tester.submit(setColor('#b91c1c'))
+    await eventually(() => colorOf(construct('play').hub) === '#b91c1c')
+    await tester.submit(hubInputs.rewind(before))
+    await eventually(() => colorOf(construct('play').hub) === undefined)
+    const clears = construct('play')
+      .hub.record()
+      .filter((input) => input.type === 'store/clear-field')
+    expect(clears).toHaveLength(2)
+    expect((clears[1].payload as { field: string }).field).toBe(COLOR_FIELD)
+  })
+
   it('sends one replace-model for a change of a label', async () => {
     setup()
     await start()

@@ -1,4 +1,4 @@
-import type { Id, Model, SetFieldPayload } from '@thrashplay/wishem-core'
+import type { ClearFieldPayload, Id, Model, SetFieldPayload } from '@thrashplay/wishem-core'
 import { entityName, shortId } from './entity-name.js'
 import { EntityInspector, type InspectedComponent } from './EntityInspector.js'
 import { EntityList } from './EntityList.js'
@@ -9,10 +9,11 @@ export interface ProductPanelProps {
   selected?: Id
   onSelect: (id: Id) => void
   onChange?: (change: SetFieldPayload) => Promise<ChangeOutcome>
+  onClear?: (change: ClearFieldPayload) => Promise<ChangeOutcome>
 }
 
 /** The entity list and the inspector of a model: two columns from 768 pixels, one column below. */
-export const ProductPanel = ({ model, selected, onSelect, onChange }: ProductPanelProps) => {
+export const ProductPanel = ({ model, selected, onSelect, onChange, onClear }: ProductPanelProps) => {
   const items = model.entities.map((entity) => ({
     id: entity.id,
     name: entityName(entity, model.definitions),
@@ -46,6 +47,7 @@ export const ProductPanel = ({ model, selected, onSelect, onChange }: ProductPan
           entity &&
           ((componentType, field, value) => onChange({ entity: entity.id, componentType, field, value }))
         }
+        onClear={onClear && entity && ((componentType, field) => onClear({ entity: entity.id, componentType, field }))}
       />
     </div>
   )

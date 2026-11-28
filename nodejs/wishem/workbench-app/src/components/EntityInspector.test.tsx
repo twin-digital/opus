@@ -137,6 +137,24 @@ describe('EntityInspector', () => {
     expect(text('count')?.disabled).toBe(true)
   })
 
+  it('calls onClear with the component type and the field', async () => {
+    const onClear = vi.fn(() => Promise.resolve({ saved: true as const }))
+    draw({ onClear })
+    const button = container.querySelector<HTMLButtonElement>('button[aria-label="Clear count"]')
+    act(() => {
+      button?.click()
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(onClear).toHaveBeenCalledExactlyOnceWith(COUNTER_TYPE, COUNT_FIELD)
+  })
+
+  it('disables Clear with no onClear', () => {
+    draw()
+    expect(container.querySelector('button[aria-label="Clear count"]')?.getAttribute('aria-disabled')).toBe('true')
+  })
+
   it('shows the zero state with no entity', () => {
     draw({ entity: undefined })
     expect(container.textContent).toContain('Inspector')

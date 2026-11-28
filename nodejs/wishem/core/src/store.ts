@@ -35,11 +35,21 @@ export interface SetFieldPayload {
   value: FieldValue
 }
 
+export interface ClearFieldPayload {
+  /** The ID of the entity. */
+  entity: Id
+  /** The ID of the component type. */
+  componentType: Id
+  /** The ID of the field. */
+  field: Id
+}
+
 export interface StoreInputs {
   replaceModel(model: Model): Input
   addEntity(entity: Entity): Input
   removeEntity(entity: Id): Input
   setField(payload: SetFieldPayload): Input
+  clearField(payload: ClearFieldPayload): Input
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -126,7 +136,18 @@ const removeEntity = (part: Model, payload: unknown): Model => {
   return deepFreeze(next)
 }
 
-const setField = (part: Model, payload: unknown): Model => {
+type Fields = Record<Id, FieldValue>
+
+interface Target {
+  fields: Record<string, unknown>
+  index: number
+  entity: Entity
+  componentType: string
+  field: string
+}
+
+/** Checks the keys `entity`, `componentType`, and `field` of a payload, and that each names a thing of the part. */
+const locate = (part: Model, payload: unknown, extraKeys: readonly string[]): Target => {
   const fields = requirePayload(payload)
   const problems: InputProblem[] = []
   for (const key of ['entity', 'componentType', 'field'] as const) {
@@ -134,13 +155,15 @@ const setField = (part: Model, payload: unknown): Model => {
       problems.push({ message: `The payload has no string "${key}" key`, path: ['payload', key] })
     }
   }
-  if (!('value' in fields)) {
-    problems.push({ message: 'The payload has no "value" key', path: ['payload', 'value'] })
+  for (const key of extraKeys) {
+    if (!(key in fields)) {
+      problems.push({ message: `The payload has no "${key}" key`, path: ['payload', key] })
+    }
   }
   if (problems.length > 0) {
     throw new InputRefusedError(problems)
   }
-  const { entity: entityId, componentType, field, value } = fields
+  const { entity: entityId, componentType, field } = fields
 
   const index = part.entities.findIndex((entity) => entity.id === entityId)
   const type = part.definitions.find((definition) => definition.id === componentType)
@@ -162,15 +185,12 @@ const setField = (part: Model, payload: unknown): Model => {
   if (problems.length > 0 || entity === undefined || typeof componentType !== 'string' || typeof field !== 'string') {
     throw new InputRefusedError(problems)
   }
+  return { fields, index, entity, componentType, field }
+}
 
-  const component = Object.hasOwn(entity.components, componentType) ? entity.components[componentType] : undefined
-  if (component?.[field] === value) {
-    return part
-  }
-  const candidate = {
-    id: entity.id,
-    components: { ...entity.components, [componentType]: { ...component, [field]: value } },
-  }
+/** Gives the part with the entity at `index` replaced by a checked entity that has `components`. */
+const withComponent = (part: Model, { index, entity, componentType }: Target, component: Fields): Model => {
+  const candidate = { id: entity.id, components: { ...entity.components, [componentType]: component } }
   const checked = check({
     definitions: part.definitions,
     entities: part.entities.map((existing, position) => (position === index ? candidate : existing)),
@@ -185,13 +205,37 @@ const setField = (part: Model, payload: unknown): Model => {
   })
 }
 
-const OPERATIONS = ['replace-model', 'add-entity', 'remove-entity', 'set-field'] as const
+const componentOf = ({ entity, componentType }: Target): Fields | undefined =>
+  Object.hasOwn(entity.components, componentType) ? entity.components[componentType] : undefined
+
+const setField = (part: Model, payload: unknown): Model => {
+  const target = locate(part, payload, ['value'])
+  const { value } = target.fields
+  const component = componentOf(target)
+  if (component?.[target.field] === value) {
+    return part
+  }
+  return withComponent(part, target, { ...component, [target.field]: value as FieldValue })
+}
+
+const clearField = (part: Model, payload: unknown): Model => {
+  const target = locate(part, payload, [])
+  const component = componentOf(target)
+  if (component === undefined || !Object.hasOwn(component, target.field)) {
+    return part
+  }
+  const { [target.field]: _cleared, ...rest } = component
+  return withComponent(part, target, rest)
+}
+
+const OPERATIONS = ['replace-model', 'add-entity', 'remove-entity', 'set-field', 'clear-field'] as const
 
 const handlers: Record<(typeof OPERATIONS)[number], (part: Model, payload: unknown) => Model> = {
   'replace-model': replaceModel,
   'add-entity': addEntity,
   'remove-entity': removeEntity,
   'set-field': setField,
+  'clear-field': clearField,
 }
 
 /** Throws a `ModelError` when the first model is not correct. */
@@ -223,4 +267,5 @@ export const storeInputs = (id = 'store'): StoreInputs => ({
   addEntity: (entity) => ({ type: `${id}/add-entity`, payload: { entity } }),
   removeEntity: (entity) => ({ type: `${id}/remove-entity`, payload: { entity } }),
   setField: (payload) => ({ type: `${id}/set-field`, payload }),
+  clearField: (payload) => ({ type: `${id}/clear-field`, payload }),
 })

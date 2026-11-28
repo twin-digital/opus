@@ -48,8 +48,9 @@ await client.submit(constructInputs.stop('play'))
 `productChanges(before, after, storeId?)` returns the inputs that change a store from the model `before` to the model `after`. The default `storeId` is `store`.
 
 - Equal models give no input.
-- When only field values differ, the result has one `<storeId>/set-field` for each changed value, in the order of the entities, the components, and the fields.
-- Each other change gives one `<storeId>/replace-model` with `after`.
+- When only field values differ, the result has, for each component in the order of the entities and the components, one `<storeId>/set-field` for each changed value and then one `<storeId>/clear-field` for each removed value.
+- A running product construct keeps its live values after a `set-field` or a `clear-field`.
+- Each other change, such as a removed component, gives one `<storeId>/replace-model` with `after`.
 
 ```ts
 import { productChanges } from '@thrashplay/wishem-construct-manager'

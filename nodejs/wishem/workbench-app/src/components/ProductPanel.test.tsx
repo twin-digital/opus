@@ -121,6 +121,22 @@ describe('ProductPanel', () => {
     })
   })
 
+  it('calls onClear with a ClearFieldPayload', async () => {
+    const onClear = vi.fn(() => Promise.resolve({ saved: true as const }))
+    draw({ selected: SAMPLE_ENTITY, onClear })
+    act(() => {
+      container.querySelector<HTMLButtonElement>('button[aria-label="Clear count"]')?.click()
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(onClear).toHaveBeenCalledExactlyOnceWith({
+      entity: SAMPLE_ENTITY,
+      componentType: COUNTER_TYPE,
+      field: COUNT_FIELD,
+    })
+  })
+
   it('disables the controls with no onChange', () => {
     draw({ selected: SAMPLE_ENTITY })
     expect(container.querySelector<HTMLInputElement>('input[type="text"]')?.disabled).toBe(true)

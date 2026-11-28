@@ -103,4 +103,14 @@ describe('Button', () => {
     expect(button.hasAttribute('aria-busy')).toBe(false)
     expect(button.hasAttribute('aria-disabled')).toBe(false)
   })
+
+  it('has no aria-label by default', () => {
+    expect(draw().hasAttribute('aria-label')).toBe(false)
+  })
+
+  it('shows the label and has the accessible name when it has accessibleName', () => {
+    const button = draw({ label: 'Clear', accessibleName: 'Clear count' })
+    expect(button.textContent).toBe('Clear')
+    expect(button.getAttribute('aria-label')).toBe('Clear count')
+  })
 })
