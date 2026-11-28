@@ -28,10 +28,34 @@ describe('COLOR_CASES', () => {
   })
 
   it('holds the cases of the design', () => {
-    expect(COLOR_CASES.some((item) => !('value' in item))).toBe(true)
-    for (const value of ['#1D4ED8', 'red', 'rgb(29, 78, 216)', 'transparent', '#fff', '#1d4ed880', '1d4ed8']) {
-      expect(COLOR_CASES.some((item) => item.value === value)).toBe(true)
+    const designed: readonly (readonly [unknown, string])[] = [
+      ['#000000', '#000000'],
+      ['#1D4ED8', '#1d4ed8'],
+      ['', FALLBACK_COLOR],
+      ['red', FALLBACK_COLOR],
+      ['transparent', FALLBACK_COLOR],
+      ['rgb(29, 78, 216)', FALLBACK_COLOR],
+      ['#fff', FALLBACK_COLOR],
+      ['#1d4ed880', FALLBACK_COLOR],
+      ['1d4ed8', FALLBACK_COLOR],
+      ['#1d4eg8', FALLBACK_COLOR],
+      [' #1d4ed8', FALLBACK_COLOR],
+      ['#1d4ed8 ', FALLBACK_COLOR],
+      ['#1d4ed8\n', FALLBACK_COLOR],
+      ['blue-ish', FALLBACK_COLOR],
+      [5, FALLBACK_COLOR],
+      [true, FALLBACK_COLOR],
+    ]
+    for (const [value, color] of designed) {
+      expect(
+        COLOR_CASES.some((item) => item.value === value && item.color === color),
+        JSON.stringify(value),
+      ).toBe(true)
     }
+  })
+
+  it('has a case with no value key and the fallback color', () => {
+    expect(COLOR_CASES.some((item) => !('value' in item) && item.color === FALLBACK_COLOR)).toBe(true)
   })
 
   it('draws the value in lower case for a #rrggbb value and the fallback color for each other case', () => {
