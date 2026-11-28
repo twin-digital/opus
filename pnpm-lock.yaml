@@ -4098,6 +4098,9 @@ importers:
 
   nodejs/wishem/workbench-app:
     dependencies:
+      '@thrashplay/wishem-clock':
+        specifier: workspace:*
+        version: link:../clock
       '@thrashplay/wishem-construct-manager':
         specifier: workspace:*
         version: link:../construct-manager

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { ViewProps, ViewTools } from '@thrashplay/wishem-renderer-react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = []
@@ -51,10 +51,14 @@ const baseModel = {
 }
 
 describe('workbench page', () => {
+  let fetchMock: Mock<() => Promise<Response>>
+
   beforeEach(() => {
     vi.resetModules()
     FakeWebSocket.instances = []
     vi.stubGlobal('WebSocket', FakeWebSocket)
+    fetchMock = vi.fn(() => Promise.resolve(new Response('', { status: 404 })))
+    vi.stubGlobal('fetch', fetchMock)
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false
     document.body.innerHTML = '<div id="root"></div>'
   })
@@ -223,5 +227,36 @@ describe('workbench page', () => {
 
     expect(error).not.toHaveBeenCalled()
     expect(FakeWebSocket.instances).toHaveLength(0)
+  })
+
+  it('loads the product views before the first render', async () => {
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(1)
+    })
+    expect(fetchMock).toHaveBeenCalledWith('/@wishem/product-views.json')
+  })
+
+  it('shows the run area when the workbench has a construct list, with views that are not correct', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    fetchMock.mockImplementation(() => Promise.resolve(new Response('{"views":3}', { status: 200 })))
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(1)
+    })
+    FakeWebSocket.instances[0]?.emit(
+      'message',
+      JSON.stringify({
+        t: 'welcome',
+        protocol: 1,
+        status: 'running',
+        seq: 0,
+        state: { store: baseModel, constructs: { constructs: {} } },
+      }),
+    )
+    await vi.waitFor(() => {
+      expect(document.querySelector('aside[aria-label="Run"]')).not.toBeNull()
+    })
+    expect(document.querySelector('[role="toolbar"]')).not.toBeNull()
   })
 })

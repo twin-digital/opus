@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createStore, storeInputs } from '@thrashplay/wishem-core'
+import { createConstructList } from '@thrashplay/wishem-construct-manager'
 import { createHub, type Hub, type Port } from '@thrashplay/wishem-hub'
 import type { ViewProps, ViewTable, ViewTools } from '@thrashplay/wishem-renderer-react'
 import { COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
@@ -48,9 +49,9 @@ describe('Page', () => {
     container.remove()
   })
 
-  const draw = (props: PageProps) => {
+  const draw = (props: Omit<PageProps, 'productViews'> & { productViews?: PageProps['productViews'] }) => {
     act(() => {
-      root.render(<Page {...props} />)
+      root.render(<Page productViews={{ views: new Map() }} {...props} />)
     })
   }
 
@@ -165,6 +166,62 @@ describe('Page', () => {
           value: 4,
         }).type,
       )
+    })
+  })
+
+  describe('with the part constructs', () => {
+    const constructsHub = (): Hub => {
+      const hub = createHub({
+        subsystems: [
+          createStore({ model: { definitions: [definition], entities: state.entities } }),
+          createStore({
+            id: 'product',
+            model: {
+              definitions: [
+                { id: COUNTER_TYPE, label: 'Counter', fields: [{ id: COUNT_FIELD, label: 'count', type: 'number' }] },
+              ],
+              entities: [{ id: SAMPLE_ENTITY, components: { [COUNTER_TYPE]: { [COUNT_FIELD]: 0 } } }],
+            },
+          }),
+          createConstructList(),
+        ],
+      })
+      hub.start()
+      return hub
+    }
+
+    it('shows the run area in an aside named Run beside the product panel, in the main element', () => {
+      const hub = constructsHub()
+      draw({ port: hub.attach({ id: 'screen', kind: 'output' }), input: undefined, views })
+      const main = container.querySelector('main')
+      const aside = main?.querySelector('aside[aria-label="Run"]')
+      expect(aside).not.toBeNull()
+      expect(aside?.querySelector('[role="toolbar"][aria-label="Product controls"]')).not.toBeNull()
+      expect(aside?.querySelector('section[aria-label="Stage"]')?.textContent).toContain(
+        'Not running. Press Run to start the product.',
+      )
+      expect(main?.querySelector('nav[aria-label="Entities"]')).not.toBeNull()
+      expect(aside?.contains(main?.querySelector('nav') ?? null)).toBe(false)
+    })
+
+    it('sends Run through the input port', async () => {
+      const hub = constructsHub()
+      const output = hub.attach({ id: 'screen', kind: 'output' })
+      const input = hub.attach({ id: 'screen-input', kind: 'input' })
+      draw({ port: output, input, views })
+      const run = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Run')
+      await act(async () => {
+        run?.click()
+        await new Promise((done) => setTimeout(done, 0))
+      })
+      expect(hub.record().map(({ type, source }) => [type, source])).toEqual([['constructs/start', 'screen-input']])
+    })
+
+    it('shows no run area with no part constructs', () => {
+      const hub = baseHub()
+      draw({ port: hub.attach({ id: 'screen', kind: 'output' }), input: undefined, views })
+      expect(container.querySelector('aside')).toBeNull()
+      expect(container.querySelector('[role="toolbar"]')).toBeNull()
     })
   })
 })

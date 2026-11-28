@@ -34,6 +34,10 @@ Terms in each group are in alphabetical order.
 
 **Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. The workbench holds one authored model, and that model contains the model of the product. The product knows nothing about the workbench.
 
+**Run controls** (**Proposed**): The tool of the workbench page that runs, pauses, resumes, steps, and steps back the product construct `play`. It reads the part `constructs` and sends `constructs/start`, `constructs/stop`, `constructs/send`, and `constructs/rewind` through the input port of the page. It shows the status, the tick, and the time of the product construct.
+
+**Stage** (**Proposed**): The area of the workbench page that draws the product construct `play` with the React renderer and the React views of the product. The stage reads the product construct through a link of its own, and it sends no input to it.
+
 **Workbench**: The part of a project that the designer uses to make the product. The workbench shows and changes the product. It holds the tools. A workbench is a model that is made with Wishem. It is not a game. The workbench runs as its own construct, and that construct does not hold the subsystems of the product.
 
 ## The model

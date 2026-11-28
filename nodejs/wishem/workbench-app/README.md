@@ -67,6 +67,25 @@ pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sam
 
 While the script runs, it keeps the generated files of the views current. It runs the generator at the start, after each change to a definition that the hub accepts, and after each change to a sidecar. A change to `state.json` does not run the generator. The script prints one line for each file that it wrote, changed, or removed, with the new and removed props. It prints each error of the generator and continues to serve the page. With `--no-view-types`, the script writes no generated file.
 
+### Run controls and stage
+
+With a part `constructs`, the page shows the run area: an `aside` named `Run` with the run controls and the stage. From 1200 pixels of width, the run area is at the right of the product panel. Below 1200 pixels, it is above the product panel.
+
+The run controls control the product construct `play`. The toolbar `Product controls` has these buttons:
+
+| Button    | Input to the workbench                                                                   |
+| --------- | ---------------------------------------------------------------------------------------- |
+| Run       | `constructs/start`. After a failure: `constructs/stop`, then `constructs/start`.         |
+| Stop      | `constructs/stop`.                                                                       |
+| Pause     | `constructs/send` with `time/set-running` and `running` set to `false`.                  |
+| Resume    | `constructs/send` with `time/set-running` and `running` set to `true`.                   |
+| Step      | `constructs/send` with `time/advance`. The length is `stepMs` of the part `time`, or 50. |
+| Step back | `constructs/rewind` with `ticks` set to `1`.                                             |
+
+Each input goes through the input port of the page. A button is disabled while a control waits for its outcome, and when the page has no input port. A control that the workbench refuses shows the line `Not done.` with the reason. A pass that the product construct refuses shows a line with the name of the control. A control waits at most 5 seconds for the result of its pass. The next accepted control removes the line. The toolbar also shows the status, the tick, and the time in seconds.
+
+The stage opens a link at `/constructs/play/link` while `play` runs. The link has one output subsystem `page-<hex>-stage`. The stage draws the part `store` of that link with the React views of the product, and it gives the views no input port. The stage shows a zero state when it has no picture: `play` does not run, the link connects, the page has no views of the product, or the views are not correct. When the link is down, the stage keeps the last picture and shows a note. The page loads the views of the product with `GET /@wishem/product-views.json` (see `--product-views`).
+
 ### Change the picture by hand
 
 Edit a file in the model folder and save it. The page shows the new model. For example, in a second terminal, from the root of the repository:
