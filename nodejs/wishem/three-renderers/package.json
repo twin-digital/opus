@@ -1,0 +1,88 @@
+{
+  "private": true,
+  "name": "@thrashplay/wishem-three-renderers",
+  "version": "0.0.0",
+  "description": "The sample construct of Wishem and its command, which the React, PixiJS, and Godot renderers draw.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null,
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "construct": "exec node scripts/construct.ts",
+    "dev": "vite --host",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "preview": "vite preview",
+    "react-page": "exec node scripts/react-page.ts",
+    "test": "opus-test",
+    "test:ui": "node scripts/browser-server.ts node --test --test-concurrency=1 \"tests/*.ui.test.ts\"",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@thrashplay/wishem-construct-manager": "workspace:*",
+    "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-renderer-react": "workspace:*",
+    "@thrashplay/wishem-sample-product": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@playwright/test": "catalog:",
+    "@thrashplay/wishem-clock": "workspace:*",
+    "@thrashplay/wishem-pixi-page": "workspace:*",
+    "@thrashplay/wishem-renderer-godot": "workspace:*",
+    "@thrashplay/wishem-workbench-app": "workspace:*",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vite-config": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pngjs": "catalog:",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "globals": "catalog:",
+    "jsdom": "^30.0.0",
+    "pngjs": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

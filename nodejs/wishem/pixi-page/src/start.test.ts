@@ -4,11 +4,11 @@ import { request } from 'node:http'
 import { connect, createServer, type Server } from 'node:net'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { TimePart } from '@thrashplay/wishem-clock'
 import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
-import type { HubEvent } from '@thrashplay/wishem-hub'
 import { startPixi, StartError } from '../scripts/start.js'
 import type { PixiStart } from '../scripts/start.js'
+import { startSampleConstruct } from '../tests/sample-construct.js'
+import type { ProductConstruct } from '@thrashplay/wishem-construct-manager/node'
 
 const vite = vi.hoisted(() => ({ createServer: vi.fn() }))
 
@@ -101,20 +101,27 @@ const portOf = (address: string) => Number(new URL(address).port)
 
 describe('startPixi', () => {
   const starts: PixiStart[] = []
+  const constructs: ProductConstruct[] = []
   const blockers: Server[] = []
 
   afterEach(async () => {
     await Promise.all(starts.splice(0).map((started) => started.close()))
+    await Promise.all(constructs.splice(0).map((construct) => construct.close()))
     await Promise.all(blockers.splice(0).map((blocker) => new Promise((resolve) => blocker.close(resolve))))
     vite.createServer.mockClear()
   })
 
-  const begin = async (options: { paused?: boolean } = {}) => {
+  const beginConstruct = async () => {
+    const construct = await startSampleConstruct({ paused: true })
+    constructs.push(construct)
+    return construct
+  }
+
+  const begin = async (hubPort: number) => {
     const lines: string[] = []
     const started = await startPixi({
       port: 0,
-      hubPort: 0,
-      ...options,
+      hubPort,
       log: (line) => {
         lines.push(line)
       },
@@ -130,16 +137,21 @@ describe('startPixi', () => {
     return (blocker.address() as { port: number }).port
   }
 
-  it('prints the address of the link and of the page', { timeout: 30000 }, async () => {
-    const { started, lines } = await begin()
+  it('prints the address of the page and of the link of the construct', { timeout: 30000 }, async () => {
+    const hubPort = await freePort()
 
-    expect(lines).toEqual([`wishem: link at ${started.linkUrl}`, `wishem: PixiJS page at ${started.pageUrl}`])
-    expect(started.linkUrl).toMatch(/^ws:\/\/127\.0\.0\.1:\d+\/link$/)
+    const { started, lines } = await begin(hubPort)
+
+    expect(lines).toEqual([
+      `wishem: PixiJS page at ${started.pageUrl}`,
+      `wishem: the page connects to ws://127.0.0.1:${String(hubPort)}/link`,
+    ])
+    expect(started.linkUrl).toBe(`ws://127.0.0.1:${String(hubPort)}/link`)
     expect(started.pageUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/)
   })
 
-  it('serves the HTML page at /', { timeout: 30000 }, async () => {
-    const { started } = await begin()
+  it('serves the HTML page at / with no construct running', { timeout: 30000 }, async () => {
+    const { started } = await begin(await freePort())
 
     const response = await fetch(started.pageUrl)
 
@@ -150,8 +162,9 @@ describe('startPixi', () => {
     expect(html).toContain('role="status"')
   })
 
-  it('serves the link at /link of the page address for the page origin', { timeout: 30000 }, async () => {
-    const { started } = await begin()
+  it('passes /link of the page address to the construct on the hub port', { timeout: 30000 }, async () => {
+    const construct = await beginConstruct()
+    const { started } = await begin(portOf(construct.linkUrl))
     const address = new URL('link', started.pageUrl.replace('http:', 'ws:')).href
 
     const { link, port } = await openOutput(address, new URL(started.pageUrl).origin)
@@ -161,63 +174,26 @@ describe('startPixi', () => {
   })
 
   it('refuses the link of a different origin with status 403', { timeout: 30000 }, async () => {
-    const { started } = await begin()
+    const construct = await beginConstruct()
+    const { started } = await begin(portOf(construct.linkUrl))
 
     expect(await upgradeStatus(new URL('link', started.pageUrl).href, 'https://example.com')).toBe(403)
   })
 
-  it('starts the time while running by default', { timeout: 30000 }, async () => {
-    const { started, lines } = await begin()
-    const { link, port } = await openOutput(started.linkUrl)
-
-    expect((port.read().time as TimePart).running).toBe(true)
-    expect(lines.join('\n')).not.toContain('starts paused')
-    link.close()
-  })
-
-  it('starts the time paused with the option, and says so first', { timeout: 30000 }, async () => {
-    const { started, lines } = await begin({ paused: true })
-    const { link, port } = await openOutput(started.linkUrl)
-    await new Promise((resolve) => setTimeout(resolve, 1200))
-
-    expect(lines[0]).toBe('wishem: the time of the construct starts paused')
-    expect(port.read().time).toEqual({ now: 0, ticks: 0, running: false })
-    link.close()
-  })
-
-  it('sends stopping to an open link and frees both ports on close', { timeout: 30000 }, async () => {
-    const { started } = await begin()
-    const { link, port } = await openOutput(started.linkUrl)
-    const { link: proxied, port: proxiedPort } = await openOutput(
-      new URL('link', started.pageUrl.replace('http:', 'ws:')).href,
-    )
-    const events: HubEvent[] = []
-    const proxiedEvents: HubEvent[] = []
-    port.subscribe((event) => {
-      events.push(event)
-    })
-    proxiedPort.subscribe((event) => {
-      proxiedEvents.push(event)
-    })
+  it('leaves the construct running after close, and frees the port of the page', { timeout: 30000 }, async () => {
+    const construct = await beginConstruct()
+    const { started } = await begin(portOf(construct.linkUrl))
 
     await started.close()
 
-    await until(
-      () => events.some((event) => event.type === 'stopping'),
-      () => JSON.stringify(events),
-    )
-    await until(
-      () => proxiedEvents.some((event) => event.type === 'stopping'),
-      () => JSON.stringify(proxiedEvents),
-    )
-    await link.closed
-    await proxied.closed
     expect(await refuses('127.0.0.1', portOf(started.pageUrl))).toBe(true)
-    expect(await refuses('127.0.0.1', portOf(started.linkUrl))).toBe(true)
+    expect(await refuses('127.0.0.1', portOf(construct.linkUrl))).toBe(false)
+    const { link } = await openOutput(construct.linkUrl)
+    link.close()
   })
 
   it('gives the same promise from each call of close', { timeout: 30000 }, async () => {
-    const { started } = await begin()
+    const { started } = await begin(await freePort())
 
     const first = started.close()
     const second = started.close()
@@ -226,53 +202,35 @@ describe('startPixi', () => {
     await first
   })
 
-  it('names the port, creates no page server, and rejects when the hub port is in use', async () => {
-    const hubPort = await block()
-    const lines: string[] = []
-
-    const failure = startPixi({ port: 0, hubPort, log: (line) => lines.push(line) })
-
-    await expect(failure).rejects.toBeInstanceOf(StartError)
-    expect(lines).toEqual([`wishem: port ${String(hubPort)} is in use`])
-    expect(vite.createServer).not.toHaveBeenCalled()
-  })
-
-  it('names the port and closes the construct when the page port is in use', { timeout: 30000 }, async () => {
+  it('names the port and rejects when the page port is in use', { timeout: 30000 }, async () => {
     const pagePort = await block()
-    const hubPort = await freePort()
     const lines: string[] = []
 
-    const failure = startPixi({ port: pagePort, hubPort, log: (line) => lines.push(line) })
+    const failure = startPixi({ port: pagePort, hubPort: await freePort(), log: (line) => lines.push(line) })
 
     await expect(failure).rejects.toBeInstanceOf(StartError)
     expect(lines).toEqual([`wishem: port ${String(pagePort)} is in use`])
-    expect(await refuses('127.0.0.1', hubPort)).toBe(true)
   })
 
-  it('closes the construct when the page server cannot be created', { timeout: 30000 }, async () => {
-    const hubPort = await freePort()
+  it('rejects when the page server cannot be created', { timeout: 30000 }, async () => {
     vite.createServer.mockRejectedValueOnce(new Error('plugin failed'))
 
-    await expect(startPixi({ port: 0, hubPort, log: () => undefined })).rejects.toThrow('plugin failed')
-
-    expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    await expect(startPixi({ port: 0, hubPort: 4750, log: () => undefined })).rejects.toThrow('plugin failed')
   })
 
-  it('closes the construct when the page server fails and cannot close', { timeout: 30000 }, async () => {
-    const hubPort = await freePort()
+  it('rejects with the error of the listen when the page server cannot close', { timeout: 30000 }, async () => {
     vite.createServer.mockResolvedValueOnce({
       listen: () => Promise.reject(new Error('listen failed')),
       close: () => Promise.reject(new Error('close failed')),
     })
 
-    await expect(startPixi({ port: 0, hubPort, log: () => undefined })).rejects.toThrow('listen failed')
-
-    expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    await expect(startPixi({ port: 0, hubPort: 4750, log: () => undefined })).rejects.toThrow('listen failed')
   })
 })
 
 describe('the start script', () => {
   const children: ChildProcess[] = []
+  const constructs: ProductConstruct[] = []
 
   afterEach(async () => {
     for (const child of children.splice(0)) {
@@ -282,6 +240,7 @@ describe('the start script', () => {
         await closed
       }
     }
+    await Promise.all(constructs.splice(0).map((construct) => construct.close()))
   })
 
   const run = (args: string[]) => {
@@ -295,76 +254,69 @@ describe('the start script', () => {
   }
 
   const ready = async (args: string[]) => {
-    const started = run(['--port', '0', '--hub-port', '0', ...args])
+    const started = run(['--port', '0', ...args])
     const page = () => /wishem: PixiJS page at (http:\/\/127\.0\.0\.1:\d+\/)/.exec(started.output())?.[1]
     await until(
       () => page() !== undefined || started.child.exitCode !== null,
       () => started.output(),
     )
-    const link = /wishem: link at (ws:\/\/127\.0\.0\.1:\d+\/link)/.exec(started.output())?.[1]
     const pageUrl = page()
-    if (pageUrl === undefined || link === undefined) {
+    if (pageUrl === undefined) {
       expect.fail(`the script stopped with no address:\n${started.output()}`)
     }
-    return { started, pageUrl, link }
+    return { started, pageUrl }
   }
 
-  it('prints the two addresses', { timeout: 30000 }, async () => {
+  it('prints the address of the page and of the link, with the default hub port 4750', { timeout: 30000 }, async () => {
     const { started } = await ready([])
 
     expect(started.output()).toMatch(
-      /^wishem: link at ws:\/\/127\.0\.0\.1:\d+\/link\nwishem: PixiJS page at http:\/\/127\.0\.0\.1:\d+\/\n/,
+      /^wishem: PixiJS page at http:\/\/127\.0\.0\.1:\d+\/\nwishem: the page connects to ws:\/\/127\.0\.0\.1:4750\/link\n/,
     )
   })
 
-  it('prints that the time starts paused with --paused', { timeout: 30000 }, async () => {
-    const { started, link } = await ready(['--paused'])
-    const { link: remote, port } = await openOutput(link)
+  it('names the hub port of the option', { timeout: 30000 }, async () => {
+    const { started } = await ready(['--hub-port', '4751'])
 
-    expect(started.output()).toMatch(/^wishem: the time of the construct starts paused\nwishem: link at /)
-    expect((port.read().time as TimePart).running).toBe(false)
-    remote.close()
+    expect(started.output()).toContain('wishem: the page connects to ws://127.0.0.1:4751/link\n')
+  })
+
+  it('refuses the option --paused with exit code 1', { timeout: 30000 }, async () => {
+    const started = run(['--port', '0', '--paused'])
+
+    expect(await started.exit).toBe(1)
+    expect(started.output()).toContain('--paused')
+    expect(started.output()).not.toContain('PixiJS page at')
   })
 
   it.each(['SIGINT', 'SIGTERM'] as const)(
-    'stops with exit code 0 on %s, sends stopping to an open link, and frees both ports',
+    'stops with exit code 0 on %s, frees the page port, and leaves the construct running',
     { timeout: 30000 },
     async (signal) => {
-      const { started, pageUrl, link } = await ready([])
-      const { link: remote, port } = await openOutput(link)
-      const { link: proxied, port: proxiedPort } = await openOutput(
-        new URL('link', pageUrl.replace('http:', 'ws:')).href,
-      )
-      const events: HubEvent[] = []
-      const proxiedEvents: HubEvent[] = []
-      port.subscribe((event) => {
-        events.push(event)
-      })
-      proxiedPort.subscribe((event) => {
-        proxiedEvents.push(event)
-      })
+      const construct = await startSampleConstruct({ paused: true })
+      constructs.push(construct)
+      const { started, pageUrl } = await ready(['--hub-port', String(portOf(construct.linkUrl))])
+      const { link: proxied } = await openOutput(new URL('link', pageUrl.replace('http:', 'ws:')).href)
 
       started.child.kill(signal)
 
       expect(await started.exit).toBe(0)
-      expect(events.some((event) => event.type === 'stopping')).toBe(true)
-      expect(proxiedEvents.some((event) => event.type === 'stopping')).toBe(true)
-      await remote.closed
       await proxied.closed
       expect(await refuses('127.0.0.1', portOf(pageUrl))).toBe(true)
-      expect(await refuses('127.0.0.1', portOf(link))).toBe(true)
+      const { link } = await openOutput(construct.linkUrl)
+      link.close()
     },
   )
 
-  it('names the port and ends with exit code 1 when the hub port is in use', { timeout: 30000 }, async () => {
+  it('names the port and ends with exit code 1 when the page port is in use', { timeout: 30000 }, async () => {
     const blocker = createServer()
     await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve))
-    const hubPort = (blocker.address() as { port: number }).port
+    const pagePort = (blocker.address() as { port: number }).port
     try {
-      const started = run(['--port', '0', '--hub-port', String(hubPort)])
+      const started = run(['--port', String(pagePort)])
 
       expect(await started.exit).toBe(1)
-      expect(started.output()).toContain(`wishem: port ${String(hubPort)} is in use`)
+      expect(started.output()).toContain(`wishem: port ${String(pagePort)} is in use`)
       expect(started.output()).not.toContain('PixiJS page at')
     } finally {
       await new Promise((resolve) => blocker.close(resolve))
