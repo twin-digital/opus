@@ -6,6 +6,13 @@ export interface HubClient {
   close(): void
 }
 
+export interface HubPorts {
+  /** `page-<hex>`. */
+  output: Port
+  /** `page-<hex>-input`. */
+  input: Port
+}
+
 export interface HubClientOptions {
   /** Default: `/link` on the origin of the page, with `ws:` or `wss:`. */
   url?: string
@@ -15,20 +22,20 @@ export interface HubClientOptions {
   firstDelayMs?: number
   /** Default 5000. */
   maxDelayMs?: number
-  /** Called after each `welcome` with the remote port of the new link. */
-  onPort: (port: Port) => void
+  /** Called after each `welcome` with the two ports of the new link. */
+  onPorts: (ports: HubPorts) => void
 }
 
 const defaultUrl = () => `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/link`
 
-/** Opens a link as one output subsystem, and gives the port of each link to `onPort` after its `welcome`. */
+/** Opens a link with an output subsystem and an input subsystem, and gives the ports of each link to `onPorts` after its `welcome`. */
 export const connectHub = (options: HubClientOptions): HubClient => {
   const {
     url = defaultUrl(),
     createSocket = (address: string) => new WebSocket(address),
     firstDelayMs,
     maxDelayMs,
-    onPort,
+    onPorts,
   } = options
   let closed = false
 
@@ -37,12 +44,15 @@ export const connectHub = (options: HubClientOptions): HubClient => {
     createSocket,
     firstDelayMs,
     maxDelayMs,
-    subsystems: [{ prefix: 'page', kind: 'output' }],
-    onLink: ([port]) => {
+    subsystems: [
+      { prefix: 'page', kind: 'output' },
+      { prefix: 'page', suffix: '-input', kind: 'input' },
+    ],
+    onLink: ([output, input]) => {
       try {
-        onPort(port)
+        onPorts({ output, input })
       } catch (cause) {
-        console.error('wishem: onPort failed.', cause)
+        console.error('wishem: onPorts failed.', cause)
       }
     },
     onDown: () => {

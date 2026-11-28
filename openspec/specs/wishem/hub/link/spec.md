@@ -190,12 +190,22 @@ The package SHALL hold a document of the protocol. The document SHALL give each 
 
 ### Requirement: A client connects again after a link ends
 
-The package `@thrashplay/wishem-hub` SHALL give a client that opens a link with a list of subsystems and, after each end of a link, opens a new link until the client is closed. Each link SHALL use new subsystem IDs. The client SHALL wait 500 milliseconds before the first new attempt, double the wait after each failed attempt up to 5 seconds, and wait 500 milliseconds again after a `welcome`. It SHALL send no input again after a link ends.
+The package `@thrashplay/wishem-hub` SHALL give a client that opens a link with a list of subsystems and, after each end of a link, opens a new link until the client is closed. Each subsystem SHALL keep one ID for the life of the client. The client SHALL make new IDs only after the hub side refuses a `hello` with `id-in-use`. The client SHALL wait 500 milliseconds before the first new attempt, double the wait after each failed attempt up to 5 seconds, and wait 500 milliseconds again after a `welcome`. It SHALL send no input again after a link ends.
 
 #### Scenario: The hub side stops and starts
 
 - **WHEN** a client has a link, the hub side stops, and a new hub side starts at the same address
-- **THEN** the client opens a new link with new IDs and gives the remote ports of the new link
+- **THEN** the client opens a new link and gives the remote ports of the new link
+
+#### Scenario: The same IDs after a new link
+
+- **WHEN** a link ends and the client opens a new link
+- **THEN** the `hello` of the new link holds the same subsystem IDs as the `hello` of the link before
+
+#### Scenario: New IDs after id-in-use
+
+- **WHEN** the hub side refuses a `hello` with `id-in-use`
+- **THEN** the client makes new subsystem IDs for the next link, and keeps them for the links after it
 
 #### Scenario: The waits
 

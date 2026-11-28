@@ -1,4 +1,15 @@
-import type { ComponentTypeDefinition, Entity, FieldDefinition, Id, Model, Problem, ValidationResult } from './model.js'
+import { FIELD_TYPES } from './model.js'
+import type {
+  ComponentTypeDefinition,
+  Entity,
+  FieldDefinition,
+  FieldType,
+  FieldValue,
+  Id,
+  Model,
+  Problem,
+  ValidationResult,
+} from './model.js'
 
 type Path = (string | number)[]
 
@@ -7,7 +18,17 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+const FIELD_TYPE_NAMES = FIELD_TYPES.map((type) => `"${type}"`).join(', ')
+
+const isFieldType = (value: unknown): value is FieldType => FIELD_TYPES.includes(value as FieldType)
+
 const describeValue = (value: unknown): string => (typeof value === 'string' ? `"${value}"` : JSON.stringify(value))
+
+/** A reference agrees when it is a string. Its form and its entity are checked later. */
+const agrees = (type: FieldType, value: unknown): boolean =>
+  type === 'number' ? typeof value === 'number' && Number.isFinite(value)
+  : type === 'boolean' ? typeof value === 'boolean'
+  : typeof value === 'string'
 
 /** Validates data of an unknown shape against the rules of the `wishem/core/model` specification. */
 export const validateModel = (data: unknown): ValidationResult => {
@@ -109,15 +130,15 @@ export const validateModel = (data: unknown): ValidationResult => {
           }
           fieldIds.add(rawField.id as Id)
         }
-        const typeOk = rawField.type === 'string'
+        const typeOk = isFieldType(rawField.type)
         if (!typeOk) {
           error(
             [...fieldPath, 'type'],
-            `${fieldThing} has the type ${describeValue(rawField.type)}, but the only type is "string"`,
+            `${fieldThing} has the type ${describeValue(rawField.type)}, but the types are ${FIELD_TYPE_NAMES}`,
           )
         }
         if (fieldIdOk && fieldLabelOk && typeOk) {
-          fields.push({ id: rawField.id as Id, label: rawField.label as string, type: 'string' })
+          fields.push({ id: rawField.id as Id, label: rawField.label as string, type: rawField.type as FieldType })
         }
       })
     }
@@ -134,6 +155,7 @@ export const validateModel = (data: unknown): ValidationResult => {
   })
 
   const entities: Entity[] = []
+  const references: { id: string; path: Path; thing: string }[] = []
   const entityIds = new Set<Id>()
 
   rawEntities.forEach((raw: unknown, index) => {
@@ -167,7 +189,7 @@ export const validateModel = (data: unknown): ValidationResult => {
         error(componentPath, `${thing} has a component of the type "${type.label}" that is not an object`)
         continue
       }
-      const component: Record<Id, string> = {}
+      const component: Record<Id, FieldValue> = {}
       for (const [fieldId, value] of Object.entries(rawComponent)) {
         const field = type.fields.find((f) => f.id === fieldId)
         if (field === undefined) {
@@ -175,13 +197,20 @@ export const validateModel = (data: unknown): ValidationResult => {
             [...componentPath, fieldId],
             `${thing} has a component of the type "${type.label}" with the key ${fieldId}, which is not a field of the type`,
           )
-        } else if (typeof value !== 'string') {
+        } else if (!agrees(field.type, value)) {
           error(
             [...componentPath, fieldId],
-            `${thing} has the value ${describeValue(value)} for the field "${field.label}" of "${type.label}", but the type of the field is "string"`,
+            `${thing} has the value ${describeValue(value)} for the field "${field.label}" of "${type.label}", but the type of the field is "${field.type}"`,
           )
         } else {
-          component[fieldId] = value
+          const valuePath = [...componentPath, fieldId]
+          const valueThing = `${thing} has the field "${field.label}" of "${type.label}", which`
+          if (field.type !== 'reference' || checkId(value, 'e', valueThing, valuePath)) {
+            component[fieldId] = value as FieldValue
+            if (field.type === 'reference') {
+              references.push({ id: value as string, path: valuePath, thing: valueThing })
+            }
+          }
         }
       }
       components[typeId] = component
@@ -190,6 +219,12 @@ export const validateModel = (data: unknown): ValidationResult => {
       entities.push({ id: raw.id as Id, components })
     }
   })
+
+  for (const { id, path, thing } of references) {
+    if (!entityIds.has(id)) {
+      error(path, `${thing} refers to the entity "${id}", and no entity has that ID`)
+    }
+  }
 
   if (problems.length > 0) {
     return { ok: false, problems }

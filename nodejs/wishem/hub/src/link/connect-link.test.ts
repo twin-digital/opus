@@ -285,21 +285,78 @@ describe('connectLink', () => {
       expect(idsOf(env.last()).map((subsystem) => subsystem.kind)).toEqual(['output', 'input'])
     })
 
-    it('uses an ID of the form prefix and 16 hex that is new for each link', async () => {
-      connect()
+    it('uses an ID of the form prefix and 16 hex that is the same for each link', async () => {
+      connect({
+        subsystems: [
+          { prefix: 'page', kind: 'output' },
+          { prefix: 'page-input', kind: 'input' },
+        ],
+      })
       await waitForLinks(1)
       env.last().drop()
       await flush(500)
-      const ids = env.sockets.map((socket) => {
-        const subsystems = idsOf(socket)
-        expect(subsystems).toHaveLength(1)
-        return subsystems[0]?.id ?? ''
+      await waitForLinks(2)
+      const [first = [], second = []] = env.sockets.map((socket) => idsOf(socket).map((subsystem) => subsystem.id))
+      expect(first).toHaveLength(2)
+      expect(first[0]).toMatch(/^page-[0-9a-f]{16}$/)
+      expect(first[1]).toMatch(/^page-input-[0-9a-f]{16}$/)
+      expect(second).toEqual(first)
+    })
+
+    it('uses one hex for all IDs of the client, and puts the suffix after it', async () => {
+      connect({
+        subsystems: [
+          { prefix: 'page', kind: 'output' },
+          { prefix: 'page', suffix: '-input', kind: 'input' },
+        ],
       })
-      expect(ids).toHaveLength(2)
-      ids.forEach((id) => {
-        expect(id).toMatch(/^page-[0-9a-f]{16}$/)
+      await waitForLinks(1)
+      const [output, input] = idsOf(env.last()).map((subsystem) => subsystem.id)
+      expect(output).toMatch(/^page-[0-9a-f]{16}$/)
+      expect(input).toBe(`${output}-input`)
+    })
+
+    it('makes new IDs for all subsystems after a refusal with id-in-use, and keeps them after', async () => {
+      connect({
+        subsystems: [
+          { prefix: 'page', kind: 'output' },
+          { prefix: 'page-input', kind: 'input' },
+        ],
       })
-      expect(ids[0]).not.toBe(ids[1])
+      await waitForLinks(1)
+      const firstIds = idsOf(env.last()).map((subsystem) => subsystem.id)
+      env.last().drop()
+      await flush()
+      const taken = env.hub.attach({ id: firstIds[0] ?? '', kind: 'input' })
+      await flush(500)
+      expect(refusals.map((error) => error.reason)).toEqual(['id-in-use'])
+      expect(links).toHaveLength(1)
+      await flush(1000)
+      await waitForLinks(2)
+      const thirdIds = idsOf(env.last()).map((subsystem) => subsystem.id)
+      expect(thirdIds[0]).not.toBe(firstIds[0])
+      expect(thirdIds[1]).not.toBe(firstIds[1])
+      expect(thirdIds[0]).toMatch(/^page-[0-9a-f]{16}$/)
+      taken.close()
+      env.last().drop()
+      await flush(500)
+      await waitForLinks(3)
+      expect(idsOf(env.last()).map((subsystem) => subsystem.id)).toEqual(thirdIds)
+    })
+
+    it('keeps the IDs after a refusal with another reason', async () => {
+      connect()
+      await waitForLinks(1)
+      const firstIds = idsOf(env.last()).map((subsystem) => subsystem.id)
+      env.last().drop()
+      await flush()
+      env.hub.stop()
+      await flush(500)
+      env.hub = startHub()
+      await flush(1000)
+      await waitForLinks(2)
+      expect(refusals.map((error) => error.reason)).toEqual(['stopped'])
+      expect(idsOf(env.last()).map((subsystem) => subsystem.id)).toEqual(firstIds)
     })
 
     it('gives two clients two IDs and both attach', async () => {

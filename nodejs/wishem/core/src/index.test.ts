@@ -10,6 +10,10 @@ describe('the package exports', () => {
     expect(api.isEqual).toBeTypeOf('function')
   })
 
+  it('gives FIELD_TYPES with the four field types', () => {
+    expect(api.FIELD_TYPES).toEqual(['string', 'number', 'boolean', 'reference'])
+  })
+
   it('does not give createCore', () => {
     expect('createCore' in api).toBe(false)
   })

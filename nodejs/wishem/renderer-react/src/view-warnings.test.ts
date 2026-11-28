@@ -1,7 +1,7 @@
-import type { ComponentTypeDefinition } from '@thrashplay/wishem-core'
+import type { ComponentTypeDefinition, Model } from '@thrashplay/wishem-core'
 import { describe, expect, it } from 'vitest'
 import type { CollectedView, ViewTable } from './collect-views.js'
-import { describeWarning, viewWarnings } from './view-warnings.js'
+import { describeWarning, holdWarnings, viewWarnings } from './view-warnings.js'
 
 const APP_BAR = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
 const HEADER = 'ct_9d1e5b72-4c08-4a3f-8e26-7b1d0c9a5e43'
@@ -55,6 +55,20 @@ describe('viewWarnings', () => {
     ])
   })
 
+  it('gives one warning with the field ID and the name for a label that gives a reserved name', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+
+    expect(viewWarnings(views, [definition(APP_BAR, 'title', 'Wishem')])).toEqual([
+      {
+        kind: 'reserved-name',
+        sidecar: 'AppBar.view.json',
+        componentType: APP_BAR,
+        name: 'wishem',
+        fields: [FIELD_B],
+      },
+    ])
+  })
+
   it('gives no warning for an empty name or a name that starts with a digit', () => {
     const views = tableOf(entry('AppBar.view.json', APP_BAR))
 
@@ -87,7 +101,81 @@ describe('viewWarnings', () => {
   })
 })
 
+const LIST = 'ct_5a6b7c8d-1e2f-4a3b-8c4d-9e0f1a2b3c4d'
+const FIELD_FIRST = 'fld_7c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f'
+const E_A = 'e_11111111-0000-4000-8000-000000000001'
+const E_B = 'e_11111111-0000-4000-8000-000000000002'
+
+const listModel = (refs: Record<string, string>): Model => ({
+  definitions: [{ id: LIST, label: 'List', fields: [{ id: FIELD_FIRST, label: 'first', type: 'reference' }] }],
+  entities: Object.entries(refs).map(([id, ref]) => ({ id, components: { [LIST]: { [FIELD_FIRST]: ref } } })),
+})
+
+describe('holdWarnings', () => {
+  const views = tableOf(entry('List.view.json', LIST))
+
+  it('gives no warning for references with no cycle', () => {
+    expect(holdWarnings(views, listModel({ [E_A]: E_B }))).toEqual([])
+  })
+
+  it('gives one warning with the entities and the field for a cycle', () => {
+    expect(holdWarnings(views, listModel({ [E_A]: E_B, [E_B]: E_A }))).toEqual([
+      {
+        kind: 'reference-cycle',
+        sidecar: 'List.view.json',
+        componentType: LIST,
+        fields: [FIELD_FIRST],
+        entities: [E_B, E_A],
+      },
+    ])
+  })
+
+  it('gives one warning for an entity that names itself', () => {
+    expect(holdWarnings(views, listModel({ [E_A]: E_A }))).toEqual([
+      {
+        kind: 'reference-cycle',
+        sidecar: 'List.view.json',
+        componentType: LIST,
+        fields: [FIELD_FIRST],
+        entities: [E_A, E_A],
+      },
+    ])
+  })
+
+  it('gives no warning after the cycle is corrected', () => {
+    expect(holdWarnings(views, listModel({ [E_A]: E_B, [E_B]: E_B.replace('2', '3') }))).toEqual([])
+  })
+})
+
 describe('describeWarning', () => {
+  it('names the sidecar file, the entities, the field, and the component type for a cycle', () => {
+    expect(
+      describeWarning({
+        kind: 'reference-cycle',
+        sidecar: 'List.view.json',
+        componentType: LIST,
+        fields: [FIELD_FIRST],
+        entities: [E_B, E_A],
+      }),
+    ).toBe(
+      `wishem: the sidecar List.view.json: the field ${FIELD_FIRST} of the component type ${LIST} of the entity ${E_B} names the entity ${E_A}, which is already on the path of its picture. The view gets no picture for it.`,
+    )
+  })
+
+  it('names the sidecar file, the field, the component type, and the name for a reserved name', () => {
+    expect(
+      describeWarning({
+        kind: 'reserved-name',
+        sidecar: 'AppBar.view.json',
+        componentType: APP_BAR,
+        name: 'wishem',
+        fields: [FIELD_B],
+      }),
+    ).toBe(
+      `wishem: the sidecar AppBar.view.json: the label of the field ${FIELD_B} of the component type ${APP_BAR} gives the reserved name "wishem". The view does not get the field.`,
+    )
+  })
+
   it('names the sidecar file and the ID for a component type that is not defined', () => {
     expect(
       describeWarning({ kind: 'component-type-not-defined', sidecar: 'Header.view.json', componentType: HEADER }),

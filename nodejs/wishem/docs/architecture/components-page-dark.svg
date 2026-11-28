@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 940" width="880" height="940" role="img" aria-labelledby="title desc">
 <title id="title">Component diagram: the page of the workbench</title>
-<desc id="desc">The page has six components. The client of the hub connects to the workbench process through the link. The renderer reads the part store from the port that the client gives, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.</desc>
+<desc id="desc">The page has six components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The views draw with the catalog.</desc>
 <defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.5"/></filter></defs>
 <rect width="880" height="940" fill="#121222"/>
 <text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#ececf3" text-anchor="start">Component diagram: the page of the workbench</text>
@@ -17,9 +17,10 @@
 <text x="173" y="382.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Attach each view to a component</text>
 <text x="173" y="398.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">type.</text>
 <rect x="582" y="316" width="250" height="104" rx="14" fill="#1b1b30" stroke="#868fa8" filter="url(#shadow)"/>
-<text x="707" y="356.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Client of the hub</text>
-<text x="707" y="374.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Component: connectHub]</text>
-<text x="707" y="390.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Gives the port of each link.</text>
+<text x="707" y="348.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Client of the hub</text>
+<text x="707" y="366.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Component: connectHub]</text>
+<text x="707" y="382.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Gives the output port and the</text>
+<text x="707" y="398.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">input port of each link.</text>
 <rect x="48" y="516" width="250" height="104" rx="14" fill="#1b1b30" stroke="#868fa8" filter="url(#shadow)"/>
 <text x="173" y="548.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Table of views</text>
 <text x="173" y="566.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Component: renderer-react]</text>
@@ -45,9 +46,9 @@
 <text x="707" y="228" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[WebSocket link]</text>
 <path d="M707 516 L707 430" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="707,420 712.5,431 701.5,431" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<rect x="624" y="448" width="166" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
-<text x="707" y="465" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Reads the part store</text>
-<text x="707" y="480" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[port]</text>
+<rect x="642" y="448" width="130" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="707" y="465" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Reads and sends</text>
+<text x="707" y="480" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[ports]</text>
 <path d="M740 620 L740 658 Q740 668 730 668 L260 668 Q250 668 250 678 L250 706" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="250,716 244.5,705 255.5,705" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
 <rect x="422.8" y="656" width="144.4" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
@@ -56,6 +57,11 @@
 <polygon points="582,768 571,773.5 571,762.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
 <rect x="396.6" y="756" width="86.8" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
 <text x="440" y="772.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Draw with</text>
+<path d="M200 716 L200 648 Q200 638 210 638 L616 638 Q620 638 620 634 L620 630" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="620,620 625.5,631 614.5,631" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="359.4" y="618" width="101.2" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="410" y="635" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Send inputs</text>
+<text x="410" y="650" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[wishem]</text>
 <path d="M582 568 L308 568" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="298,568 309,562.5 309,573.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
 <rect x="378.6" y="556" width="122.8" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
