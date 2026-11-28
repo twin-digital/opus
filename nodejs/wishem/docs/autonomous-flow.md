@@ -165,7 +165,7 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Before each push, run `node nodejs/wishem/docs/flow-scripts/finish-check.mjs` from the root of the worktree. Push only when it prints no FAIL line.
 - A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
-- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> <range> <file>...` creates the one break-test issue of a change. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
+- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. Its last line is `<number> merged=<true|false>`. The exit code is 0 when the pull request is merged and 1 when it is not merged. The lead agent does the steps after the merge (the worktree, the board, the break-test issue) only after exit code 0. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> <range> <file>...` creates the one break-test issue of a change. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
 
 ### The steps that a person does
 
@@ -180,6 +180,7 @@ A test of one requirement does not find a fault that needs two features in a seq
 
 - A change with two or more tasks has a review of each task and one final review of the full branch.
 - The final reviewer compares the packages of `nodejs/wishem/` and their imports in the code with the container diagram and the tables of the architecture document. A package, a process, or a relationship that the document does not show is a finding of the grade Important. Reason: the change that added the clock package did not add it to the document, and a milestone with two changes has no review of the full milestone that would find it.
+- The final reviewer runs the type check of each package that depends on a changed package, and not only of the changed packages. Use the turbo filter `...^<package>` (the dependents only) or `...<package>` (the package and its dependents), after a build. Reason: a change of a library package can break the types of a package that imports it, and the checks of a pull request do not always find it (see #663).
 - A change with one task has one review: the final review of the full branch. The diff of the task is the diff of the branch, so a review of the task reads the same code.
 
 ### Break-tests
@@ -250,8 +251,17 @@ The brief of each subagent says: report each thing that is not in the scope of t
 ## When a milestone is complete
 
 1. If the milestone has more than three changes, review the full result of the milestone with a subagent that did not write it. Correct each fault that the review finds.
-2. Write the test guide of the milestone. See "The test guide of a milestone".
-3. Create one issue with the type `Review` in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
+2. Run a full type check of all Wishem packages, after a build. Run each command from the root of the worktree. Split a command into parts when it takes more than 140 seconds:
+
+   ```bash
+   node nodejs/wishem/docs/flow-scripts/heavy.mjs pnpm exec turbo run build --filter './nodejs/wishem/*'
+   node nodejs/wishem/docs/flow-scripts/heavy.mjs pnpm exec turbo run typecheck --filter './nodejs/wishem/*'
+   ```
+
+   A failure is an issue of the type `Bug` in the milestone R1 Tech Debt. Reason: the owner decided on 2026-11-28 to check each package once at each milestone completion. `main` had a type error in `renderer-pixi` from #535 that no check of a pull request found (fixed by #663).
+
+3. Write the test guide of the milestone. See "The test guide of a milestone".
+4. Create one issue with the type `Review` in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
    - A link to the test guide of the milestone.
    - A link to each specification of the milestone.
    - What was built, how it was built, and the reason.
@@ -259,7 +269,7 @@ The brief of each subagent says: report each thing that is not in the scope of t
    - Each change to blueprint text that had the label **Agreed**.
    - The result of the retrospective. See "Retrospective".
    - If the milestone published a build that a person can install, and where it is.
-4. Continue with the next milestone. Do not wait for the review.
+5. Continue with the next milestone. Do not wait for the review.
 
 ### The test guide of a milestone
 
