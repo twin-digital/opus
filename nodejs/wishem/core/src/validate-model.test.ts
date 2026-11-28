@@ -93,7 +93,7 @@ describe('validateModel', () => {
       expect(problems[0]?.path).toEqual(['definitions', 0, 'fields', 0, 'type'])
       expect(problems[0]?.message).toContain('AppBar')
       expect(problems[0]?.message).toContain('title')
-      expect(problems[0]?.message).toContain('date')
+      expect(problems[0]?.message).toContain('has the type "date"')
       for (const type of ['string', 'number', 'boolean', 'reference']) {
         expect(problems[0]?.message).toContain(`"${type}"`)
       }
@@ -362,6 +362,18 @@ describe('validateModel', () => {
         expect(problems).toHaveLength(1)
         expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD2])
         expect(problems[0]?.message).toContain(`has the value ${name} for the field`)
+      })
+
+      it.each([
+        ['a number', FLD, 42, 'has the value 42 for'],
+        ['a boolean', FLD2, true, 'has the value true for'],
+        ['null', FLD2, null, 'has the value null for'],
+        ['a string', FLD2, '42', 'has the value "42" for'],
+        ['an object', FLD3, { a: 1 }, 'has the value {"a":1} for'],
+      ])('shows %s as its value in the message of a type mismatch', (_name, field, value, text) => {
+        const problems = errors(withValues({ [field]: value }))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.message).toContain(text)
       })
 
       it('accepts a reference to a later entity and a reference of an entity to itself', () => {
