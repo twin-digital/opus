@@ -63,7 +63,7 @@ This is the path from a change of the product model to a running product constru
 4. The store of the product construct applies them, and the rules of the product (`wrapStore`) and the clock continue to run.
 5. The hub of the product construct sends the `applied` message on each open link.
 
-The package `sample-product` is a container because it holds the example product model folder. It holds the model folder `model/` and the count rule `withCountRule`, which wraps a store and adds 1 to each count at each tick of the clock. The count rule is a native behavior in a first form. It stands in for the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)). The package imports only types from `core` and `hub`, so the diagram shows no relationship from it. It uses `clock` in its tests. `workbench-app` uses it as a development dependency, for a test, so the diagram shows no relationship to it.
+The package `sample-product` is a container because it holds the example product model folder. It holds the model folder `model/` and the count rule `withCountRule`, which wraps a store and adds 1 to each count at each tick of the clock. The count rule is a native behavior in a first form. It stands in for the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)). The package imports only types from `core` and `hub`, so the diagram shows no relationship from it. It uses `clock` in its tests. The workbench process loads it as the product code, so the diagram shows the relationship from the workbench process to it. The tests of `workbench-app` and of `construct-manager` use it too.
 
 To start the workbench, see [`workbench-app/README.md`](../../workbench-app/README.md). To start the PixiJS page, see [`pixi-page/README.md`](../../pixi-page/README.md).
 
@@ -102,7 +102,7 @@ This is the path of a tick from the clock in the PixiJS process to the picture i
 - `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`. `@thrashplay/wishem-pixi-page` depends on it. `@thrashplay/wishem-core` is a development dependency of it, for a test.
 - `@thrashplay/wishem-renderer-pixi` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub` for types only. It has `pixi.js` as a peer dependency.
 - `@thrashplay/wishem-pixi-page` depends on `@thrashplay/wishem-clock`, `@thrashplay/wishem-core`, `@thrashplay/wishem-host-nodejs`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-renderer-pixi`.
-- `@thrashplay/wishem-sample-product` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`. `@thrashplay/wishem-clock` is a development dependency of it, for a test. Only the test of `workbench-app` depends on it.
+- `@thrashplay/wishem-sample-product` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`. `@thrashplay/wishem-clock` is a development dependency of it, for a test. The packages `workbench-app` and `construct-manager` have it as a development dependency.
 - `@thrashplay/wishem-hub` depends on no other package of Wishem.
 
 The package `host-nodejs` also provides the `wishem` command. The command starts a construct for a model folder, with no page. The option `--product <folder>` mounts a product model folder. The `start` script of `@thrashplay/wishem-workbench` uses it (`wishem start ./model`). The command runs no construct manager.

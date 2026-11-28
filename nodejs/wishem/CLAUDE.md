@@ -11,7 +11,7 @@ The `docs/` folder holds the blueprint.
 - `clock` (`@thrashplay/wishem-clock`): the `time` subsystem and the clock. It uses no Node.js API.
 - `sample-product` (`@thrashplay/wishem-sample-product`): the sample product. It holds a model folder with a color and a count, and the count rule that adds 1 to the count at each tick. It uses no Node.js API.
 - `host-nodejs` (`@thrashplay/wishem-host-nodejs`): runs a construct in a Node.js process, serves the link (`startConstruct` and `serveHub`), writes `state.json`, and provides the `wishem` command.
-- `construct-manager` (`@thrashplay/wishem-construct-manager`): the construct list (the model subsystem `constructs`) and `productChanges`. The root entry uses no Node.js API. It is private.
+- `construct-manager` (`@thrashplay/wishem-construct-manager`): the construct list (the model subsystem `constructs`) and `productChanges`. The entry `node` holds the construct manager and the product construct. The root entry uses no Node.js API. It is private.
 - `workbench` (`@thrashplay/wishem-workbench`): the base workbench. It holds the first model and a `start` script.
 - `renderer-react` (`@thrashplay/wishem-renderer-react`): the React renderer. It draws React views from a port of the hub, and it writes the types of the props of the views. The root entry runs in a web browser. The entry `view-types` runs in Node.js.
 - `renderer-pixi` (`@thrashplay/wishem-renderer-pixi`): the PixiJS renderer. It draws PixiJS views from a port. It uses no Node.js API.

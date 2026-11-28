@@ -644,7 +644,7 @@ The report after it sets `"time": "paused"` and `"lastSend": { "seq": 5, "result
 
 A report from a client of the link: `{"ok":false,"reason":"invalid","problems":[{"message":"Only the construct manager reports a status","path":["source"]}]}`.
 
-A rewind through the link of `play`: `{"t":"result","request":1,"result":{"ok":false,"reason":"not-permitted","problems":[{"message":"Only construct-manager can rewind this construct"}]}}`.
+A rewind through the link of `play`: `{"t":"result","request":1,"result":{"ok":false,"reason":"not-permitted","problems":[]}}`.
 
 ## Package Impact
 

@@ -16,6 +16,14 @@ const vite = vi.hoisted(() => ({ createServer: vi.fn() }))
 
 const hostModule = vi.hoisted(() => ({ startConstruct: vi.fn() }))
 
+const managerModule = vi.hoisted(() => ({ attachConstructManager: vi.fn() }))
+
+vi.mock('@thrashplay/wishem-construct-manager/node', async (importActual) => {
+  const actual = await importActual<typeof import('@thrashplay/wishem-construct-manager/node')>()
+  managerModule.attachConstructManager.mockImplementation(actual.attachConstructManager)
+  return { ...actual, attachConstructManager: managerModule.attachConstructManager }
+})
+
 vi.mock('vite', () => ({ createServer: vite.createServer }))
 vi.mock('@thrashplay/wishem-host-nodejs', async (importActual) => {
   const actual = await importActual<typeof import('@thrashplay/wishem-host-nodejs')>()
@@ -132,6 +140,7 @@ describe('the start script of the workbench', () => {
     vite.createServer.mockReset()
     vite.createServer.mockRejectedValue(new Error('plugin failed'))
     hostModule.startConstruct.mockClear()
+    managerModule.attachConstructManager.mockClear()
     folder = mkdtempSync(join(tmpdir(), 'workbench-start-'))
     model = join(folder, 'model')
     cpSync(baseModel, model, { recursive: true })
@@ -375,6 +384,71 @@ describe('the start script of the workbench', () => {
       expect(await refuses('127.0.0.1', hubPort)).toBe(true)
     },
   )
+
+  describe('a manager that cannot close', () => {
+    let product = ''
+
+    /** Makes the manager close with an error. */
+    const breakManagerClose = () => {
+      const actualAttach = managerModule.attachConstructManager.getMockImplementation()
+      managerModule.attachConstructManager.mockImplementationOnce((options: never) => {
+        const manager = (actualAttach as (options: never) => { close(): Promise<void> })(options)
+        const close = manager.close.bind(manager)
+        return {
+          ...manager,
+          close: async () => {
+            await close()
+            throw new Error('manager failed')
+          },
+        }
+      })
+    }
+
+    beforeEach(() => {
+      product = join(folder, 'product')
+      cpSync(sampleProduct, product, { recursive: true })
+    })
+
+    it('closes the page server and the construct on close', { timeout: 30000 }, async () => {
+      const hubPort = await freePort()
+      const close = vi.fn(() => Promise.resolve())
+      vite.createServer.mockResolvedValue({
+        listen: () => Promise.resolve(),
+        httpServer: { address: () => ({ port: 5555 }) },
+        close,
+      })
+      breakManagerClose()
+      const workbench = await startWorkbench({
+        model,
+        product,
+        views,
+        viewTypes: false,
+        port: 0,
+        hubPort,
+        log: () => undefined,
+      })
+
+      await expect(workbench.close()).rejects.toThrow('manager failed')
+
+      expect(close).toHaveBeenCalledTimes(1)
+      expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    })
+
+    it(
+      'closes the construct and reports the start error when the page server cannot start',
+      { timeout: 30000 },
+      async () => {
+        const hubPort = await freePort()
+        breakManagerClose()
+
+        await expect(
+          startWorkbench({ model, product, views, viewTypes: false, port: 0, hubPort, log: () => undefined }),
+        ).rejects.toThrow('plugin failed')
+
+        expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+      },
+    )
+  })
 
   it('sends each line to the log option, and stops both parts on close', { timeout: 30000 }, async () => {
     const hubPort = await freePort()
