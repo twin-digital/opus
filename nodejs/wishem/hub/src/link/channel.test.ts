@@ -190,6 +190,20 @@ describe('a listener that throws for a message that waited', () => {
   })
 })
 
+describe('two listeners that throw for messages that waited', () => {
+  it('throws the first error', async () => {
+    const [a, b] = createChannelPair()
+    a.send('1')
+    a.send('2')
+    await tick()
+    expect(() => {
+      b.onMessage((text) => {
+        throw new Error(`boom ${text}`)
+      })
+    }).toThrow('boom 1')
+  })
+})
+
 describe('webSocketChannel', () => {
   it('resolves at once for an open socket', async () => {
     const { socket } = fakeSocket(1)
@@ -231,8 +245,28 @@ describe('webSocketChannel', () => {
 
   it('does not close the socket again for a close event', async () => {
     const { socket, fire } = fakeSocket(1)
-    await webSocketChannel(socket)
+    const channel = await webSocketChannel(socket)
+    const onClose = vi.fn()
+    channel.onClose(onClose)
+    fire('error')
     fire('close')
+    expect(socket.closeCalls).toBe(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not close the socket again for an error after the channel closed', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    channel.close()
+    fire('error')
+    expect(socket.closeCalls).toBe(1)
+  })
+
+  it('does not close the socket for an error before the open', async () => {
+    const { socket, fire } = fakeSocket(0)
+    const promise = webSocketChannel(socket)
+    fire('error')
+    await expect(promise).rejects.toBeInstanceOf(Error)
     expect(socket.closeCalls).toBe(0)
   })
 

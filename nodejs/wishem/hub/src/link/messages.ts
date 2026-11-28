@@ -1,4 +1,4 @@
-import type { Input, JoinedState, RecordedInput, SubmitResult } from '../types.js'
+import type { Input, JoinedState, RecordedInput, RejectionReason, SubmitResult } from '../types.js'
 
 /** The version of the protocol of the link. */
 export const LINK_PROTOCOL_VERSION = 1
@@ -24,7 +24,13 @@ export type Parsed<Message> =
   { readonly kind: 'message'; readonly message: Message } | { readonly kind: 'unknown'; readonly t: string }
 
 const REASONS: readonly string[] = ['malformed', 'version', 'id-in-use', 'unsupported', 'stopped']
-const REJECTIONS: readonly string[] = ['not-permitted', 'not-running', 'unknown-type', 'invalid']
+const REJECTION_SET: Record<RejectionReason, true> = {
+  'not-permitted': true,
+  'not-running': true,
+  'unknown-type': true,
+  invalid: true,
+}
+const REJECTIONS: readonly string[] = Object.keys(REJECTION_SET)
 const STATUSES: readonly string[] = ['created', 'running']
 const CLIENT_TYPES: readonly string[] = ['hello', 'submit']
 const HUB_TYPES: readonly string[] = ['welcome', 'refused', 'event', 'applied', 'result']
