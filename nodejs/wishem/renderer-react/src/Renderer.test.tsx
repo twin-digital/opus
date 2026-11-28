@@ -1,4 +1,4 @@
-import { createStore, storeInputs, type Model } from '@thrashplay/wishem-core'
+import { createStore, storeInputs, type Entity, type Model } from '@thrashplay/wishem-core'
 import {
   createChannelPair,
   createHub,
@@ -14,6 +14,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { collectViews, type ViewProps } from './collect-views.js'
 import { Renderer, type PortReader } from './Renderer.js'
+import type { InputPort, ViewTools } from './view-tools.js'
 
 const CT_A = 'ct_aaaaaaaa-0000-4000-8000-000000000001'
 const CT_B = 'ct_bbbbbbbb-0000-4000-8000-000000000002'
@@ -80,7 +81,14 @@ const counting = (port: PortReader) => {
   }
 }
 
-const viewA = ({ title }: ViewProps) => <span className='a'>{title === undefined ? 'none' : `title:${title}`}</span>
+const text = (value: unknown): string =>
+  value === undefined || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ?
+    String(value)
+  : ''
+
+const viewA = ({ title }: ViewProps) => (
+  <span className='a'>{title === undefined ? 'none' : `title:${text(title)}`}</span>
+)
 
 interface ViewSource {
   name: string
@@ -358,7 +366,7 @@ describe('Renderer', () => {
           ...sourceA,
           view: (props) => {
             keys.push(Object.keys(props))
-            return <span>{`heading:${String(props.heading)}`}</span>
+            return <span>{`heading:${text(props.heading)}`}</span>
           },
         }),
       )
@@ -378,7 +386,7 @@ describe('Renderer', () => {
       })
 
       expect(wrappers()[0]?.textContent).toBe('heading:One')
-      expect(keys.at(-1)).toEqual(['heading'])
+      expect(keys.at(-1)).toEqual(['heading', 'wishem'])
     })
   })
 
@@ -435,14 +443,14 @@ describe('Renderer', () => {
         }),
       )
 
-      expect(received[0]).toEqual({ maxHealth: '12', other: undefined })
-      expect(Object.keys(received[0] ?? {})).toEqual(['maxHealth', 'other'])
+      expect(received[0]).toEqual({ maxHealth: '12', other: undefined, wishem: expect.anything() })
+      expect(Object.keys(received[0] ?? {})).toEqual(['maxHealth', 'other', 'wishem'])
     })
 
     it('mounts the function of the view as a React component', async () => {
       const Counter = ({ title }: ViewProps) => {
         const [count] = useState(7)
-        return <span>{`${String(title)}:${count}`}</span>
+        return <span>{`${text(title)}:${count}`}</span>
       }
       const { input, output } = startWorld(baseModel())
       draw(output, tableOf({ ...sourceA, view: Counter }))
@@ -475,7 +483,7 @@ describe('Renderer', () => {
       const sourceB: ViewSource = {
         name: 'B',
         componentType: CT_B,
-        view: ({ other }) => <span className='b'>{`other:${other ?? 'none'}`}</span>,
+        view: ({ other }) => <span className='b'>{`other:${text(other ?? 'none')}`}</span>,
       }
       const model: Model = {
         ...baseModel(),
@@ -522,7 +530,7 @@ describe('Renderer', () => {
 
       draw(
         startWorld(model).output,
-        tableOf({ ...sourceA, view: ({ maxHealth }) => <span>{`max:${String(maxHealth)}`}</span> }),
+        tableOf({ ...sourceA, view: ({ maxHealth }) => <span>{`max:${text(maxHealth)}`}</span> }),
       )
 
       expect(wrappers()[0]?.textContent).toBe('max:first')
@@ -634,6 +642,441 @@ describe('Renderer', () => {
 
       expect(container.innerHTML).toBe(before)
       expect(warn).not.toHaveBeenCalled()
+    })
+  })
+  describe('the inputs of a view', () => {
+    const SEEN_VIEW_SOURCE = (seen: ViewTools[]): ViewSource => ({
+      name: 'A',
+      componentType: CT_A,
+      view: ({ wishem }: ViewProps) => {
+        seen.push(wishem)
+        return null
+      },
+    })
+
+    const render = (output: PortReader, views: ReturnType<typeof tableOf>, input?: InputPort, strict = false) => {
+      const element = <Renderer port={output} views={views} input={input} />
+      act(() => {
+        root.render(strict ? <StrictMode>{element}</StrictMode> : element)
+      })
+    }
+
+    it('gives each view the prop wishem with setField and submit', () => {
+      const seen: ViewTools[] = []
+      render(startWorld(baseModel()).output, tableOf(SEEN_VIEW_SOURCE(seen)))
+      expect(seen.length).toBeGreaterThan(0)
+      expect(typeof seen[0]?.setField).toBe('function')
+      expect(typeof seen[0]?.submit).toBe('function')
+    })
+
+    it('gives the same wishem after a change of a value', async () => {
+      const seen: ViewTools[] = []
+      const { input, output } = startWorld(baseModel())
+      render(output, tableOf(SEEN_VIEW_SOURCE(seen)), input)
+      const first = seen.at(-1)
+      const renders = seen.length
+
+      await act(async () => {
+        await setTitle(input, E1, 'Changed')
+      })
+
+      expect(seen.length).toBeGreaterThan(renders)
+      expect(new Set(seen).size).toBe(2)
+      expect(seen.at(-1)).toBe(first)
+    })
+
+    it('gives a new wishem after a change of the definition', async () => {
+      const seen: ViewTools[] = []
+      const { input, output } = startWorld(baseModel())
+      render(output, tableOf(SEEN_VIEW_SOURCE(seen)), input)
+      const before = new Set(seen)
+      const model = baseModel()
+
+      await act(async () => {
+        await input.submit(
+          inputs.replaceModel({
+            ...model,
+            definitions: model.definitions.map((definition) =>
+              definition.id === CT_A ? { ...definition, label: 'Header' } : definition,
+            ),
+          }),
+        )
+      })
+
+      expect(before.has(seen.at(-1) as ViewTools)).toBe(false)
+    })
+
+    it('gives a new wishem after a change of the input port', () => {
+      const seen: ViewTools[] = []
+      const { input, output } = startWorld(baseModel())
+      const views = tableOf(SEEN_VIEW_SOURCE(seen))
+      render(output, views, input)
+      const first = seen.at(-1)
+      render(output, views, startWorld(baseModel()).input)
+      expect(seen.at(-1)).not.toBe(first)
+    })
+
+    it('gives a different wishem to each entity', () => {
+      const seen: ViewTools[] = []
+      render(startWorld(baseModel()).output, tableOf(SEEN_VIEW_SOURCE(seen)))
+      expect(new Set(seen).size).toBe(2)
+    })
+
+    it('sends no input when the renderer draws two times and no view calls wishem', () => {
+      const seen: ViewTools[] = []
+      const { hub, input, output } = startWorld(baseModel())
+      const views = tableOf(SEEN_VIEW_SOURCE(seen))
+      render(output, views, input)
+      render(output, tableOf(SEEN_VIEW_SOURCE(seen)), input)
+      expect(hub.record()).toEqual([])
+    })
+
+    it('sets a field: one input with the source of the input port, and the picture shows the new title', async () => {
+      const hub = createHub({ subsystems: [createStore({ model: baseModel() }), counter] })
+      hub.start()
+      const input = hub.attach({ id: 'page-input', kind: 'input' })
+      const output = hub.attach({ id: 'screen', kind: 'output' })
+      const seen: ViewProps[] = []
+      const views = tableOf({
+        name: 'A',
+        componentType: CT_A,
+        view: (props: ViewProps) => {
+          seen.push(props)
+          return <span className='a'>{text(props.title)}</span>
+        },
+      })
+      render(output, views, input)
+      const first = seen.find((props) => props.title === 'One') as ViewProps
+
+      await act(async () => {
+        await first.wishem.setField('title', 'Hello')
+      })
+
+      expect(hub.record()).toEqual([
+        expect.objectContaining({
+          source: 'page-input',
+          type: 'store/set-field',
+          payload: { entity: E1, componentType: CT_A, field: FLD_TITLE, value: 'Hello' },
+        }),
+      ])
+      expect(wrappers()[0]?.textContent).toBe('Hello')
+    })
+
+    it('gives not-permitted and sends no input when there is no input port', async () => {
+      const seen: ViewProps[] = []
+      const { hub, output } = startWorld(baseModel())
+      render(
+        output,
+        tableOf({
+          name: 'A',
+          componentType: CT_A,
+          view: (props: ViewProps) => {
+            seen.push(props)
+            return null
+          },
+        }),
+      )
+      const outcome = await seen[0].wishem.setField('title', 'Hello')
+      expect(outcome).toEqual({ ok: false, reason: 'not-permitted', problems: [] })
+      expect(hub.record()).toEqual([])
+    })
+
+    it('sends the input to the old port when a view calls wishem after the renderer is removed', async () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const seen: ViewTools[] = []
+      const { hub, input, output } = startWorld(baseModel())
+      render(output, tableOf(SEEN_VIEW_SOURCE(seen)), input)
+      const kept = seen[0]
+      act(() => {
+        root.render(null)
+      })
+
+      const outcome = await kept.setField('title', 'After')
+
+      expect(outcome.ok).toBe(true)
+      expect(hub.record()).toHaveLength(1)
+      expect(error).not.toHaveBeenCalled()
+    })
+
+    it('keeps the port of its time for a call that waits, and uses the new port for the next call', async () => {
+      const seen: ViewTools[] = []
+      const resolvers: ((result: { ok: true; seq: number }) => void)[] = []
+      const first: InputPort = {
+        submit: () =>
+          new Promise((resolve) => {
+            resolvers.push(resolve)
+          }),
+      }
+      const second = vi.fn(() => Promise.resolve({ ok: true as const, seq: 2 }))
+      const { output } = startWorld(baseModel())
+      const views = tableOf(SEEN_VIEW_SOURCE(seen))
+      render(output, views, first)
+      const waiting = seen[0].setField('title', 'a')
+      render(output, views, { submit: second })
+
+      resolvers[0]?.({ ok: true, seq: 1 })
+      expect(await waiting).toEqual({ ok: true, seq: 1 })
+      expect(second).not.toHaveBeenCalled()
+      expect(await (seen.at(-1) as ViewTools).setField('title', 'b')).toEqual({ ok: true, seq: 2 })
+      expect(second).toHaveBeenCalledTimes(1)
+    })
+
+    it('sends one input for one call under StrictMode', async () => {
+      const seen: ViewTools[] = []
+      const { hub, input, output } = startWorld(baseModel())
+      render(output, tableOf(SEEN_VIEW_SOURCE(seen)), input, true)
+
+      await act(async () => {
+        await (seen.at(-1) as ViewTools).setField('title', 'Once')
+      })
+
+      expect(hub.record()).toHaveLength(1)
+    })
+
+    it('gives the view no prop for a field with a reserved name, and warns', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const seen: ViewProps[] = []
+      const model = baseModel()
+      const reserved: Model = {
+        ...model,
+        definitions: [
+          { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: 'Wishem', type: 'string' }] },
+          model.definitions[1],
+        ],
+      }
+      render(
+        startWorld(reserved).output,
+        tableOf({
+          name: 'A',
+          componentType: CT_A,
+          view: (props: ViewProps) => {
+            seen.push(props)
+            return null
+          },
+        }),
+      )
+      expect(typeof seen[0]?.wishem.setField).toBe('function')
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(String(warn.mock.calls[0]?.[0])).toContain('reserved name "wishem"')
+    })
+  })
+
+  describe('nested views', () => {
+    const CT_LIST = 'ct_dddddddd-0000-4000-8000-000000000004'
+    const FLD_FIRST = 'fld_dddddddd-0000-4000-8000-000000000015'
+    const E3 = 'e_aaaaaaaa-0000-4000-8000-000000000023'
+    const E4 = 'e_aaaaaaaa-0000-4000-8000-000000000024'
+
+    const listView = ({ first }: ViewProps) => <section className='list'>{first}</section>
+    const listSource: ViewSource = { name: 'List', componentType: CT_LIST, view: listView }
+
+    const nested = (entities: Model['entities']): Model => ({
+      definitions: [
+        { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: 'title', type: 'string' }] },
+        { id: CT_LIST, label: 'List', fields: [{ id: FLD_FIRST, label: 'first', type: 'reference' }] },
+      ],
+      entities,
+    })
+    const task = (id: string, title: string): Entity => ({ id, components: { [CT_A]: { [FLD_TITLE]: title } } })
+    const list = (id: string, first?: string): Entity => ({
+      id,
+      components: { [CT_LIST]: first === undefined ? {} : { [FLD_FIRST]: first } },
+    })
+    const topLevel = () => Array.from(container.children).map((child) => child.getAttribute('data-wishem-entity'))
+    const entityTexts = (parent: ParentNode) =>
+      Array.from(parent.querySelectorAll('[data-wishem-entity]')).map(
+        (wrapper) => `${wrapper.getAttribute('data-wishem-entity') ?? ''}:${wrapper.textContent}`,
+      )
+
+    it('draws a held entity in the picture of its holder, and not at the top level', () => {
+      draw(startWorld(nested([task(E1, 'Task'), list(E2, E1)])).output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2])
+      const held = container.querySelector(`[data-wishem-entity="${E2}"] [data-wishem-entity="${E1}"]`)
+      expect(held?.getAttribute('data-wishem-component-type')).toBe(CT_A)
+      expect(held?.textContent).toBe('title:Task')
+    })
+
+    it('draws a held entity in the place of each of two holders', () => {
+      draw(startWorld(nested([task(E1, 'Task'), list(E2, E1), list(E3, E1)])).output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2, E3])
+      expect(entityTexts(container.children[0])).toEqual([`${E1}:title:Task`])
+      expect(entityTexts(container.children[1])).toEqual([`${E1}:title:Task`])
+    })
+
+    it('draws a held entity at the top level when its holder has no view', () => {
+      draw(startWorld(nested([task(E1, 'Task'), list(E2, E1)])).output, tableOf(sourceA))
+      expect(topLevel()).toEqual([E1])
+    })
+
+    it('draws one picture for each component of the held entity that has a view, in the order of the definitions', () => {
+      const model: Model = {
+        definitions: [
+          { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: 'title', type: 'string' }] },
+          { id: CT_B, label: 'B', fields: [{ id: FLD_OTHER, label: 'other', type: 'string' }] },
+          { id: CT_LIST, label: 'List', fields: [{ id: FLD_FIRST, label: 'first', type: 'reference' }] },
+        ],
+        entities: [
+          { id: E1, components: { [CT_B]: { [FLD_OTHER]: 'b' }, [CT_A]: { [FLD_TITLE]: 'a' } } },
+          list(E2, E1),
+        ],
+      }
+      const viewB = ({ other }: ViewProps) => <span>{`other:${text(other)}`}</span>
+      draw(startWorld(model).output, tableOf(sourceA, { name: 'B', componentType: CT_B, view: viewB }, listSource))
+      expect(entityTexts(container.children[0])).toEqual([`${E1}:title:a`, `${E1}:other:b`])
+    })
+
+    it('gives the prop of a reference field no value when the component omits the field', () => {
+      const seen: unknown[] = []
+      draw(
+        startWorld(nested([list(E2)])).output,
+        tableOf({
+          ...listSource,
+          view: (props: ViewProps) => {
+            seen.push(props.first)
+            return null
+          },
+        }),
+      )
+      expect(seen).toEqual([undefined])
+    })
+
+    it('gives a picture that draws nothing for a held entity with no view', () => {
+      const model = nested([{ id: E1, components: {} }, list(E2, E1)])
+      draw(startWorld(model).output, tableOf(listSource))
+      expect(container.querySelector('.list')?.innerHTML).toBe('')
+      expect(topLevel()).toEqual([E2])
+    })
+
+    it('moves the held entity when an input changes the reference of the holder', async () => {
+      const { input, output } = startWorld(nested([task(E1, 'Task'), task(E3, 'Other'), list(E2, E1)]))
+      draw(output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E3, E2])
+
+      await act(async () => {
+        const result = await input.submit(
+          inputs.setField({ entity: E2, componentType: CT_LIST, field: FLD_FIRST, value: E3 }),
+        )
+        expect(result.ok).toBe(true)
+      })
+
+      expect(topLevel()).toEqual([E1, E2])
+      expect(entityTexts(container.children[1])).toEqual([`${E3}:title:Other`])
+    })
+
+    it('draws the held entity at the top level when an input removes the holder', async () => {
+      const { input, output } = startWorld(nested([task(E1, 'Task'), list(E2, E1)]))
+      draw(output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2])
+
+      await act(async () => {
+        expect((await input.submit(inputs.removeEntity(E2))).ok).toBe(true)
+      })
+
+      expect(topLevel()).toEqual([E1])
+    })
+
+    it('sends the input of a held view for the held entity, not the holder', async () => {
+      const submit = vi.fn(() => Promise.resolve({ ok: true as const, seq: 1 }))
+      const taskView = ({ wishem }: ViewProps) => (
+        <button
+          onClick={() => {
+            void wishem.setField('title', 'Renamed')
+          }}
+        />
+      )
+      act(() => {
+        root.render(
+          <Renderer
+            port={startWorld(nested([task(E1, 'Task'), list(E2, E1)])).output}
+            views={tableOf({ ...sourceA, view: taskView }, listSource)}
+            input={{ submit }}
+          />,
+        )
+      })
+
+      await act(async () => {
+        container.querySelector('button')?.click()
+        await Promise.resolve()
+      })
+
+      expect(submit).toHaveBeenCalledWith(
+        inputs.setField({ entity: E1, componentType: CT_A, field: FLD_TITLE, value: 'Renamed' }),
+      )
+    })
+
+    it('calls no view again after an input that leaves the part store the same object, also a held view', async () => {
+      const { input, output } = startWorld(nested([task(E1, 'Task'), list(E2, E1)]))
+      const calls = vi.fn()
+      draw(
+        output,
+        tableOf(
+          {
+            ...sourceA,
+            view: (props) => {
+              calls()
+              return viewA(props)
+            },
+          },
+          listSource,
+        ),
+      )
+      const before = calls.mock.calls.length
+      expect(before).toBeGreaterThan(0)
+      const store = output.read().store
+
+      await act(async () => {
+        await input.submit({ type: 'counter/add' })
+      })
+
+      expect(output.read().store).toBe(store)
+      expect(calls.mock.calls.length).toBe(before)
+    })
+
+    describe('a cycle', () => {
+      it('draws each entity one time on its path, and warns one time', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        draw(startWorld(nested([list(E1, E2), list(E2, E3), list(E3, E2)])).output, tableOf(listSource))
+
+        expect(topLevel()).toEqual([E1])
+        expect(entityTexts(container)).toEqual([E1, E2, E3].map((id) => `${id}:`))
+        expect(warn).toHaveBeenCalledTimes(1)
+        const text = String(warn.mock.calls[0]?.[0])
+        expect(text).toContain(E3)
+        expect(text).toContain(E2)
+        expect(text).toContain(FLD_FIRST)
+      })
+
+      it('draws nothing for the reference of an entity that holds itself, and warns', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        draw(startWorld(nested([list(E1, E1)])).output, tableOf(listSource))
+        expect(entityTexts(container)).toEqual([`${E1}:`])
+        expect(warn).toHaveBeenCalledTimes(1)
+      })
+
+      it('draws neither entity of a cycle with no root, and warns one time', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        draw(startWorld(nested([list(E1, E2), list(E2, E1)])).output, tableOf(listSource))
+        expect(container.innerHTML).toBe('')
+        expect(warn).toHaveBeenCalledTimes(1)
+      })
+
+      it('gives no new warning for a second input with the same cycle, and none after the cycle is corrected', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        const { input, output } = startWorld(nested([list(E1, E2), list(E2, E3), list(E3, E2), task(E4, 'x')]))
+        draw(output, tableOf(sourceA, listSource))
+        expect(warn).toHaveBeenCalledTimes(1)
+
+        await act(async () => {
+          await setTitle(input, E4, 'y')
+        })
+        expect(warn).toHaveBeenCalledTimes(1)
+
+        await act(async () => {
+          await input.submit(inputs.setField({ entity: E3, componentType: CT_LIST, field: FLD_FIRST, value: E4 }))
+        })
+        expect(warn).toHaveBeenCalledTimes(1)
+        expect(entityTexts(container)).toContain(`${E4}:title:y`)
+      })
     })
   })
 })

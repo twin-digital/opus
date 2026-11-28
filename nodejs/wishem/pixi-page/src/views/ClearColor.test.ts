@@ -46,7 +46,7 @@ describe('the ClearColor view', () => {
 
   it('hides the sprite for a value that is not text', () => {
     const sprite = view.create()
-    view.update(sprite, { color: 5 as unknown as string }, viewport)
+    view.update(sprite, { color: 5 }, viewport)
     expect(sprite.visible).toBe(false)
   })
 

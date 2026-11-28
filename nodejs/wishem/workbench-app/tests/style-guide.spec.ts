@@ -203,6 +203,47 @@ test.describe('components section', () => {
       expect(cut).toEqual({ overflow: 'ellipsis', clipped: true })
     })
 
+    test(`${id}: the title field has the display typeface, no lowercase transform, and a maker caret`, async ({
+      page,
+    }) => {
+      const field = specimen(page, id, 'App bar, edit').getByRole('textbox', { name: 'Title' })
+      const style = await field.evaluate((e) => {
+        const { fontFamily, textTransform, caretColor } = getComputedStyle(e)
+        return { fontFamily, textTransform, caretColor }
+      })
+      expect(style.fontFamily).toMatch(/^"Bricolage Grotesque Variable"/)
+      expect(style.textTransform).not.toBe('lowercase')
+      expect(style.caretColor).toBe('rgb(242, 169, 59)')
+      expect(await field.inputValue()).toBe('Wishem studio')
+    })
+
+    test(`${id}: the saving field is read-only and busy, and the label SAVING is in JetBrains Mono`, async ({
+      page,
+    }) => {
+      const bar = specimen(page, id, 'App bar, saving')
+      const field = bar.getByRole('textbox', { name: 'Title' })
+      expect(await field.getAttribute('aria-busy')).toBe('true')
+      expect(await field.evaluate((e) => (e as HTMLInputElement).readOnly)).toBe(true)
+      const label = bar.getByText('Saving', { exact: true })
+      expect(await label.evaluate((e) => (e as HTMLElement).innerText)).toBe('SAVING')
+      expect(await label.evaluate((e) => getComputedStyle(e).fontFamily)).toMatch(/^"JetBrains Mono"/)
+    })
+
+    test(`${id}: the line of a title that is not saved is danger-text on ground, with the role alert`, async ({
+      page,
+    }) => {
+      const line = specimen(page, id, 'App bar, not saved').getByRole('alert')
+      await expect(line).toHaveText('The title is not saved. The workbench does not run. Start it, and try again.')
+      const style = await line.evaluate((e) => {
+        const { color, backgroundColor } = getComputedStyle(e)
+        return { color, backgroundColor }
+      })
+      expect(style).toEqual({
+        color: theme === 'light' ? 'rgb(198, 40, 40)' : 'rgb(242, 102, 106)',
+        backgroundColor: GROUND[theme],
+      })
+    })
+
     test(`${id}: the zero state is a centered mono label and text in fg-muted`, async ({ page }) => {
       const zero = specimen(page, id, 'Zero state')
       const label = zero.getByText('Workbench', { exact: true })

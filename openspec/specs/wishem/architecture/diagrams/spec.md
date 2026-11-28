@@ -117,6 +117,11 @@ The architecture document SHALL hold a C4 component diagram of the page of the w
 - **WHEN** the client of the hub gives the port of each link, and the renderer and the table of views come from `@thrashplay/wishem-renderer-react`
 - **THEN** the component diagram shows that the renderer reads the part `store` through the port, and its technology lines name `renderer-react` for the renderer and the table of views
 
+#### Scenario: A view sends an input
+
+- **WHEN** a view sends an input through the prop `wishem`, and the renderer sends it through the input port that the client of the hub gives
+- **THEN** the component diagram shows a relationship from the views to the renderer with the label "Send inputs [wishem]", and the relationship from the renderer to the client of the hub says that the renderer reads and sends through the ports
+
 ### Requirement: The entity diagram of the model folder
 
 The architecture document SHALL hold an entity diagram of the model folder, in `nodejs/wishem/docs/architecture/entities-model-folder-light.svg` and `entities-model-folder-dark.svg`. The diagram SHALL show each entity of the model folder, its keys, and each relationship with its cardinality. The diagram SHALL apply to each model folder: the model folder of the workbench and the product folder have the same entities.
@@ -130,6 +135,11 @@ The architecture document SHALL hold an entity diagram of the model folder, in `
 
 - **WHEN** a change adds a store of persisted data that has the layout of a model folder, such as the product folder
 - **THEN** the architecture document says that the entity diagram applies to that store, and no second entity diagram exists
+
+#### Scenario: A field value refers to an entity
+
+- **WHEN** a field of the type `reference` holds the ID of an entity
+- **THEN** the entity diagram shows a relationship from `FieldValue` to `Entity` with the label "Refers to", with the mark "zero or one" at `Entity`, and the mark "zero or more" at `FieldValue`, and the legend explains the mark "zero or one"
 
 ### Requirement: Each diagram is written by the render script
 

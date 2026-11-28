@@ -28,10 +28,33 @@ const appBar = (...labels: string[]) =>
 const EXPECTED_APP_BAR = `// Generated from AppBar.view.json and the definition of its component type. Do not edit.
 // To write this file again: ${COMMAND}
 
+import type { ViewTools } from '@thrashplay/wishem-renderer-react'
+
+/** The values that \`wishem.setField\` takes for the component type "AppBar" (${APP_BAR}). */
+export interface Values {
+  /** The field "title" (${TITLE}). */
+  readonly title: string
+}
+
 /** The fields of the component type "AppBar" (${APP_BAR}). */
 export interface Props {
   /** The field "title" (${TITLE}). */
   readonly title: string | undefined
+  /** Sends inputs for this component. */
+  readonly wishem: ViewTools<Values>
+}
+`
+
+const EXPECTED_EMPTY = `// Generated from Header.view.json and the definition of its component type. Do not edit.
+// To write this file again: ${COMMAND}
+
+import type { ViewTools } from '@thrashplay/wishem-renderer-react'
+
+export type Values = object
+
+export interface Props {
+  /** Sends inputs for this component. */
+  readonly wishem: ViewTools<Values>
 }
 `
 
@@ -40,10 +63,81 @@ describe('renderViewTypes', () => {
     expect(renderViewTypes('AppBar.view.json', APP_BAR, COMMAND, appBar('title'))).toBe(EXPECTED_APP_BAR)
   })
 
+  it('gives Props with only wishem, and Values with no member, when there is no definition', () => {
+    expect(renderViewTypes('Header.view.json', APP_BAR, COMMAND)).toBe(EXPECTED_EMPTY)
+  })
+
+  it('gives the type of each field type', () => {
+    const text = renderViewTypes('Task.view.json', APP_BAR, COMMAND, {
+      id: APP_BAR,
+      label: 'Task',
+      fields: [
+        { id: FIELD_A, label: 'Title', type: 'string' },
+        { id: FIELD_B, label: 'Points', type: 'number' },
+        { id: 'fld_5e6f7a8b-9c0d-4e1f-8a2b-4c5d6e7f8091', label: 'Done', type: 'boolean' },
+      ],
+    })
+    const [values, props] = text.split('export interface Props')
+    expect(values).toContain('readonly title: string\n')
+    expect(values).toContain('readonly points: number\n')
+    expect(values).toContain('readonly done: boolean\n')
+    expect(props).toContain('readonly title: string | undefined\n')
+    expect(props).toContain('readonly points: number | undefined\n')
+    expect(props).toContain('readonly done: boolean | undefined\n')
+    expect(props).toContain('readonly wishem: ViewTools<Values>\n')
+  })
+
+  describe('a reference field', () => {
+    const NEXT = 'fld_6f7a8b9c-0d1e-4f2a-9b3c-5d6e7f809102'
+    const list = (): ComponentTypeDefinition => ({
+      id: APP_BAR,
+      label: 'List',
+      fields: [
+        { id: FIELD_A, label: 'Title', type: 'string' },
+        { id: NEXT, label: 'First', type: 'reference' },
+      ],
+    })
+
+    it('gives a ReactNode in Props and a string in Values, with the comment of the field', () => {
+      const text = renderViewTypes('List.view.json', APP_BAR, COMMAND, list())
+      const [values, props] = text.split('export interface Props')
+      expect(values).toContain(`/** The field "First" (${NEXT}). */\n  readonly first: string\n`)
+      expect(props).toContain(
+        `/** The picture of the entity that the field "First" (${NEXT}) names. */\n  readonly first: ReactNode\n`,
+      )
+      expect(props).toContain('readonly title: string | undefined\n')
+    })
+
+    it('imports ReactNode from react', () => {
+      const text = renderViewTypes('List.view.json', APP_BAR, COMMAND, list())
+      expect(text).toContain("import type { ReactNode } from 'react'\n")
+      expect(text).toContain("import type { ViewTools } from '@thrashplay/wishem-renderer-react'\n")
+    })
+
+    it('gives no import of react for a definition with no reference field', () => {
+      expect(renderViewTypes('AppBar.view.json', APP_BAR, COMMAND, appBar('title'))).not.toContain("from 'react'")
+      expect(renderViewTypes('Header.view.json', APP_BAR, COMMAND)).not.toContain("from 'react'")
+    })
+
+    it('names the field in the added props', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'wishem-ref-'))
+      try {
+        writeFileSync(join(dir, 'List.view.json'), JSON.stringify({ kind: 'react', componentType: APP_BAR }))
+        const result = await generateViewTypes({ definitions: [list()], views: dir, command: COMMAND })
+        expect(result.files[0]?.addedProps).toEqual(['title', 'first'])
+      } finally {
+        rmSync(dir, { recursive: true })
+      }
+    })
+  })
+
   it('gives one member for each field, in the order of the definition', () => {
     const text = renderViewTypes('AppBar.view.json', APP_BAR, COMMAND, appBar('title', 'subtitle'))
     expect(text).toBe(
       EXPECTED_APP_BAR.replace(
+        '  readonly title: string\n',
+        `  readonly title: string\n  /** The field "subtitle" (${FIELD_B}). */\n  readonly subtitle: string\n`,
+      ).replace(
         '  readonly title: string | undefined\n',
         `  readonly title: string | undefined\n  /** The field "subtitle" (${FIELD_B}). */\n  readonly subtitle: string | undefined\n`,
       ),
@@ -62,10 +156,12 @@ describe('renderViewTypes', () => {
     expect(text).not.toContain('*/ ')
   })
 
-  it('gives a Props type with no member when there is no definition', () => {
+  it('gives a Props type with only the member wishem when there is no definition', () => {
     const text = renderViewTypes('Header.view.json', APP_BAR, COMMAND)
-    expect(text).toContain('export type Props = object')
-    expect(text).not.toContain('readonly')
+    expect(text).toContain('export type Values = object')
+    expect(text).toContain('export interface Props {')
+    expect(text.match(/readonly /g)).toHaveLength(1)
+    expect(text).toContain('readonly wishem: ViewTools<Values>')
   })
 })
 
@@ -156,11 +252,26 @@ describe('generateViewTypes', () => {
     ])
   })
 
-  it('removes a generated file that has no sidecar', async () => {
+  it('names only field props in the added and removed props, and not wishem or Values', async () => {
+    sidecar('AppBar')
+    await run([appBar('title')])
+    const result = await run([appBar('heading')])
+    expect(result.files[0]).toMatchObject({ addedProps: ['heading'], removedProps: ['title'] })
+    expect(viewTypesLines(result)).toEqual(['wishem: changed AppBar.view.gen.ts: added heading, removed title'])
+  })
+
+  it('names only the field props of a file of the old form that has no wishem', async () => {
+    sidecar('AppBar')
     writeFileSync(
-      generated('Header'),
+      generated('AppBar'),
       '// Generated\nexport interface Props {\n  readonly title: string | undefined\n}\n',
     )
+    const result = await run([appBar('title')])
+    expect(result.files[0]).toMatchObject({ status: 'changed', addedProps: [], removedProps: [] })
+  })
+
+  it('removes a generated file that has no sidecar', async () => {
+    writeFileSync(generated('Header'), renderViewTypes('Header.view.json', APP_BAR, COMMAND, appBar('title')))
     const result = await run([appBar('title')])
     expect(result.files).toEqual([
       { file: 'Header.view.gen.ts', status: 'removed', addedProps: [], removedProps: ['title'] },
@@ -182,7 +293,7 @@ describe('generateViewTypes', () => {
     expect(result.warnings).toHaveLength(1)
     expect(result.warnings[0]).toContain('Header.view.json')
     expect(result.warnings[0]).toContain(APP_BAR)
-    expect(readFileSync(generated('Header'), 'utf8')).toContain('export type Props = object')
+    expect(readFileSync(generated('Header'), 'utf8')).toBe(EXPECTED_EMPTY)
   })
 
   describe('a label that gives no usable name', () => {
@@ -206,6 +317,24 @@ describe('generateViewTypes', () => {
         expect(result.errors[0]).toContain(part)
       }
       expect(existsSync(generated('AppBar'))).toBe(false)
+    })
+
+    it('gives an error for a reserved name, and writes no file', async () => {
+      sidecar('AppBar')
+      const result = await run([definition(APP_BAR, 'AppBar', [FIELD_A, 'Wishem'])])
+      expect(result.errors).toHaveLength(1)
+      for (const part of ['AppBar.view.json', APP_BAR, FIELD_A, '"wishem"', 'reserved']) {
+        expect(result.errors[0]).toContain(part)
+      }
+      expect(result.files).toEqual([])
+      expect(existsSync(generated('AppBar'))).toBe(false)
+    })
+
+    it('gives an error for the label Key', async () => {
+      sidecar('AppBar')
+      const result = await run([definition(APP_BAR, 'AppBar', [FIELD_A, 'Key'])])
+      expect(result.errors).toHaveLength(1)
+      expect(result.errors[0]).toContain('"key"')
     })
 
     it('gives one error for each label that gives no usable name', async () => {
