@@ -153,6 +153,9 @@ describe('the test guide: each product construct runs in a process of its own', 
       // no process loaded the code
     }
     for (const pid of pids) {
+      if (!Number.isInteger(pid) || pid <= 1) {
+        continue
+      }
       try {
         process.kill(pid, 'SIGKILL')
       } catch {
@@ -312,7 +315,9 @@ describe('the test guide: each product construct runs in a process of its own', 
     const started = Date.now()
     const endless = start(['--product', product, '--product-code', './code.mjs'], { INIT_CWD: folder })
     expect(await endless.exit).toBe(1)
-    expect(Date.now() - started).toBeGreaterThan(4500)
+    const elapsed = Date.now() - started
+    expect(elapsed).toBeGreaterThan(4500)
+    expect(elapsed).toBeLessThan(7000)
     expect(endless.output()).toContain(
       'wishem: the product code ./code.mjs cannot be loaded: The check did not end in 5 seconds.',
     )
