@@ -78,6 +78,19 @@ describe('parseClientMessage', () => {
     expect(parseClientMessage(text)).toBeUndefined()
   })
 
+  it('reads a count of 0 and a count of 2^53 - 1 where a count is required', () => {
+    const top = Number.MAX_SAFE_INTEGER
+    const messages = [
+      { ...hello, protocol: top },
+      { ...hello, protocol: 0 },
+      { ...submit, request: top },
+      { ...submit, request: 0 },
+    ]
+    for (const message of messages) {
+      expect(parseClientMessage(json(message))).toEqual({ kind: 'message', message })
+    }
+  })
+
   it('marks a message with an unknown type', () => {
     const message = parseClientMessage(json({ t: 'future-thing', x: 1 }))
     expect(message).toEqual({ kind: 'unknown', t: 'future-thing' })
@@ -152,6 +165,9 @@ describe('parseHubMessage', () => {
     ['a refused with a reason that is not known', json({ ...refused, reason: 'because' })],
     ['a refused with no message', json({ ...refused, message: undefined })],
     ['a refused with a supported that is not a list', json({ ...refused, supported: 1 })],
+    ['a refused with a supported version of 1.5', json({ ...refused, supported: [1.5] })],
+    ['a refused with a negative supported version', json({ ...refused, supported: [-1] })],
+    ['a refused with a supported version of 2^53', json({ ...refused, supported: [2 ** 53] })],
     ['a refused with a supported that holds text', json({ ...refused, supported: ['1'] })],
     ['a refused with a supported that holds a number and text', json({ ...refused, supported: [1, '2'] })],
     ['a refused with a supported that is null', json({ ...refused, supported: null })],

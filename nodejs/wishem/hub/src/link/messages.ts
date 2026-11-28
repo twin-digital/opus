@@ -35,8 +35,6 @@ const isFields = (value: unknown): value is Fields =>
 
 const isString = (value: unknown): value is string => typeof value === 'string'
 
-const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
-
 const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
 
@@ -64,7 +62,7 @@ const isRefused = (fields: Fields) =>
   isString(fields.reason) &&
   REASONS.includes(fields.reason) &&
   isString(fields.message) &&
-  (fields.supported === undefined || (Array.isArray(fields.supported) && fields.supported.every(isNumber)))
+  (fields.supported === undefined || (Array.isArray(fields.supported) && fields.supported.every(isCount)))
 
 const isEvent = (fields: Fields) => fields.event === 'started' || fields.event === 'stopping'
 
