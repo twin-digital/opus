@@ -1108,7 +1108,9 @@ describe('Renderer', () => {
       const tableDeck = () => tableOf(sourceA, deckSource)
 
       it('gives a list of pictures in order, each in an element of its entity inside the deck', () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
         draw(startWorld(deckModel([E1, E3])).output, tableDeck())
+        expect(error).not.toHaveBeenCalled()
         expect(topLevel()).toEqual([E2])
         expect(entityTexts(container.children[0])).toEqual([`${E1}:title:goat`, `${E3}:title:owl`])
         const inner = Array.from(
