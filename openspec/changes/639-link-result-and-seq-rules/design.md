@@ -143,7 +143,7 @@ The rules are rules of the protocol. A person sees them through the tests of the
 1. Run the tests of the reference client:
 
    ```
-   pnpm exec turbo run test --filter @thrashplay/wishem-hub
+   pnpm exec turbo run test --filter @thrashplay/wishem-hub -- --reporter=verbose
    ```
 
    Result: the run passes with no failed test. The output names the new tests of `messages.test.ts` and `open-link.test.ts`, for example "gives undefined for a result with a result and an error" and "closes the channel and rejects with a LinkClosedError for a welcome with the seq 3.5".
@@ -154,7 +154,7 @@ The rules are rules of the protocol. A person sees them through the tests of the
    pnpm --filter @thrashplay/wishem-renderer-godot test:godot
    ```
 
-   Result: the last line is `wishem-godot tests: <n> passed, 0 failed`. The output has a `PASS` line for each new test of `test_link_client.gd` and `test_link_messages.gd`, for example `PASS res://tests/test_link_client.gd test_a_result_with_result_and_error_closes_the_socket_and_gives_down_once`.
+   Result: the output has the summary line `wishem-godot tests: <n> passed, 0 failed`. The summary line is not the last line. Godot prints `ERROR` lines at shutdown after it, and these lines are expected. The output has a `PASS` line for each new test of `test_link_client.gd` and `test_link_messages.gd`, for example `PASS res://tests/test_link_client.gd test_a_result_with_result_and_error_closes_the_socket_and_gives_down_once`.
 
 ## Package Impact
 
