@@ -50,6 +50,13 @@ describe('parseClientMessage', () => {
     ['a hello with a subsystem with no kind', json({ ...hello, subsystems: [{ id: 'a' }] })],
     ['a submit with no request', json({ ...submit, request: undefined })],
     ['a submit with a request that is not a number', json({ ...submit, request: '1' })],
+    ['a hello with a protocol of 1.5', json({ ...hello, protocol: 1.5 })],
+    ['a hello with a negative protocol', json({ ...hello, protocol: -1 })],
+    ['a hello with a protocol of 2^53', json({ ...hello, protocol: 2 ** 53 })],
+    ['a submit with a request of 1.5', json({ ...submit, request: 1.5 })],
+    ['a submit with a negative request', json({ ...submit, request: -1 })],
+    ['a submit with a request of 2^53', json({ ...submit, request: 2 ** 53 })],
+    ['a submit with a request larger than 2^53', json({ ...submit, request: 2 ** 60 })],
     ['a submit with no subsystem', json({ ...submit, subsystem: undefined })],
     ['a submit with a subsystem that is not text', json({ ...submit, subsystem: 3 })],
     ['a submit with no input', json({ ...submit, input: undefined })],
@@ -69,6 +76,19 @@ describe('parseClientMessage', () => {
   it('gives undefined for a number that is not finite', () => {
     const text = '{"t":"hello","protocol":1e999,"subsystems":[{"id":"page","kind":"output"}]}'
     expect(parseClientMessage(text)).toBeUndefined()
+  })
+
+  it('reads a count of 0 and a count of 2^53 - 1 where a count is required', () => {
+    const top = Number.MAX_SAFE_INTEGER
+    const messages = [
+      { ...hello, protocol: top },
+      { ...hello, protocol: 0 },
+      { ...submit, request: top },
+      { ...submit, request: 0 },
+    ]
+    for (const message of messages) {
+      expect(parseClientMessage(json(message))).toEqual({ kind: 'message', message })
+    }
   })
 
   it('marks a message with an unknown type', () => {
@@ -145,6 +165,9 @@ describe('parseHubMessage', () => {
     ['a refused with a reason that is not known', json({ ...refused, reason: 'because' })],
     ['a refused with no message', json({ ...refused, message: undefined })],
     ['a refused with a supported that is not a list', json({ ...refused, supported: 1 })],
+    ['a refused with a supported version of 1.5', json({ ...refused, supported: [1.5] })],
+    ['a refused with a negative supported version', json({ ...refused, supported: [-1] })],
+    ['a refused with a supported version of 2^53', json({ ...refused, supported: [2 ** 53] })],
     ['a refused with a supported that holds text', json({ ...refused, supported: ['1'] })],
     ['a refused with a supported that holds a number and text', json({ ...refused, supported: [1, '2'] })],
     ['a refused with a supported that is null', json({ ...refused, supported: null })],
