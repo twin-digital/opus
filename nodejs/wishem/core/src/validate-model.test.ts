@@ -507,14 +507,23 @@ describe('validateModel', () => {
         expect(warning?.message).toContain('AppBar')
         expect(warning?.message).toContain(CT)
         expect(warning?.message).toContain(CT2)
-        expect(warning?.path).toEqual(['definitions'])
+        expect(warning?.path).toEqual(['definitions', 1, 'label'])
       }
+    })
+
+    it('gives the index of the later definition when another definition lies between', () => {
+      const result = validateModel(model([appBar(), appBar({ id: CT2, label: 'Other' }), appBar({ id: CT3 })], []))
+      expect(result.ok && result.warnings.map((warning) => warning.path)).toEqual([['definitions', 2, 'label']])
     })
 
     it('warns for each component type that repeats a label', () => {
       const result = validateModel(model([appBar(), appBar({ id: CT2 }), appBar({ id: CT3 })], []))
       expect(result.ok && result.warnings).toHaveLength(2)
       if (result.ok) {
+        expect(result.warnings.map((warning) => warning.path)).toEqual([
+          ['definitions', 1, 'label'],
+          ['definitions', 2, 'label'],
+        ])
         expect(result.warnings.every((warning) => warning.message.includes(CT))).toBe(true)
         expect(result.warnings.some((warning) => warning.message.includes(CT2))).toBe(true)
         expect(result.warnings.some((warning) => warning.message.includes(CT3))).toBe(true)
