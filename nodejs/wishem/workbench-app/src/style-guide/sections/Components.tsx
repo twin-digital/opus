@@ -74,7 +74,7 @@ const runBarStates = {
   starting: { status: 'Starting', enabled: controls('stop') },
   running: {
     status: 'Running',
-    enabled: controls('stop', 'pause', 'step'),
+    enabled: controls('stop', 'pause'),
     readout: { ticks: 412, seconds: '20.60' },
   },
   paused: {
@@ -260,7 +260,7 @@ export const Components = () => (
     </Specimen>
     <Specimen label='Stage, not reachable'>
       <div className='w-[672px] p-4'>
-        <StageFrame note='The product is not reachable. The picture is the last one.'>
+        <StageFrame note='The product is not reachable. The page tries again.'>
           <div className='h-[180px] w-[320px] bg-accent' />
         </StageFrame>
       </div>

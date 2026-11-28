@@ -232,7 +232,7 @@ When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the scrip
 - `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
 - `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
 - `product` runs `tests/product.spec.ts`. The browser opens the page of the workbench with the sample product at `127.0.0.1:4184`.
-- `run` runs `tests/run.guide.spec.ts`. The browser opens the page of the workbench with the sample product, its code, and its views at `127.0.0.1:4186` (`scripts/e2e-server.ts --run`, with the folders `.e2e-run-model/` and `.e2e-run-product/`). The tests run, pause, step, and step back `play`.
+- `run` runs `tests/run.guide.spec.ts`. The browser opens the page of the workbench with the sample product, its code, and its views at `127.0.0.1:4186` (`scripts/e2e-server.ts --run`, with the folders `.e2e-run-model/`, `.e2e-run-product/`, and `.e2e-run-views/`; the last holds the view files of the sample product with no test file, and ESLint ignores each `.e2e-*` folder). The tests run, pause, step, and step back `play`.
 
 The `webServer` option of the config runs `scripts/e2e-server.ts` (and `scripts/e2e-server.ts --product`) on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, hub port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
 

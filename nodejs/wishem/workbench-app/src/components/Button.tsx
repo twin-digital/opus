@@ -32,7 +32,7 @@ export const Button = ({
         onPress?.()
       }
     }}
-    className={`rounded-sm border bg-surface px-3 py-1.5 text-ui hover:bg-ground focus-visible:outline-2 focus-visible:outline-accent ${disabled ? 'border-control-border text-fg-muted' : variants[variant]}`}
+    className={`rounded-sm border bg-surface px-3 py-1.5 text-ui focus-visible:outline-2 focus-visible:outline-accent ${disabled ? 'border-control-border text-fg-muted' : `hover:bg-ground ${variants[variant]}`}`}
   >
     {label}
   </button>

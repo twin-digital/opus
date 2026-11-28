@@ -1208,7 +1208,7 @@ describe('the start script of the workbench', () => {
       return workbench
     }
 
-    const upgradeStatus = (page: string, path: string) =>
+    const upgradeStatus = (page: string, path: string, extra: Record<string, string> = {}) =>
       new Promise<number>((resolve, reject) => {
         const url = new URL(path, page)
         const request = httpRequest(url, {
@@ -1217,6 +1217,7 @@ describe('the start script of the workbench', () => {
             Upgrade: 'websocket',
             'Sec-WebSocket-Version': '13',
             'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+            ...extra,
           },
         })
         request.on('response', (response) => {
@@ -1253,6 +1254,18 @@ describe('the start script of the workbench', () => {
       const workbench = await startPlay(run, socketBase)
       try {
         expect(await upgradeStatus(page, '/constructs/other/link')).toBe(404)
+      } finally {
+        workbench.link.close()
+      }
+    })
+
+    it('refuses a foreign Origin at /constructs/play/link with 403', { timeout: 30000 }, async () => {
+      const { page, run, socketBase } = await startProduct()
+      const workbench = await startPlay(run, socketBase)
+      try {
+        const path = '/constructs/play/link'
+        expect(await upgradeStatus(page, path, { Origin: 'http://evil.example' })).toBe(403)
+        expect(await upgradeStatus(page, path, { Origin: new URL(page).origin })).toBe(101)
       } finally {
         workbench.link.close()
       }
@@ -1295,28 +1308,23 @@ describe('the start script of the workbench', () => {
       expect(run.output()).toContain(`wishem: product code ${SAMPLE_CODE}\nwishem: product views ${productViews}\n`)
     })
 
-    it('resolves a relative --product-views against INIT_CWD', { timeout: 30000 }, () => {
-      const relative = spawnSync(
-        'node',
-        [
-          script,
-          '--model',
-          model,
-          '--views',
-          views,
-          '--port',
-          '0',
-          '--hub-port',
-          '0',
-          '--product',
-          product,
-          '--product-views',
-          './product-views',
-        ],
-        { env: { ...process.env, INIT_CWD: folder }, encoding: 'utf8', timeout: 4000, killSignal: 'SIGKILL' },
+    it('resolves a relative --product-views against INIT_CWD', { timeout: 30000 }, async () => {
+      const args = ['--model', model, '--views', views, '--port', '0', '--hub-port', '0', '--product', product]
+      const child = spawn('node', [script, ...args, '--product-views', './product-views'], {
+        env: { ...process.env, INIT_CWD: folder },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+      children.push(child)
+      let text = ''
+      child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()))
+      child.stderr.on('data', (chunk: Buffer) => (text += chunk.toString()))
+
+      await until(
+        () => text.includes('wishem: workbench at') || child.exitCode !== null,
+        () => text,
       )
 
-      expect(relative.stdout).toContain(`wishem: product views ${productViews}\n`)
+      expect(text).toContain(`wishem: product views ${productViews}\n`)
     })
 
     it('lists the pairs of the sample product and no test file', { timeout: 30000 }, async () => {

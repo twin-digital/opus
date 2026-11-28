@@ -71,6 +71,11 @@ describe('Button', () => {
     expect(document.activeElement).toBe(button)
   })
 
+  it('disabled has no hover style', () => {
+    expect(draw({ disabled: true }).className).not.toContain('hover:')
+    expect(draw({ disabled: false }).className).toContain('hover:bg-ground')
+  })
+
   it('disabled calls nothing on a click, Enter, or Space and keeps the focus', () => {
     const onPress = vi.fn()
     const button = draw({ disabled: true, onPress })

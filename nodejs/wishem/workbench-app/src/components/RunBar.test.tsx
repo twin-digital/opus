@@ -174,6 +174,34 @@ describe('RunBar', () => {
     expect(document.activeElement).toBe(buttons()[2])
   })
 
+  it('moves the focus from a disabled button to the neighbor that is enabled', () => {
+    draw({ state: state({ enabled: new Set<RunControl>(['stop', 'back']) }) })
+    buttons()[1]?.focus()
+    press('ArrowRight')
+    expect(document.activeElement).toBe(buttons()[3])
+    buttons()[2]?.focus()
+    press('ArrowLeft')
+    expect(document.activeElement).toBe(buttons()[0])
+    buttons()[2]?.focus()
+    press('ArrowRight')
+    expect(document.activeElement).toBe(buttons()[3])
+  })
+
+  it('leaves a key with a modifier to the browser', () => {
+    draw({ state: state({ enabled: new Set<RunControl>(['stop', 'step', 'back']) }) })
+    buttons()[2]?.focus()
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey'] as const) {
+      for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End']) {
+        const event = new KeyboardEvent('keydown', { key, [modifier]: true, bubbles: true, cancelable: true })
+        act(() => {
+          buttons()[2]?.dispatchEvent(event)
+        })
+        expect(event.defaultPrevented).toBe(false)
+        expect(document.activeElement).toBe(buttons()[2])
+      }
+    }
+  })
+
   it('moves the focus to the first and the last enabled button with Home and End', () => {
     draw({ state: state({ enabled: new Set<RunControl>(['resume', 'step']) }) })
     buttons()[2]?.focus()

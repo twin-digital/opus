@@ -37,27 +37,40 @@ export const RunBar = ({ state, busy, alert, onControl }: RunBarProps) => {
   const stop = Math.max(found, 0)
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(bar.current?.querySelectorAll('button') ?? []).filter(
-      (button) => button.getAttribute('aria-disabled') !== 'true',
-    )
-    if (items.length === 0) {
+    if (event.altKey || event.ctrlKey || event.metaKey) {
       return
     }
-    const at = items.indexOf(document.activeElement as HTMLButtonElement)
-    let next: number
+    const all = Array.from(bar.current?.querySelectorAll('button') ?? [])
+    const isEnabled = (button: HTMLButtonElement) => button.getAttribute('aria-disabled') !== 'true'
+    const enabledButtons = all.filter(isEnabled)
+    if (enabledButtons.length === 0) {
+      return
+    }
+    const at = all.indexOf(document.activeElement as HTMLButtonElement)
+    // The first enabled button after (or before) the position, wrapping around.
+    const neighbor = (step: 1 | -1) => {
+      for (let offset = 1; offset <= all.length; offset++) {
+        const candidate = all[(((at + step * offset) % all.length) + all.length) % all.length]
+        if (isEnabled(candidate)) {
+          return candidate
+        }
+      }
+      return undefined
+    }
+    let next: HTMLButtonElement | undefined
     if (event.key === 'ArrowRight') {
-      next = (at + 1) % items.length
+      next = at < 0 ? enabledButtons[0] : neighbor(1)
     } else if (event.key === 'ArrowLeft') {
-      next = at <= 0 ? items.length - 1 : at - 1
+      next = at < 0 ? enabledButtons[enabledButtons.length - 1] : neighbor(-1)
     } else if (event.key === 'Home') {
-      next = 0
+      next = enabledButtons[0]
     } else if (event.key === 'End') {
-      next = items.length - 1
+      next = enabledButtons[enabledButtons.length - 1]
     } else {
       return
     }
     event.preventDefault()
-    items[next]?.focus()
+    next?.focus()
   }
 
   return (

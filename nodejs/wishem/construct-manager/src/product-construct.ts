@@ -45,9 +45,10 @@ export interface ProductConstruct {
  * Rejects with the error of a step, and then holds no port and no timer.
  */
 export const startProductConstruct = async (options: ProductConstructOptions): Promise<ProductConstruct> => {
+  const stepMs = options.stepMs ?? DEFAULT_STEP_MS
   const update = createUpdate({ store: createStore({ model: options.model }), behaviors: options.behaviors ?? [] })
   const hub = createHub({
-    subsystems: [createTime({ running: options.running, stepMs: options.stepMs ?? DEFAULT_STEP_MS }), update],
+    subsystems: [createTime({ running: options.running, stepMs }), update],
     rewindSources: [CONSTRUCT_MANAGER_ID],
     ...(options.onError === undefined ? {} : { onError: options.onError }),
   })
@@ -59,7 +60,7 @@ export const startProductConstruct = async (options: ProductConstructOptions): P
     hub.start()
     clockPort = hub.attach({ id: 'clock', kind: 'input' })
     clock = startClock(clockPort, {
-      ...(options.stepMs === undefined ? {} : { stepMs: options.stepMs }),
+      stepMs,
       ...(options.timer === undefined ? {} : { timer: options.timer }),
       ...(options.now === undefined ? {} : { now: options.now }),
     })

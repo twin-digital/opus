@@ -10,7 +10,7 @@ const plugin = /** @type {import('eslint').ESLint.Plugin} */ (/** @type {unknown
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  { ignores: ['dist', 'dist-style-guide', 'playwright-report', 'test-results'] },
+  { ignores: ['dist', 'dist-style-guide', 'playwright-report', 'test-results', '.e2e-*'] },
   {
     files: ['src/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': plugin },

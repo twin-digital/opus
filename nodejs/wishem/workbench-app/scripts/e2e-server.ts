@@ -3,7 +3,7 @@
 // With `--product`, the workbench mounts a copy of the sample product from `.e2e-product/`, and its model is in
 // `.e2e-product-model/`.
 // With `--run`, the workbench mounts a copy of the sample product from `.e2e-run-product/`, with the product code and
-// the views of the sample product copied to `.e2e-run-views/`, and its model is in `.e2e-run-model/`.
+// the view files of the sample product (no test file) copied to `.e2e-run-views/`, which ESLint ignores, and its model is in `.e2e-run-model/`.
 import { cp } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -34,7 +34,11 @@ if (withProduct) {
   await cp(resolve(root, '..', 'sample-product', 'model'), productCopy, { recursive: true })
 }
 if (withRun) {
-  await cp(resolve(root, '..', 'sample-product', 'views', 'react'), viewsCopy, { recursive: true })
+  // The views need the `node_modules` of the package, so the copy stays here. It holds no test file.
+  await cp(resolve(root, '..', 'sample-product', 'views', 'react'), viewsCopy, {
+    recursive: true,
+    filter: (source) => !/\.test\.tsx?$/.test(source),
+  })
 }
 
 // Node.js needs the `.ts` extension. TypeScript reads the types through `.js`.

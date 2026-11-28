@@ -229,7 +229,7 @@ describe('workbench page', () => {
     expect(FakeWebSocket.instances).toHaveLength(0)
   })
 
-  it('loads the product views before the first render', async () => {
+  it('fetches the list of the product views at the start', async () => {
     await import('./main.js')
     await vi.waitFor(() => {
       expect(FakeWebSocket.instances).toHaveLength(1)
