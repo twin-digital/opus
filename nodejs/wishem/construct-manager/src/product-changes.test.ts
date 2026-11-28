@@ -65,6 +65,22 @@ describe('productChanges', () => {
     expect(productChanges(before, mixed)).toEqual([setField(E_2, CT_A, F_A, 'z')])
   })
 
+  it('gives no set-field for an unchanged value of a component with a changed value', () => {
+    const F_C = 'fld_cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+    const before = base()
+    before.definitions[0].fields.push({ id: F_C, label: 'c', type: 'string' })
+    before.entities[0].components[CT_A][F_C] = [E_2]
+    const firstChanged = clone(before)
+    firstChanged.entities[0].components[CT_A][F_A] = 'z'
+    firstChanged.entities[0].components[CT_A][F_C] = [E_2]
+    expect(productChanges(before, firstChanged)).toEqual([setField(E_1, CT_A, F_A, 'z')])
+    const lastChanged = clone(before)
+    lastChanged.entities[0].components[CT_A][F_C] = [E_3]
+    expect(productChanges(before, lastChanged)).toEqual([
+      { type: 'store/set-field', payload: { entity: E_1, componentType: CT_A, field: F_C, value: [E_3] } },
+    ])
+  })
+
   it('gives set-field inputs in the order of the entities, the components, and the fields', () => {
     const after = clone(base())
     after.entities[0].components[CT_A][F_A] = 'p'
@@ -150,6 +166,16 @@ describe('productChanges', () => {
     drop(after, 0, CT_A, F_A)
     after.entities[0].components[CT_A][F_C] = 'm'
     expect(productChanges(before, after)).toEqual([setField(E_1, CT_A, F_C, 'm'), clearField(E_1, CT_A, F_A)])
+  })
+
+  it('gives the clear-field inputs of one component in the order of its fields', () => {
+    const F_C = 'fld_cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+    const before = base()
+    before.definitions[0].fields.push({ id: F_C, label: 'c', type: 'string' })
+    before.entities[0].components[CT_A][F_C] = 'k'
+    const after = clone(before)
+    after.entities[0].components[CT_A] = {}
+    expect(productChanges(before, after)).toEqual([clearField(E_1, CT_A, F_A), clearField(E_1, CT_A, F_C)])
   })
 
   it('gives the inputs in the order of the entities and the components', () => {

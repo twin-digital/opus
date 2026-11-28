@@ -92,7 +92,7 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 - More than one subagent can implement at the same time, each one in the worktree of its change. Each other work of an agent, such as to read, to write, and to design, needs no lock.
 - `pnpm install`, `pnpm sync`, Prettier, and `git` need no lock.
 - Before you start a subagent, examine the free memory of the container. Start fewer subagents when the memory is low.
-- Enter the worktree of a change before you start a subagent for it. Enter it with the tool EnterWorktree, never with `cd`. A subagent that the lead agent starts after a `cd` is not bound to that worktree, and it cannot write or run commands when the lead agent enters a different worktree (the first planner of #611). A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
+- Enter the worktree of a change before you start a subagent for it. A subagent works only in the worktree in which the lead agent is when it starts the subagent. Enter it with the tool EnterWorktree, never with `cd`. A subagent that the lead agent starts after a `cd` is not bound to that worktree, and it cannot write or run commands when the lead agent enters a different worktree (the first planner of #611). A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
 - Do not send a message to a subagent that stopped. Such a subagent gets the worktree in which the lead agent is at that time, and the lead agent then cannot leave that worktree until the subagent reports. Start a new subagent, and give it the report file of the first one.
 - A subagent does no background work: no command in the background, no monitor, and no wait for a later event. A subagent that wakes from a wait gets the worktree in which the lead agent is at that time, and then it cannot use git in its own worktree. A long job runs in the foreground, in parts that each end in less than 150 seconds.
 - A subagent writes no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. It writes its scripts and its results in `.superpowers/` of its own worktree, which git ignores. The lock file is the one exception. A subagent cannot write a `.md` file there, so each report file of a subagent has the extension `.txt`.
@@ -165,7 +165,7 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Before each push, run `node nodejs/wishem/docs/flow-scripts/finish-check.mjs` from the root of the worktree. Push only when it prints no FAIL line.
 - A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
-- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. The step "merge, or update the branch and wait for the checks" holds the lock file `/tmp/wishem-merge.lock` (`flock`), so that one pull request at a time is in that step. The wait for the first checks is outside the lock. Reason: each merge moves `main`, the other runs then update their branch and lose their round; three runs lost four rounds each on 2026-11-28. Its last line is `<number> merged=<true|false>`. The exit code is 0 when the pull request is merged and 1 when it is not merged. The lead agent does the steps after the merge (the worktree, the board, the break-test issue) only after exit code 0. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> --pr <pull request number> <file>...` creates the one break-test issue of a change. The script reads the merge commit of the merged pull request itself, builds the range `<sha>~1..<sha>`, and refuses a pull request that is not merged. Reason: on 2026-11-28 the lead agent three times sent the read of a merge commit and its use in one batch and used a guessed commit, and two break-test issues got a wrong range. The form `<change issue> <milestone> <range> <file>...` also works. The option `--dry` prints the title and the body of the issue and creates nothing. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
+- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. The step "merge, or update the branch and wait for the checks" holds the lock file `/tmp/wishem-merge.lock` (`flock`), so that one pull request at a time is in that step. The wait for the first checks is outside the lock. Reason: each merge moves `main`, the other runs then update their branch and lose their round; three runs lost four rounds each on 2026-11-28. Its last line is `<number> merged=<true|false>`. The exit code is 0 when the pull request is merged and 1 when it is not merged. The lead agent does the steps after the merge (the worktree, the board, the break-test issue) only after exit code 0. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> --pr <pull request number> <file>...` creates the one break-test issue of a change. The script reads the merge commit of the merged pull request itself, builds the range `<sha>~1..<sha>`, and refuses a pull request that is not merged. Reason: on 2026-11-28 the lead agent three times sent the read of a merge commit and its use in one batch and used a guessed commit, and two break-test issues got a wrong range. The form `<change issue> <milestone> <range> <file>...` also works, but the flow uses only the form `--pr`. The script refuses a range that does not match `<sha>..<sha>` or `<sha>~1..<sha>` (a sha has 7 to 40 hex digits), a file that does not exist on the merge commit (or in the tree of the end commit of the range), and a change issue, milestone, or pull request that is not a number. Reason: break-test issue #776 got a path in the place of the range (#799). The option `--dry` prints the title and the body of the issue and creates nothing. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
 
 ### The steps that a person does
 
@@ -174,13 +174,15 @@ A test of one requirement does not find a fault that needs two features in a seq
 - The design of a change that adds or changes a thing that a person can use or see has a section "The test guide". It gives the steps that a person does to see the change work, with real processes and real files, as exact commands and their results. The steps join the change with the features that it meets: a write and then a hand edit, a stop and then a start, an input through the link and then the file on the disk.
 - The final reviewer does these steps on the branch before it gives its verdict, and reports the real result of each step. A step that does not give its result is a finding of the grade Important or higher.
 - Each step of the test guide that a program can do is also an automated test of the change, in the package of the change (a test with real processes, or a Playwright test, or a script such as `docs/milestones/a4-workbench/page-driver.mjs`). Reason: four bug fixes of the A3 period (#624, #642, #652, #657) were faults of two features in a sequence that only a test guide or a break-test found, after the merge. A test in CI finds such a fault in the next change.
+- An automated test with real processes or a browser keeps a margin. Each time limit is at least 3 times the expected time. Each wait has its own limit, and that limit is less than the test timeout. A test with real processes leaves no process behind, on a pass or on a failure: it kills each process that it knows, or its process group. The brief of an implementer and the brief of a reviewer give this rule, and each review checks it. Reason: the two flakes of 2026-11-28 (#767 and #628 Task 4) came from tight limits (#798).
 - The test guide of the milestone uses these sections.
 
 ### Reviews
 
 - A change with two or more tasks has a review of each task and one final review of the full branch.
 - The final reviewer compares the runtime units that the change adds or changes with the container diagram and its table, and runs `node nodejs/wishem/docs/architecture/render.mjs --check`. The check replaces the comparison of the imports by hand. A package, a process, or a relationship that the document does not show is a finding of the grade Important. Reason: the change that added the clock package did not add it to the document, and a milestone with two changes has no review of the full milestone that would find it.
-- The final reviewer runs the type check of each package that depends on a changed package, and not only of the changed packages. Use the turbo filter `...^<package>` (the dependents only) or `...<package>` (the package and its dependents), after a build. Reason: a change of a library package can break the types of a package that imports it, and the checks of a pull request do not always find it (see #663).
+- The final reviewer runs the checks of each package that depends on a changed package, and not only of the changed packages. The final reviewer also runs the tests of these packages. Run `build typecheck test` with the turbo filter `...<package>` (the package and its dependents). Reason: a change of a library package can break the types of a package that imports it (see #663), and a test of a dependent can fail in CI when only the type check ran (a test of `update` failed on #773).
+- Each review checks the margin rule for automated tests with real processes or a browser (see "The steps that a person does").
 - A change with one task has one review: the final review of the full branch. The diff of the task is the diff of the branch, so a review of the task reads the same code.
 
 ### Break-tests
@@ -213,6 +215,7 @@ A brief of a planner holds each item. A brief of a task reviewer and of a final 
 - The expected results of "The test guide" come from a real run on `main` where the behavior exists, or say clearly that they are the result after the change.
 - Each open issue of the type `Bug` that touches the same files or behavior is named, with what the change does about it.
 - One changeset for each distinct change, as `~/.claude/rules/changesets.md` says.
+- The margin rule for the automated tests of the test guide (see "The steps that a person does"). A brief of an implementer holds it, and a brief of a reviewer holds the check of it.
 - A planner does not drop or reduce a feature that the owner named in the issue or in a decision. When the full feature costs much work, the planner plans it in more tasks, or asks the owner. Reason: the owner overruled #650, which left out the arrows of the package view.
 
 ### Work at the same time
@@ -230,7 +233,7 @@ Keep the lead agent free:
 
 ## The scope of a task
 
-A task does what its issue and its plan say. Work on a task finds other things: a fault in code that the task did not change, an improvement, a minor finding of a review. Do not do them in the task. Reason: a task that grows causes rework, and its pull request is harder to review.
+A task does what its issue and its plan say. Work on a task finds other things: a fault in code that the task did not change, an improvement, a minor finding of a review. Do not do them in the task, except the case of the final fix wave below. Reason: a task that grows causes rework, and its pull request is harder to review.
 
 Correct a finding in the task only when one of these conditions is true:
 
@@ -239,6 +242,8 @@ Correct a finding in the task only when one of these conditions is true:
 - A check of the pull request fails.
 - A later correction needs a breaking change to an interface that the task adds.
 
+One more case: the final fix wave of a change can fix a Minor finding when the finding is in a file that the change already touches and the fix takes less than about 15 minutes. A scoped re-review checks the fix. The owner decided this on 2026-11-28 (#704).
+
 For each other finding, create a follow-up issue:
 
 - Give the issue the type, the label `app:wishem`, and a milestone: the milestone of the outcome that the finding belongs to, or `[WSH] R1 Tech Debt`. Add it to the project.
@@ -246,7 +251,7 @@ For each other finding, create a follow-up issue:
 - Put related findings of one review in one issue.
 - Start a follow-up issue in its turn, as each other task. A follow-up issue that changes no behavior does not need an OpenSpec change.
 
-The brief of each subagent says: report each thing that is not in the scope of the task, and do not correct it.
+The brief of each subagent says: report each thing that is not in the scope of the task, and do not correct it. The lead agent decides which findings go into the final fix wave.
 
 ## When a milestone is complete
 

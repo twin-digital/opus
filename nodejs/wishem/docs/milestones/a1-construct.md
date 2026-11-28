@@ -112,7 +112,7 @@ pnpm --filter @thrashplay/wishem-workbench exec wishem
 Result (exit code 2):
 
 ```text
-usage: wishem start <folder> [--product <folder>] [--port <number>]
+usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]
 ```
 
 **A port that is not a number.**
@@ -125,7 +125,7 @@ Result (exit code 2):
 
 ```text
 wishem: the port must be a number from 0 to 65535, not "abc"
-usage: wishem start <folder> [--product <folder>] [--port <number>]
+usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]
 ```
 
 **A folder that does not exist.**

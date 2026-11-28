@@ -204,14 +204,18 @@ describe('wishem command', () => {
     const arg = (name: string) => (name === 'folder' ? folder : name)
     const process_ = start([arg(first), arg(second), '--port', '0'])
     expect(await process_.exit).not.toBe(0)
-    expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
+    expect(process_.stderr()).toContain(
+      'usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]',
+    )
     expect(process_.stdout()).not.toContain('link at')
   })
 
   it('prints the usage and exits with a non-zero code for an unknown option', async () => {
     const process_ = start(['start', folder, '--nope'])
     expect(await process_.exit).not.toBe(0)
-    expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
+    expect(process_.stderr()).toContain(
+      'usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]',
+    )
   })
 
   it('accepts the highest port number', async () => {
@@ -268,7 +272,9 @@ describe('wishem command', () => {
   it('prints the usage and exits with a non-zero code when no folder is given', async () => {
     const process_ = start(['start'])
     expect(await process_.exit).not.toBe(0)
-    expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
+    expect(process_.stderr()).toContain(
+      'usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]',
+    )
   })
 
   it.each(['', '0x10', '1e3', ' 5000 ', '65536', '70000', '-1'])(
@@ -276,7 +282,9 @@ describe('wishem command', () => {
     async (value) => {
       const process_ = start(['start', folder, '--port', value])
       expect(await process_.exit).not.toBe(0)
-      expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
+      expect(process_.stderr()).toContain(
+        'usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]',
+      )
       expect(process_.stdout()).not.toContain('link at')
     },
   )
@@ -368,7 +376,9 @@ describe('wishem command', () => {
       async (extra) => {
         const process_ = start(['start', folder, ...extra, '--port', '0'])
         expect(await process_.exit).toBe(2)
-        expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
+        expect(process_.stderr()).toContain(
+          'usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]',
+        )
         expect(process_.stdout()).not.toContain('link at')
       },
     )

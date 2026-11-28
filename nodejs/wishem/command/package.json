@@ -1,0 +1,62 @@
+{
+  "private": true,
+  "name": "@thrashplay/wishem-command",
+  "version": "0.0.0",
+  "description": "The wishem command of Wishem. Runs a construct for a model folder, and runs the product constructs of a mounted product.",
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "bin": {
+    "wishem": "./bin/wishem.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@thrashplay/wishem-construct-manager": "workspace:*",
+    "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-sample-product": "workspace:*",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}
