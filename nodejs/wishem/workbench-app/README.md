@@ -160,7 +160,7 @@ With the part `product` in the joined state of the link, the page shows the prod
 - A hand edit of the `state.json` of the product folder shows in the panel with no reload. A rewind of the hub restores the value in the panel and in the file.
 - When a hand edit removes the selected entity, the panel clears the selection. If the focus was in the inspector, the focus moves to the list.
 
-The browser tests of the panel are in the Playwright project `product` (`tests/product.spec.ts`). `scripts/e2e-server.ts --product` starts a second workbench on port 4190. It mounts a copy of the sample product from `.e2e-product/` and uses the model folder copy `.e2e-product-model/`. Both folders are git-ignored. It loads no product code.
+The browser tests of the panel are in the Playwright project `product` (`tests/product.spec.ts`). `scripts/e2e-server.ts --product` starts a second workbench on port 4184. It mounts a copy of the sample product from `.e2e-product/` and uses the model folder copy `.e2e-product-model/`. Both folders are git-ignored. It loads no product code.
 
 ## Start the style guide
 
