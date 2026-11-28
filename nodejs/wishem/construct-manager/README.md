@@ -10,6 +10,7 @@ The package is private. The root entry uses no Node.js API. The entry `node` (`@
 
 - `want`: `running` or `stopped`. The wanted state.
 - `startTime`: `running` or `paused`. The time state when the construct starts.
+- `startSeq`: The sequence number of the last `constructs/start` in the workbench record.
 - `status`: `pending`, `running`, `stopped`, or `failed`. What the construct manager reported last.
 - `link`, `time`: only with the status `running`.
 - `message`, `lastSend`: optional.
@@ -18,7 +19,7 @@ The ID of a construct has the form of the ID of a subsystem, for example `play`.
 
 | Input               | Effect                                                                                                                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `constructs/start`  | Sets `want` to `running`. A new or stopped entry gets the status `pending`.                                                 |
+| `constructs/start`  | Sets `want` to `running`. A new or stopped entry gets the status `pending` and the `startSeq` of the input.                 |
 | `constructs/stop`   | Sets `want` to `stopped`. The entry stays. The construct must be in the list.                                               |
 | `constructs/send`   | Changes no part. The construct must be wanted to run and have the status `running`.                                         |
 | `constructs/report` | Sets the reported fields. Only the source `construct-manager` can send it. `stopped` and `failed` remove `link` and `time`. |
