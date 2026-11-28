@@ -20,17 +20,33 @@ static func field_name(label: String) -> String:
 	return name
 
 
+## Gives `{ "names": [{ "name": String, "field": Dictionary }], "problems": [Dictionary] }`.
+## A problem is `{ "kind": "empty-name", "field": ID }` or `{ "kind": "same-name", "name": String, "fields": [ID, ID] }`.
+## One entry for each name, in the order of the definition. A field with an empty name has no entry.
+static func prop_names(definition: Dictionary) -> Dictionary:
+	var names: Array = []
+	var problems: Array = []
+	var first := {}
+	for field: Dictionary in definition.get("fields", []):
+		var name := field_name(str(field.get("label", "")))
+		if name.is_empty():
+			problems.append({"kind": "empty-name", "field": field["id"]})
+			continue
+		if first.has(name):
+			problems.append({"kind": "same-name", "name": name, "fields": [first[name], field["id"]]})
+			continue
+		first[name] = field["id"]
+		names.append({"name": name, "field": field})
+	return {"names": names, "problems": problems}
+
+
 ## One prop for each field of the definition that has a value. For two fields with one name, the first field.
 static func props(definition: Dictionary, component: Dictionary) -> Dictionary:
 	var result := {}
-	var seen := {}
-	for field: Dictionary in definition.get("fields", []):
-		var name := field_name(str(field.get("label", "")))
-		if name.is_empty() or seen.has(name):
-			continue
-		seen[name] = true
-		if component.has(field["id"]):
-			result[name] = component[field["id"]]
+	for entry: Dictionary in prop_names(definition)["names"]:
+		var id: String = entry["field"]["id"]
+		if component.has(id):
+			result[entry["name"]] = component[id]
 	return result
 
 

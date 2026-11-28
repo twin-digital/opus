@@ -2,6 +2,7 @@ extends "res://tests/check.gd"
 
 const Renderer = preload("res://wishem/renderer.gd")
 const FakePort = preload("res://tests/fake_port.gd")
+const Views = preload("res://wishem/views.gd")
 const CT := "ct_00000000-0000-4000-8000-000000000001"
 const OTHER := "ct_00000000-0000-4000-8000-000000000002"
 const COLOR := "fld_color"
@@ -290,5 +291,56 @@ func test_the_viewport_size_comes_from_the_callable_at_each_update() -> void:
 	port.apply(_store([_entity("e1", {CT: {COLOR: "x"}})]))
 	assert_equal(view.updates[0]["viewport"], Vector2(640, 360))
 	assert_equal(view.updates[1]["viewport"], Vector2(320, 180))
+	renderer.stop()
+	host.free()
+
+
+func _warning_line(field: String) -> String:
+	return "wishem: the sidecar Box.view.json: the label of the field %s of the component type %s gives an empty name. The view does not get the field." % [field, CT]
+
+
+func _two_field_definition() -> Dictionary:
+	return {"id": CT, "label": "Thing", "fields": [{"id": COLOR, "label": "Color", "type": "string"}, {"id": "fld_bad", "label": "???", "type": "string"}]}
+
+
+func _box_table(view: Object) -> Dictionary:
+	var table: Dictionary = Views.collect_from("res://tests/views/ok", ["Box.view.json"])["views"]
+	table[CT]["view"] = view
+	return table
+
+
+func test_warns_for_a_label_with_an_empty_name_and_draws() -> void:
+	var host := _host()
+	var view := RectView.new()
+	var entity := _entity("e1", {CT: {COLOR: "#111111", "fld_bad": "x"}})
+	var port := FakePort.new({"store": _store([entity], [_two_field_definition()])})
+	var renderer := Renderer.new(port, _box_table(view), host, _size)
+	var line := _warning_line("fld_bad")
+	assert_equal(renderer.warnings, [line])
+	assert_equal(view.updates[0]["props"], {"color": "#111111"})
+	port.apply(_store([_entity("e1", {CT: {COLOR: "#222222", "fld_bad": "x"}})], [_two_field_definition()]))
+	assert_equal(renderer.warnings, [line], "a changed value writes no line")
+	port.apply(_store([_entity("e1", {CT: {COLOR: "#222222"}})]))
+	assert_equal(renderer.warnings, [line], "a definition with no problem writes no line")
+	port.apply(_store([_entity("e1", {CT: {COLOR: "#222222"}})], [_two_field_definition()]))
+	assert_equal(renderer.warnings, [line, line], "the problem again writes the line again")
+	renderer.stop()
+	host.free()
+
+
+func test_warns_for_a_component_type_with_no_component() -> void:
+	var host := _host()
+	var port := FakePort.new({"store": _store([], [_two_field_definition()])})
+	var renderer := Renderer.new(port, _box_table(RectView.new()), host, _size)
+	assert_equal(renderer.warnings, [_warning_line("fld_bad")])
+	renderer.stop()
+	host.free()
+
+
+func test_writes_no_warning_for_a_model_with_no_problem() -> void:
+	var host := _host()
+	var port := FakePort.new({"store": _store([_entity("e1", {CT: {COLOR: "#112233"}})])})
+	var renderer := Renderer.new(port, _table(RectView.new()), host, _size)
+	assert_equal(renderer.warnings, [])
 	renderer.stop()
 	host.free()

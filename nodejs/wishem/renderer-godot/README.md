@@ -110,7 +110,7 @@ The sidecar `<name>.view.json` attaches the view to a component type:
 
 ### The props
 
-A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. A label with no letter or digit gives no prop. For two fields with one name, the first field gives the value.
+A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. A label with no letter or digit gives no prop, and the renderer writes one warning for it with `push_warning`: `wishem: the sidecar <sidecar>: the label of the field <field ID> of the component type <component type ID> gives an empty name. The view does not get the field.` The renderer writes the warnings again only when their text changes, and keeps each line in `renderer.warnings`. For two fields with one name, the first field gives the value.
 
 ### Use
 
@@ -125,6 +125,7 @@ var renderer := Renderer.new(port, views, self, func() -> Vector2: return get_vi
 - The renderer adds one `Control` to the root node. It keeps one node for each component that has a view, in the order of the entities and then the definitions.
 - It calls the views only when the part `store` is a different object. It makes the node of a new component. It removes and frees the node of a component that is gone.
 - When `create` gives no node, the renderer writes one error with `push_error` and keeps the text in `renderer.errors`. The other views draw.
+- The renderer keeps the text of each warning that it wrote with `push_warning` in `renderer.warnings`.
 
 `entity_at(point)` gives `{ "entity": String, "componentType": String }` for the top visible `Control` that holds the point. It gives an empty dictionary when no visible node holds the point, and after `stop()`.
 

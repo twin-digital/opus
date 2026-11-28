@@ -5,15 +5,20 @@ extends RefCounted
 ## `views` is the table of `Views.collect_views`. `viewport_size` is a `Callable` that gives a `Vector2`.
 
 const Views = preload("res://wishem/views.gd")
+const ViewWarnings = preload("res://wishem/view_warnings.gd")
 
 ## The text of each error that the renderer wrote.
 var errors: Array[String] = []
+
+## The text of each warning that the renderer wrote.
+var warnings: Array[String] = []
 
 var _views: Dictionary
 var _viewport_size: Callable
 var _layer: Control
 var _unsubscribe: Callable
 var _store: Variant = null
+var _warning_text := ""
 var _entries := {}
 var _failed := {}
 var _stopped := false
@@ -60,6 +65,7 @@ func _sync(port: Variant) -> void:
 	if is_same(store, _store):
 		return
 	_store = store
+	_warn(store)
 	var wanted: Array = []
 	if typeof(store) == TYPE_DICTIONARY:
 		wanted = _wanted(store)
@@ -76,6 +82,20 @@ func _sync(port: Variant) -> void:
 		item["view"].update(node, item["props"], viewport)
 		_layer.move_child(node, position)
 		position += 1
+
+
+func _warn(store: Variant) -> void:
+	var lines: Array[String] = []
+	if typeof(store) == TYPE_DICTIONARY:
+		for warning: Dictionary in ViewWarnings.view_warnings(_views, (store as Dictionary).get("definitions", [])):
+			lines.append(ViewWarnings.describe_warning(warning))
+	var text := "\n".join(lines)
+	if text == _warning_text:
+		return
+	_warning_text = text
+	for line in lines:
+		push_warning(line)
+		warnings.append(line)
 
 
 ## One item for each component that has a view, in the order of the entities and then the definitions.
