@@ -99,3 +99,11 @@ export const withSource = (problems: Problem[], result: Pick<ModelFolderResult, 
     }
     return problem
   })
+
+/** Sets each `source` to an absolute path. A source is relative to `folder`, or is `folder` itself. */
+export const toAbsoluteSources = (problems: Problem[], folder: string): Problem[] =>
+  problems.map((problem) =>
+    problem.source === undefined ? problem
+    : problem.source === folder ? { ...problem, source: path.resolve(folder) }
+    : { ...problem, source: path.resolve(folder, problem.source) },
+  )

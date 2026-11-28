@@ -31,6 +31,8 @@ After the hub applies the input `hub/rewind`, the clock measures real time again
 
 ## Start and stop
 
+When the hub starts, the clock measures real time again from the `started` event. The real time before the start causes no tick after it.
+
 `startClock` throws an `Error` in these cases:
 
 - The port is not the port of an input subsystem.

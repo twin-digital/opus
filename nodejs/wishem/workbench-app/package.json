@@ -37,6 +37,7 @@
     "@fontsource/jetbrains-mono": "catalog:",
     "@playwright/test": "catalog:",
     "@tailwindcss/vite": "^4.3.3",
+    "@thrashplay/wishem-sample-product": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

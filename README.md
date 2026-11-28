@@ -59,6 +59,7 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/wishem-host-nodejs](./nodejs/wishem/host-nodejs): Runs a Wishem construct in a Node.js process. Reads and writes a model folder, serves the link of the hub over local WebSocket, and provides the wishem command.
 - [@thrashplay/wishem-hub](./nodejs/wishem/hub): The hub of a Wishem construct. Joins the joined state, orders the inputs, and keeps the record. Runs with no Node.js API.
 - [@thrashplay/wishem-renderer-react](./nodejs/wishem/renderer-react): The React renderer of Wishem. Draws React views from a port of the hub, and writes the prop types of the views.
+- [@thrashplay/wishem-sample-product](./nodejs/wishem/sample-product): The sample product of Wishem: a model with a color and a count, and the rule that makes the clock advance the count. Runs with no Node.js API.
 - [@thrashplay/wishem-workbench](./nodejs/wishem/workbench): The base workbench of Wishem. Holds the first model and a command to start it.
 - [@thrashplay/wishem-workbench-app](./nodejs/wishem/workbench-app): The Wishem workbench application: design tokens, components, and the style guide.
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.
