@@ -1,0 +1,518 @@
+# wishem/workbench/construct-manager Specification
+
+## Purpose
+
+Defines the construct manager of the workbench construct: how it starts and stops each product construct that the construct list names, what a product construct holds, how it gives the product model to a product construct, how it passes inputs, how it reports a status, and how it stops with the workbench.
+
+## Requirements
+
+### Requirement: The construct manager attaches two subsystems to the workbench
+
+The construct manager SHALL attach the input subsystem `construct-manager` and the output subsystem `construct-manager-reader` to the workbench hub. It SHALL communicate with the workbench construct only through these two ports. It SHALL send no input to a store of the workbench construct.
+
+#### Scenario: The subsystems of the workbench
+
+- **WHEN** the workbench starts with a mounted product
+- **THEN** the subsystems `construct-manager` and `construct-manager-reader` are attached to the workbench hub, and each report in the record has the source `construct-manager`
+
+### Requirement: The construct manager starts each construct that is wanted to run
+
+For each construct of the list that is wanted to run and has no product construct, the construct manager SHALL start one product construct in a Node.js child process of its own, the product construct process. When the product construct serves its link, the construct manager SHALL report the status `running` with the address of the link and the time state. When the start fails, it SHALL report the status `failed` with a message, and no process of the start SHALL stay.
+
+#### Scenario: A start
+
+- **WHEN** an input subsystem sends `constructs/start` with the construct `play`
+- **THEN** the part `constructs` holds `play` with the status `running` and an address `ws://127.0.0.1:<port>/link`, and a client of that address gets a `welcome` message
+
+#### Scenario: Two constructs
+
+- **WHEN** an input subsystem starts the constructs `play` and `check`
+- **THEN** each one has its own address, and an input to one changes only that one
+
+#### Scenario: A start that fails
+
+- **WHEN** the list of behaviors of the product holds two behaviors with the same ID, and the construct manager makes the hub of `play`
+- **THEN** the part holds `play` with the status `failed` and the text of the error, the process of `play` ended, and the workbench continues
+
+#### Scenario: A process of its own
+
+- **WHEN** an input subsystem starts the constructs `play` and `check`
+- **THEN** each one runs in a different process, and neither process is the process of the workbench
+
+### Requirement: A product construct holds the product and no storage
+
+A product construct SHALL have the model subsystems `time` and `store`, in this order. The model subsystem `store` SHALL be the update subsystem of a store that starts from the product model at the start, with the behaviors of the product, or with no behavior when the workbench has no product code. A product construct SHALL have a clock and SHALL have no storage subsystem. A product construct SHALL write no file.
+
+#### Scenario: The sample product with its rules
+
+- **WHEN** the workbench has the product code of the sample product, a construct runs for 500 milliseconds of real time, and a client reads it
+- **THEN** the part `store` holds the entity of the product with a count larger than `0`, and the part `time` has `running` set to `true`
+
+#### Scenario: A product with no rules
+
+- **WHEN** the workbench has no product code, and a construct runs for 500 milliseconds
+- **THEN** the part `time` has more than 0 ticks, and the count is the count of the product model
+
+#### Scenario: A behavior that throws
+
+- **WHEN** the product code has a behavior that throws, and an input subsystem sends `constructs/send` with `time/advance` to `play`
+- **THEN** the part `constructs` holds the result of the pass with `"ok":false` and the reason `invalid`, and a problem names the behavior
+
+#### Scenario: No file changes
+
+- **WHEN** a construct runs, gets inputs, and is rewound
+- **THEN** the `state.json` of the product folder does not change
+
+#### Scenario: The code runs in the product construct process
+
+- **WHEN** the product code writes the ID of its process to a file when it loads, and an input subsystem starts `play`
+- **THEN** the file holds the ID of the process of `play`, and not the ID of the process of the workbench
+
+### Requirement: The construct manager sends each change of the product model
+
+After each input that makes the part `product` a different object, the construct manager SHALL send the change to each running product construct, with the source `construct-manager`. For a changed, added, or removed value, it SHALL send one `store/set-field` or `store/clear-field`, and each other value SHALL keep its live value. Each other change SHALL go as "The construct manager sends an added or removed entity" and "A change that cannot keep the live values replaces the model" give.
+
+#### Scenario: A hand edit of a value
+
+- **WHEN** a construct of the sample product runs with a count of `25`, and a person changes the color in the `state.json` of the product folder to `#b91c1c`
+- **THEN** the store of the construct holds `#b91c1c`, its record holds one `store/set-field` with the source `construct-manager`, and the count continues from its live value
+
+#### Scenario: An input to the product
+
+- **WHEN** a construct runs, and an input subsystem sends `product/set-field` that sets the count to `100` in the workbench
+- **THEN** the store of the construct holds the count `100` or a count that the ticks added to `100`
+
+#### Scenario: A cleared value
+
+- **WHEN** a construct of the sample product is paused with a count of `25`, and an input subsystem sends `product/clear-field` for the color in the workbench
+- **THEN** the construct gets one `store/clear-field` for the color with the source `construct-manager`, its store holds no color, and it still holds the count `25`
+
+#### Scenario: A hand edit removes a value
+
+- **WHEN** a construct of the sample product runs, and a person removes the color from the `Color` component in the `state.json` of the product folder and keeps the empty component
+- **THEN** the construct gets one `store/clear-field` for the color, and no `store/replace-model`
+
+#### Scenario: A hand edit removes a component
+
+- **WHEN** a construct runs, and a person removes the `Color` component of the sample entity in the `state.json` of the product folder
+- **THEN** the construct gets one `store/replace-model` with the product model
+
+#### Scenario: A change of a definition
+
+- **WHEN** a construct runs, and the label of a component type of the product model changes
+- **THEN** the construct gets one `store/replace-model` with the product model, and its entities are the entities of the product model
+
+#### Scenario: A rewind of the workbench
+
+- **WHEN** an input changed a value of the product, and `hub/rewind` of the workbench returns the part `product` to the value before that input
+- **THEN** the construct gets one `store/set-field` with the earlier value, and its record holds no rewind
+
+#### Scenario: A rewind of the workbench after a clear
+
+- **WHEN** an input cleared a value of the product, and `hub/rewind` of the workbench returns the part `product` to the value before that input
+- **THEN** the construct gets one `store/set-field` with the earlier value
+
+#### Scenario: A rewind of the workbench after a set of a new value
+
+- **WHEN** an input set a value for a field that had no value, and `hub/rewind` of the workbench returns the part `product` to the state before that input
+- **THEN** the construct gets one `store/clear-field` for that field
+
+#### Scenario: A change that the construct refuses
+
+- **WHEN** the construct refuses an input of a change
+- **THEN** the construct manager reports the message of the refusal for that construct, and it sends the next change
+
+### Requirement: The construct manager passes inputs
+
+After the workbench hub applies `constructs/send`, the construct manager SHALL send its input to the product construct with the source `construct-manager`. It SHALL report the result with the sequence number of the `constructs/send` in the workbench record. A rewind or a replay of the workbench SHALL NOT send an input again.
+
+#### Scenario: A pause
+
+- **WHEN** an input subsystem sends `constructs/send` with `play` and `time/set-running` with `false`
+- **THEN** the part `time` of `play` has `running` set to `false`, the clock of `play` sends no tick, and the part `constructs` holds `play` with the time state `paused` and the result `ok`
+
+#### Scenario: A step
+
+- **WHEN** `play` is paused, and an input subsystem sends `constructs/send` with `time/advance` of 50 milliseconds
+- **THEN** the count of `play` is one more than before
+
+#### Scenario: A rewind of a product construct
+
+- **WHEN** `play` accepted 40 inputs, and an input subsystem sends `constructs/send` with `hub/rewind` to the sequence number 10
+- **THEN** the joined state of `play` is equal to its state after the input 10, and no file changes
+
+#### Scenario: An input that the product construct refuses
+
+- **WHEN** an input subsystem sends `constructs/send` with the input `sound/play`
+- **THEN** the part holds `play` with a result that has the reason `unknown-type`
+
+#### Scenario: A rewind of the workbench past a send
+
+- **WHEN** an input subsystem sent `constructs/send` that paused `play`, and `hub/rewind` of the workbench returns to the state before it
+- **THEN** the construct manager sends no input to `play`
+
+### Requirement: Only the construct manager rewinds a product construct
+
+A product construct SHALL accept `hub/rewind` only from the source `construct-manager`. It SHALL refuse `hub/rewind` from each other subsystem with the reason `not-permitted`. Each other input type SHALL be accepted from each input subsystem of the product link.
+
+#### Scenario: A rewind through the product link
+
+- **WHEN** a client of the link of `play` sends `hub/rewind`
+- **THEN** the result is a rejection with the reason `not-permitted`, and the joined state of `play` does not change
+
+#### Scenario: A step through the product link
+
+- **WHEN** a client of the link of `play` sends `time/advance`
+- **THEN** the product construct accepts the input
+
+### Requirement: The construct manager stops a construct that is not wanted
+
+When a construct of the list is not wanted to run and has a product construct, the construct manager SHALL stop its clock and its hub, close its link, release its port, end its product construct process, and report the status `stopped`. A new start of the same ID SHALL start a new product construct from the product model at that time, with a new record. This SHALL also be true when the workbench hub applies the stop and the new start before the construct manager handles the stop.
+
+#### Scenario: A stop
+
+- **WHEN** `play` runs, and an input subsystem sends `constructs/stop` with `play`
+- **THEN** each client of the link of `play` gets the `stopping` event, the address of `play` accepts no connection, the process of `play` ended, and the part holds `play` with the status `stopped`
+
+#### Scenario: A stop and a start
+
+- **WHEN** `play` ran with ticks and was stopped, and an input subsystem sends `constructs/start` with `play`
+- **THEN** the store of the new `play` starts from the product model, its record starts at the sequence number 0, and it runs in a new process
+
+#### Scenario: A stop and a start in one pass
+
+- **WHEN** `play` runs with ticks, and the workbench hub applies `constructs/stop` with `play` and then `constructs/start` with `play` and `running` set to `false` before the construct manager handles the stop
+- **THEN** each client of the old link gets the `stopping` event, the old address accepts no connection, the terminal shows the line of the stop and then a line of a start, and the part holds `play` with the status `running`, a new address, and the time state `paused`, and the new `play` has 0 ticks and a record that starts at the sequence number 0
+
+### Requirement: The construct manager follows the list after a rewind
+
+After each applied input of the workbench, the construct manager SHALL compare the construct list with the product constructs that run. It SHALL start each construct that is wanted to run and does not run, stop each product construct that is not wanted, and report the real status of each construct whose reported status is not true. It SHALL stop and start again each product construct whose start number differs from the start number of its entry.
+
+#### Scenario: A rewind of the workbench before a start
+
+- **WHEN** `play` runs, and `hub/rewind` of the workbench returns to the state before `constructs/start` of `play`
+- **THEN** the construct manager stops the product construct of `play`
+
+#### Scenario: A rewind to a status that is not true
+
+- **WHEN** `play` was stopped, and `hub/rewind` of the workbench returns to a state in which `play` is wanted to stop and has the status `running`
+- **THEN** the construct manager reports the status `stopped` for `play`
+
+#### Scenario: A rewind to a different start
+
+- **WHEN** `play` was started, stopped, and started again, and `hub/rewind` of the workbench returns to a state after the first start and before the stop
+- **THEN** the construct manager stops the product construct of the second start and starts a new product construct of `play` from the product model, with a new address
+
+### Requirement: The product constructs stop with the workbench
+
+When the workbench stops, the construct manager SHALL stop each product construct before the workbench hub stops, and SHALL close its two ports. The product constructs and the construct list SHALL NOT be kept. A new start of the workbench SHALL have no product construct. When the process of the workbench ends for each other cause, each product construct process SHALL end in at most 2 seconds.
+
+#### Scenario: The person stops the workbench
+
+- **WHEN** `play` runs, and the person sends an interrupt signal to the `start` script of the workbench page
+- **THEN** a client of the link of `play` gets the `stopping` event, the address of `play` accepts no connection, the process of `play` ended, and `node scripts/start.ts` stops with exit code 0
+
+#### Scenario: The process of the workbench is killed
+
+- **WHEN** `play` runs, and the process of the workbench gets `SIGKILL`
+- **THEN** the process of `play` ended at most 2 seconds later, and the address of `play` accepts no connection
+
+### Requirement: The terminal shows each change of a product construct
+
+The construct manager SHALL print one line when a product construct starts, with its ID and the address of its link, one line when it stops, one line when its start fails, with the reason, and one line when it refuses a change of the product model, with the reason.
+
+#### Scenario: A start and a stop
+
+- **WHEN** an input subsystem starts `play` and then stops it
+- **THEN** the terminal shows `wishem: construct play runs, link at ws://127.0.0.1:<port>/link` and then `wishem: construct play stopped`
+
+### Requirement: A product construct can serve its link on a given port
+
+The function that starts a product construct SHALL take an optional port for its link. With no port, or with 0, the system SHALL select the port. The construct manager SHALL start each product construct with no port. When the port is in use, the start SHALL fail with the error of the server, and no hub, no clock, and no port SHALL stay.
+
+#### Scenario: A given port
+
+- **WHEN** a program starts a product construct with the port 4750 and that port is free
+- **THEN** the address of the link is `ws://127.0.0.1:4750/link`
+
+#### Scenario: The port is in use
+
+- **WHEN** a program starts a product construct with a port that a different program uses
+- **THEN** the start rejects with an error with the code `EADDRINUSE`, and no timer of the clock runs
+
+#### Scenario: The construct manager
+
+- **WHEN** an input subsystem starts the constructs `play` and `check`
+- **THEN** the system selects the port of each one, and the two addresses are different
+
+### Requirement: The part time of a product construct holds its step length
+
+The part `time` of a product construct SHALL hold the step length of its clock as `stepMs`. The default step length SHALL be 50 milliseconds.
+
+#### Scenario: A product construct of the workbench
+
+- **WHEN** an input subsystem starts `play`, and a client of the link of `play` reads the joined state
+- **THEN** the part `time` has `stepMs` 50
+
+#### Scenario: A different step length
+
+- **WHEN** a program starts a product construct with the step length 500
+- **THEN** the part `time` has `stepMs` 500, and the clock sends ticks of 500 milliseconds
+
+### Requirement: The construct manager steps a product construct back
+
+After the workbench hub applies `constructs/rewind`, the construct manager SHALL send `hub/rewind` to the product construct, with the source `construct-manager` and the target before the tick that is `ticks` ticks back in the history of the construct. A history of fewer ticks SHALL give the target before its first tick.
+
+#### Scenario: One tick back
+
+- **WHEN** `play` is paused after 12 ticks, and an input subsystem sends `constructs/rewind` with `play` and `ticks` set to `1`
+- **THEN** the part `time` of `play` has 11 ticks, and the part `constructs` holds the result `ok` under the sequence number of the `constructs/rewind`
+
+#### Scenario: More ticks than the history
+
+- **WHEN** `play` is paused after 3 ticks, and an input subsystem sends `constructs/rewind` with `play` and `ticks` set to `10`
+- **THEN** the part `time` of `play` has 0 ticks
+
+#### Scenario: Two step backs
+
+- **WHEN** `play` is paused after 12 ticks, and an input subsystem sends `constructs/rewind` with `ticks` set to `1` two times
+- **THEN** the part `time` of `play` has 10 ticks
+
+#### Scenario: A step back after a step
+
+- **WHEN** `play` is paused after 12 ticks, an input subsystem sends one step and then `constructs/rewind` with `ticks` set to `1`
+- **THEN** the part `time` of `play` has 12 ticks
+
+#### Scenario: No tick
+
+- **WHEN** `play` started paused and has 0 ticks, and an input subsystem sends `constructs/rewind` with `play`
+- **THEN** the joined state of `play` does not change, and the part `constructs` holds a result with `"ok":false` and the reason `invalid`
+
+### Requirement: The construct manager reports the result of a step back
+
+The construct manager SHALL report the result of the `hub/rewind` of a step back as the last pass, with the sequence number of the `constructs/rewind` in the workbench record. A rewind or a replay of the workbench SHALL NOT send a step back again.
+
+#### Scenario: A rewind of the workbench past a step back
+
+- **WHEN** an input subsystem sent `constructs/rewind` to `play`, and `hub/rewind` of the workbench returns to the state before it
+- **THEN** the construct manager sends no input to `play`
+
+### Requirement: A step back keeps the time state and the authored changes
+
+A step back SHALL keep the `running` value that the product construct had before it. It SHALL keep each change of the product model that the construct manager sent after the target. The construct manager SHALL send the rewind and the inputs that keep these values with no tick of the clock between them.
+
+#### Scenario: A step back during a pause
+
+- **WHEN** `play` ran, was paused, and an input subsystem sends `constructs/rewind` with `ticks` set to `1`
+- **THEN** the part `time` of `play` has `running` set to `false`, and the clock sends no tick for 1 second
+
+#### Scenario: A change of the product before a step back
+
+- **WHEN** `play` is paused, an input subsystem sends `product/set-field` that sets the color to `#b91c1c`, and then `constructs/rewind` with `ticks` set to `1`
+- **THEN** the store of `play` holds `#b91c1c`, and its count is the count before the last tick
+
+#### Scenario: A step back while the construct runs
+
+- **WHEN** `play` runs, and an input subsystem sends `constructs/rewind` with `ticks` set to `1`
+- **THEN** the part `time` of `play` has `running` set to `true` after the rewind
+
+#### Scenario: An added entity before a step back
+
+- **WHEN** `play` is paused after a step, an input subsystem sends `product/add-entity` with a second entity, and then `constructs/rewind` with `ticks` set to `1`
+- **THEN** the store of `play` holds the second entity after the sample entity, `play` gets `store/add-entity` after the `hub/rewind`, and the count of the sample entity is the count before the last tick
+
+#### Scenario: An added entity before a step back across the processes
+
+- **WHEN** `play` runs in a product construct process, is paused after 12 ticks, an input subsystem sends `product/add-entity` with a second entity, and then `constructs/rewind` with `ticks` set to `1`
+- **THEN** the part `time` of `play` has 11 ticks, the store of `play` holds the second entity after the sample entity, and the record of `play` has no `time/advance` between the `hub/rewind` and the `store/add-entity` of the step back
+
+### Requirement: The construct manager reaches each product construct through a link
+
+The construct manager SHALL attach the subsystems `construct-manager` and `construct-manager-reader` to the hub of a product construct through a link with the link protocol, on the IPC channel of the product construct process. The IDs `construct-manager` and `construct-manager-reader` SHALL be in use for the full life of the process, so a client of the WebSocket link gets `id-in-use` for them. The clock SHALL start only after this link is open.
+
+#### Scenario: The first ticks are in the history
+
+- **WHEN** `play` runs with its clock for 1 second, is paused with `n` ticks, and an input subsystem sends `constructs/rewind` with `play` and `ticks` set to `n - 1`
+- **THEN** the part `time` of `play` has 1 tick
+
+#### Scenario: A client with the ID of the construct manager
+
+- **WHEN** `play` runs, and a client of the link of `play` sends `hello` with the input subsystem `construct-manager`
+- **THEN** the client gets `refused` with the reason `id-in-use`, and no link opens
+
+#### Scenario: A step back across the processes
+
+- **WHEN** `play` is paused after 12 ticks, an input subsystem sends `product/set-field` that sets the color to `#b91c1c`, and then `constructs/rewind` with `ticks` set to `1`
+- **THEN** the part `time` of `play` has 11 ticks, the store of `play` holds `#b91c1c`, and the record of `play` has no `time/advance` between the `hub/rewind` and the `store/set-field` of the step back
+
+### Requirement: A product construct process that ends is a failed construct
+
+When a product construct process ends while its construct is wanted to run, the construct manager SHALL report the status `failed` with the message `The process of the construct ended with the exit code <code>.` or `The process of the construct ended with the signal <signal>.` The workbench SHALL continue. The construct SHALL stay `failed` until a client sends `constructs/stop` and then `constructs/start`.
+
+#### Scenario: A behavior that ends the process
+
+- **WHEN** a behavior of `play` calls `process.exit(3)` at a tick
+- **THEN** the part holds `play` with the status `failed` and the message `The process of the construct ended with the exit code 3.`, the address of `play` accepts no connection, and a client of the workbench link still gets a `welcome` message
+
+#### Scenario: A start after the failure
+
+- **WHEN** `play` failed, and an input subsystem sends `constructs/stop` and then `constructs/start` with `play`
+- **THEN** `play` runs in a new process with the status `running`
+
+#### Scenario: A stop and a start while the end is reported
+
+- **WHEN** the process of `play` ends, and an input subsystem sends `constructs/stop` and then `constructs/start` with `play` before the construct manager reports the end
+- **THEN** the construct manager starts a new process for `play`, and the part holds `play` with the status `running`, not `failed`
+
+### Requirement: A product construct process that does not answer is a failed construct
+
+The construct manager SHALL end a product construct process with `SIGKILL` and report the status `failed` when the process does not start its link in 10 seconds, or does not answer a check or an input in 5 seconds. The message SHALL be `The construct did not start in 10 seconds.` or `The construct did not answer in 5 seconds.` Each other construct and the workbench SHALL continue.
+
+#### Scenario: A behavior that does not end
+
+- **WHEN** a behavior of `play` does not end at a tick
+- **THEN** at most 7 seconds later the part holds `play` with the status `failed` and the message `The construct did not answer in 5 seconds.`, the process of `play` ended, and an input to `check` gives its result
+
+#### Scenario: The workbench answers during the fault
+
+- **WHEN** a behavior of `play` does not end at a tick, and a client of the workbench link sends `product/set-field`
+- **THEN** the client gets the result in less than 1 second
+
+### Requirement: Each product construct process loads the product code
+
+Each product construct process SHALL load the product code from its file when it starts, and the process of the workbench SHALL NOT load it. A change of the file SHALL change no product construct that runs. A product construct that starts after the change SHALL run the changed code. When the module cannot be loaded or has no correct list `behaviors`, the start SHALL fail with the reason.
+
+#### Scenario: A new version of the code
+
+- **WHEN** `play` runs the product code, a person changes the count behavior in the file to add `10` at each tick, and an input subsystem sends `constructs/stop` and then `constructs/start` with `play`
+- **THEN** the count of the new `play` grows by `10` at each tick
+
+#### Scenario: A running construct keeps its code
+
+- **WHEN** `play` runs the product code, and a person changes the count behavior in the file
+- **THEN** the count of `play` still grows by `1` at each tick
+
+#### Scenario: Code that cannot be loaded
+
+- **WHEN** a person changes the file of the product code to a text that is not correct JavaScript, and an input subsystem starts `play`
+- **THEN** the part holds `play` with the status `failed` and a message that names the error, and the workbench continues
+
+### Requirement: A product construct process that does not end at a stop
+
+When a product construct process does not end in 2 seconds after the construct manager tells it to stop, the construct manager SHALL end it with `SIGKILL` and SHALL report the status `stopped`.
+
+#### Scenario: A process that does not end
+
+- **WHEN** a behavior of `play` does not end, and an input subsystem sends `constructs/stop` with `play` before the construct manager finds that `play` does not answer
+- **THEN** the process of `play` ended at most 3 seconds later, and the part holds `play` with the status `stopped`
+
+### Requirement: The terminal shows the process and the output of each product construct
+
+The construct manager SHALL print `wishem: construct <id> runs in the process <pid>` when a product construct process starts, before the line of its link. It SHALL print each line that the process writes to its standard output or its standard error, after the text `wishem: construct <id>: `.
+
+#### Scenario: The line of the process
+
+- **WHEN** an input subsystem starts `play`
+- **THEN** the terminal shows `wishem: construct play runs in the process <pid>` and then `wishem: construct play runs, link at ws://127.0.0.1:<port>/link`, and `<pid>` is the ID of the process of `play`
+
+#### Scenario: A line of the product code
+
+- **WHEN** a behavior of `play` writes `hello` with `console.log`
+- **THEN** the terminal shows `wishem: construct play: hello`
+
+### Requirement: The construct manager sends an added or removed entity
+
+When the definitions of the two product models are equal, and the entities that the two models both hold have the same order and the same component types, the construct manager SHALL send one `store/add-entity` for each added entity, with its position in the new model, and one `store/remove-entity` for each removed entity. The entities that the two models both hold SHALL keep their live values, except the values that the change changes.
+
+#### Scenario: An added entity
+
+- **WHEN** a construct of the sample product is paused with a count of `25`, and an input subsystem sends `product/add-entity` with a second entity that has a `Counter` component with the count `1000`
+- **THEN** the construct gets one `store/add-entity` with the source `construct-manager` and no `store/replace-model`, its store holds the sample entity with the count `25` and then the second entity with the count `1000`
+
+#### Scenario: A removed entity
+
+- **WHEN** a construct of the sample product is paused with a count of `25` and holds a second entity, and a person removes the second entity from the `state.json` of the product folder
+- **THEN** the construct gets one `store/remove-entity` for the second entity and no `store/replace-model`, and it still holds the count `25`
+
+#### Scenario: An entity at the start of the list
+
+- **WHEN** a construct runs, and a person adds an entity before the sample entity in the `state.json` of the product folder
+- **THEN** the construct gets one `store/add-entity` with the `index` 0, and the order of the entities in its store is the order of the product model
+
+#### Scenario: A rewind of the workbench after a removal
+
+- **WHEN** the product holds three entities, an input removes the second one, and `hub/rewind` of the workbench returns the part `product` to the state before that input
+- **THEN** the construct gets one `store/add-entity` with the `index` 1 and the authored values of that entity, and the other two entities keep their live values
+
+#### Scenario: A rewind of the workbench after an addition
+
+- **WHEN** an input added an entity to the product, and `hub/rewind` of the workbench returns the part `product` to the state before that input
+- **THEN** the construct gets one `store/remove-entity` for that entity
+
+#### Scenario: An addition, a removal, and a value in one change
+
+- **WHEN** a person adds one entity, removes a different entity, and changes the color of the sample entity in one write of the `state.json` of the product folder
+- **THEN** the construct gets one `store/add-entity`, one `store/set-field`, and one `store/remove-entity`, no `store/replace-model`, and the count of the sample entity keeps its live value
+
+### Requirement: The inputs of an entity change are accepted in order
+
+The construct manager SHALL send the inputs of a change that adds or removes entities in an order in which a store that holds the earlier product model accepts each input, and after the last input holds the new product model. A reference or a list of references that names an entity that is not yet in the store SHALL go in a `store/set-field` after the `store/add-entity` of that entity. A reference or a list between two removed entities SHALL be cleared before their removal.
+
+#### Scenario: A new entity that refers to an entity of the store
+
+- **WHEN** one change adds an entity whose reference field names the sample entity
+- **THEN** the construct gets one `store/add-entity` with the reference, and the store accepts it
+
+#### Scenario: An entity of the store that refers to a new entity
+
+- **WHEN** one change adds an entity and sets a reference field of an entity of the store to it
+- **THEN** the construct gets the `store/add-entity` first and then the `store/set-field` of the reference, and the store accepts each one
+
+#### Scenario: Two new entities that refer to each other
+
+- **WHEN** one change adds the entities `a` and `b`, the reference field of `a` names `b`, and the reference field of `b` names `a`
+- **THEN** the construct gets `store/add-entity` of `a` with no value for the field, `store/add-entity` of `b` with its reference, and then `store/set-field` of the reference of `a`, and the store accepts each one
+
+#### Scenario: Two removed entities that refer to each other
+
+- **WHEN** one change removes the entities `a` and `b`, and each one has a reference field that names the other
+- **THEN** the construct gets `store/clear-field` of each of the two references, and then `store/remove-entity` of `a` and of `b`, and the store accepts each one
+
+#### Scenario: A reference that moves from a removed entity to a new entity
+
+- **WHEN** a reference field of the sample entity names the entity `a`, and one change removes `a`, adds the entity `b`, and sets the reference to `b`
+- **THEN** the construct gets `store/add-entity` of `b`, then `store/set-field` of the reference, and then `store/remove-entity` of `a`, and the store accepts each one
+
+#### Scenario: A list that holds a removed entity
+
+- **WHEN** a `reference-list` field of an entity of the store holds the IDs of `a` and `b`, and one change removes `a` and removes its ID from the list
+- **THEN** the construct gets one `store/set-field` of the full list with only the ID of `b`, and then `store/remove-entity` of `a`, and the store accepts each one
+
+#### Scenario: Two new entities in the lists of each other
+
+- **WHEN** one change adds the entities `a` and `b`, the `reference-list` field of `a` holds the ID of `b`, and the `reference-list` field of `b` holds the ID of `a`
+- **THEN** the construct gets `store/add-entity` of `a` with no value for the list, `store/add-entity` of `b` with its list, and then `store/set-field` of the list of `a`, and the store accepts each one
+
+#### Scenario: Two removed entities in the lists of each other
+
+- **WHEN** one change removes the entities `a` and `b`, and the `reference-list` field of each one holds the ID of the other
+- **THEN** the construct gets `store/clear-field` of each of the two lists, and then `store/remove-entity` of `a` and of `b`, and the store accepts each one
+
+#### Scenario: An entity that refers to itself
+
+- **WHEN** one change adds an entity whose reference field names that same entity
+- **THEN** the construct gets one `store/add-entity` with the reference, and the store accepts it
+
+### Requirement: A change that cannot keep the live values replaces the model
+
+When a change of the product model changes the definitions, the order of the entities that the two models both hold, or the component types of such an entity, the construct manager SHALL send one `store/replace-model` with the new model to each running product construct. This SHALL also be true when the same change adds or removes an entity.
+
+#### Scenario: A new order of the entities
+
+- **WHEN** a construct runs with two entities, and a person changes the order of the two entities in the `state.json` of the product folder
+- **THEN** the construct gets one `store/replace-model` with the product model
+
+#### Scenario: An added entity and a change of a definition
+
+- **WHEN** a construct runs, and one change of the product model adds an entity and changes the label of a component type
+- **THEN** the construct gets one `store/replace-model` with the product model

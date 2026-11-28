@@ -12,32 +12,47 @@ export interface ButtonProps extends Native<'button'> {
    * Shows a spinner and ignores clicks. The button stays in the focus order.
    */
   loading?: boolean
+  /**
+   * Dims the button and ignores clicks, Enter, and Space. The button keeps the focus and its place in the tab order.
+   */
+  disabled?: boolean
+  /**
+   * The accessible name. It starts with the label. Default: the label.
+   */
+  accessibleName?: string
 }
 
 const baseClass = [
   'inline-flex items-center justify-center rounded-sm border border-transparent px-3 py-1.5 text-control font-medium whitespace-nowrap',
-  'cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 data-loading:cursor-progress',
   'st-focus-visible:outline-2 st-focus-visible:outline-offset-2 st-focus-visible:outline-maker-text',
 ].join(' ')
 
 const neutralFill = [
-  'enabled:not-data-loading:st-hover:bg-[color-mix(in_srgb,var(--fg)_8%,var(--surface))]',
-  'enabled:not-data-loading:st-active:translate-y-px enabled:not-data-loading:st-active:bg-[color-mix(in_srgb,var(--fg)_14%,var(--surface))]',
+  'st-hover:bg-[color-mix(in_srgb,var(--fg)_8%,var(--surface))]',
+  'st-active:translate-y-px st-active:bg-[color-mix(in_srgb,var(--fg)_14%,var(--surface))]',
 ].join(' ')
 
-const variantClass: Record<ButtonVariant, string> = {
-  maker: [
-    'bg-maker font-semibold text-on-fill',
-    'enabled:not-data-loading:st-hover:brightness-[1.08]',
-    'enabled:not-data-loading:st-active:translate-y-px enabled:not-data-loading:st-active:brightness-[0.88]',
-  ].join(' '),
-  neutral: `border-control-border bg-surface text-fg ${neutralFill}`,
-  quiet: `text-fg-muted ${neutralFill}`,
-  danger: [
-    'bg-danger font-semibold text-on-fill',
-    'enabled:not-data-loading:st-hover:brightness-[1.08]',
-    'enabled:not-data-loading:st-active:translate-y-px enabled:not-data-loading:st-active:brightness-[0.96]',
-  ].join(' '),
+const variantClass: Record<ButtonVariant, { look: string; states: string }> = {
+  maker: {
+    look: 'bg-maker font-semibold text-on-fill',
+    states: 'st-hover:brightness-[1.08] st-active:translate-y-px st-active:brightness-[0.88]',
+  },
+  neutral: { look: 'border-control-border bg-surface text-fg', states: neutralFill },
+  quiet: { look: 'text-fg-muted', states: neutralFill },
+  danger: {
+    look: 'bg-danger font-semibold text-on-fill',
+    states: 'st-hover:brightness-[1.08] st-active:translate-y-px st-active:brightness-[0.96]',
+  },
+}
+
+const stateClass = (variant: ButtonVariant, loading: boolean, disabled: boolean) => {
+  if (loading) {
+    return 'cursor-progress'
+  }
+  if (disabled) {
+    return 'cursor-not-allowed opacity-45'
+  }
+  return `cursor-pointer ${variantClass[variant].states}`
 }
 
 /**
@@ -46,6 +61,8 @@ const variantClass: Record<ButtonVariant, string> = {
 export const Button = ({
   variant = 'neutral',
   loading = false,
+  disabled = false,
+  accessibleName,
   type = 'button',
   onClick,
   children,
@@ -54,17 +71,19 @@ export const Button = ({
   <button
     {...rest}
     type={type}
+    aria-label={accessibleName ?? rest['aria-label']}
     aria-busy={loading ? true : rest['aria-busy']}
-    aria-disabled={loading ? true : rest['aria-disabled']}
+    aria-disabled={loading || disabled ? true : rest['aria-disabled']}
     data-loading={loading ? '' : undefined}
+    data-disabled={disabled ? '' : undefined}
     onClick={(event) => {
-      if (loading) {
+      if (loading || disabled) {
         event.preventDefault()
         return
       }
       onClick?.(event)
     }}
-    className={`${baseClass} ${variantClass[variant]}`}
+    className={`${baseClass} ${variantClass[variant].look} ${stateClass(variant, loading, disabled)}`}
   >
     {loading && <Spinner />}
     {children}

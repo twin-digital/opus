@@ -215,6 +215,18 @@ Agent decision. The owner agreed only that the section is a static grid of each 
 
 For the focus ring, the test also clicks the button and checks that it has no outline. For the select, a test opens a closed specimen with the keyboard, selects an option, and checks the roles with the accessibility tree. The highlighted option of the menu has no forced specimen: this test covers its look.
 
+### D13. The merge with `main` (2026-11-28)
+
+`main` added its own `Button`, the product panel, the run controls, and the list control while this change was in work. The merge keeps one button and both sets of requirements in `component-catalog`.
+
+- The button of this change stays. It takes `accessibleName` from the button of `main`.
+- A disabled button has `aria-disabled` and not the native `disabled` attribute. It keeps the focus and its place in the tab order, and it ignores a click, Enter, and Space. The run bar and the field row of `main` need this behavior. It replaces the native `disabled` of this change.
+- The callers of `main` use `children` for `label`, `onClick` for `onPress`, `loading` for `busy`, and `neutral` for `plain`.
+- The look of this change replaces the look of the button of `main`: control text, not UI text; a `maker` fill with `on-fill` text, not a `maker` border with `maker-text`; a focus ring in `maker-text`, not `accent`; a dimmed disabled button, not a label in `fg-muted`.
+- The requirement "The button" of `main` keeps the label, the disabled behavior, and `aria-disabled`, and refers to "The button variants" and "The states of a button" for the look. The field row and the list control use neutral buttons.
+- `Section` has the boolean prop `stacked` of `main`, not the `layout` prop of D11.
+- The specimens of `main` are in the files `ProductPanelSpecimens.tsx` and `RunControls.tsx` of `src/style-guide/sections/components/`. The app bar specimens of `main` are in `AppBarAndZeroState.tsx`.
+
 ## Risks / Trade-offs
 
 - [Base UI does not permit one of the three facts] → Task 1 proves them before other work, and stops for the owner if one is false.

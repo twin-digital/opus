@@ -132,7 +132,7 @@ The radius scale SHALL have three steps: 4, 8, and 12 pixels. The shadow scale S
 
 ### Requirement: The app bar
 
-The app bar SHALL show a title. Its surface SHALL be `night` and its text SHALL be `on-night`, in each theme. It SHALL show the title in lowercase, in the display typeface, with a full stop after it in the `maker` color.
+The app bar SHALL show a title. Its surface SHALL be `night` and its text SHALL be `on-night`, in each theme. It SHALL show the title in lowercase, in the display typeface, with a full stop after it in the `maker` color. When the app bar gets a rename function, the title SHALL be a button that opens a text field for the title.
 
 #### Scenario: A title with a capital letter
 
@@ -143,6 +143,11 @@ The app bar SHALL show a title. Its surface SHALL be `night` and its text SHALL 
 
 - **WHEN** the app bar is shown in light mode
 - **THEN** its surface is `#17172A`
+
+#### Scenario: An app bar with no rename function
+
+- **WHEN** the app bar gets no rename function
+- **THEN** the title is a heading with no button, as in the style guide specimen "App bar"
 
 ### Requirement: The zero state
 
@@ -185,6 +190,16 @@ Each component of the workbench SHALL be in the components section of the style 
 
 - **WHEN** a person opens the components section
 - **THEN** it shows the panel, the field, the button, the text input, the text area, the select, the checkbox, the prompt box, the quote, the spirit aside, the maker line, the spirit line, the callout, the badge, and the divider
+
+#### Scenario: The states of the app bar
+
+- **WHEN** a person opens the components section
+- **THEN** it shows the app bar in the states "App bar", "App bar, long title", "App bar, edit", "App bar, saving", and "App bar, not saved", in light mode and in dark mode
+
+#### Scenario: The states of the components of the product panel
+
+- **WHEN** a person opens the components section
+- **THEN** it shows, in light mode and in dark mode, the specimens "Entity list", "Entity list, selected", "Entity list, empty", "Field row, string", "Field row, number", "Field row, boolean", "Field row, reference", "Field row, reference list", "Field row, reference list, empty", "Field row, reference list, saving", "Field row, reference list, not saved", "Field row, reference list, disabled", "Field row, no value", "Field row, saving", "Field row, not saved", "Field row, disabled", "Inspector, nothing selected", "Inspector, an entity", and "Product panel"
 
 ### Requirement: The style guide is not in the workbench page
 
@@ -661,3 +676,224 @@ A button and a badge SHALL keep their text on one line. The label of a checkbox 
 
 - **WHEN** a checkbox in a box of 260 pixels has a label of three lines
 - **THEN** the box is at the first line of the label
+
+### Requirement: The app bar edits its title
+
+When the designer selects the title, the app bar SHALL show a text field with the title as the designer typed it, not in lowercase, with all its text selected. Enter or a move of the focus out of the field SHALL commit the text one time. Escape SHALL close the field with no input. A commit of an empty text or of the same title SHALL close the field with no input.
+
+#### Scenario: Enter commits
+
+- **WHEN** the designer selects the title `Wishem`, types `Wishem studio`, and presses Enter
+- **THEN** the app bar calls the rename function one time with `Wishem studio`
+
+#### Scenario: Enter and then a move of the focus
+
+- **WHEN** the designer presses Enter, and the focus then leaves the field before the outcome
+- **THEN** the rename function is called one time
+
+#### Scenario: Escape
+
+- **WHEN** the designer types a new title and presses Escape
+- **THEN** the field closes, the title does not change, the rename function is not called, and the focus is on the title button
+
+#### Scenario: An empty title
+
+- **WHEN** the designer removes all the text and presses Enter
+- **THEN** the field closes, and the rename function is not called
+
+### Requirement: The app bar shows the state of a rename
+
+While a rename waits for its outcome, the field SHALL be read-only, SHALL have `aria-busy="true"`, and SHALL have the mono label `Saving` beside it in `on-night`. After a rejection, the field SHALL stay open with the text of the designer, and a line below the bar SHALL show `The title is not saved.` and the reason in `danger-text` on `ground`, in an element with the role `alert`. After an accepted rename, the field SHALL close and the focus SHALL go to the title button.
+
+#### Scenario: Saving
+
+- **WHEN** the rename function did not give its outcome yet
+- **THEN** the field is read-only, has `aria-busy="true"`, and the label `SAVING` shows beside it, and Escape and Enter do nothing
+
+#### Scenario: Not saved
+
+- **WHEN** the rename function gives a rejection with the reason text `The workbench does not run. Start it, and try again.`
+- **THEN** the line below the bar shows `The title is not saved. The workbench does not run. Start it, and try again.`, and the field holds the text of the designer
+
+#### Scenario: A new commit after a rejection
+
+- **WHEN** the app bar shows a rejection, and the designer presses Enter again
+- **THEN** the line of the rejection goes away, and the app bar calls the rename function again
+
+#### Scenario: A move of the focus after a rejection
+
+- **WHEN** the app bar shows a rejection, and the focus leaves the field
+- **THEN** the app bar does not call the rename function, and the field and the line of the rejection stay
+
+#### Scenario: The app bar is removed while it saves
+
+- **WHEN** the app bar is removed from the page while a rename waits, and then the outcome arrives
+- **THEN** no error occurs
+
+### Requirement: The entity list
+
+The entity list SHALL show one button for each entity that it gets, with the name in UI text in `fg` and the short ID as a mono label in `fg-muted`. The selected item SHALL have `aria-current="true"`, a bar in `accent` at its start edge, and its name in `accent-text`. A list with no entity SHALL show the zero state with the label `Entities` and the text `No entities yet.`.
+
+#### Scenario: The selected item
+
+- **WHEN** the entity list shows two entities and the second one is selected
+- **THEN** only the second button has `aria-current="true"`, and its name has the color of `accent-text`
+
+#### Scenario: Selection with the keyboard
+
+- **WHEN** the focus is on an item, and the person presses Enter or Space
+- **THEN** the list calls its select function one time with the ID of that entity, and the focus stays on the item
+
+### Requirement: The field row
+
+The field row SHALL show the label of the field in UI text, the type of the field as a mono label in `fg-muted`, the control for the type, and a neutral button with the label `Clear` after the control. The text field and the select SHALL use `surface`, `fg`, `control-border`, a focus ring in `accent`, and, for the text field, a caret in `maker`. The check box SHALL have the label of the field as its accessible name. The text `no value` SHALL be a mono label in `fg-muted`.
+
+#### Scenario: The row of a number field
+
+- **WHEN** the field row gets the field `count` of the type `number` with the value `0`
+- **THEN** it shows the label `count`, the mono label `NUMBER`, a text field with the accessible name `count` that holds `0`, and a button with the accessible name `Clear count`
+
+#### Scenario: A row with no input port
+
+- **WHEN** the field row gets no change function
+- **THEN** its control is disabled, its button `Clear` is disabled, and the row shows the value
+
+#### Scenario: A row with no value
+
+- **WHEN** the field row gets no value
+- **THEN** its button `Clear` is disabled, and the row shows `no value`
+
+#### Scenario: Not cleared
+
+- **WHEN** the clear function gives a rejection with the reason text `The workbench does not run. Start it, and try again.`
+- **THEN** the line below the control shows `The value is not cleared. The workbench does not run. Start it, and try again.` in `danger-text`, in an element with the role `alert`, and the control holds the value of the field
+
+#### Scenario: A narrow row
+
+- **WHEN** the field row is shown in a viewport 390 pixels wide
+- **THEN** the button `Clear` is on the line of the control, and the row needs no horizontal scroll
+
+### Requirement: The field row shows the state of a change
+
+While a change of a field row waits for its outcome, the control SHALL be read-only or disabled, SHALL have `aria-busy="true"`, and the mono label `Saving` SHALL show beside it in `fg-muted`. After a rejection, a line below the control SHALL show `The value is not saved.` and the reason in `danger-text`, in an element with the role `alert`. The style guide SHALL show each state through the first state that the row gets.
+
+#### Scenario: Not saved
+
+- **WHEN** the change function gives a rejection with the reason text `The workbench does not run. Start it, and try again.`
+- **THEN** the line below the control shows `The value is not saved. The workbench does not run. Start it, and try again.`, and the control holds the value of the designer
+
+#### Scenario: The row is removed while it saves
+
+- **WHEN** the field row is removed from the page while a change waits, and then the outcome arrives
+- **THEN** no error occurs
+
+### Requirement: The inspector
+
+The inspector SHALL show the name of the entity as a heading, the full ID as a mono label in `fg-muted`, and one group for each component, with the label of the component type as the legend of the group and one field row for each field. With no entity, it SHALL show the zero state with the label `Inspector` and the text `Select an entity to change it.`.
+
+#### Scenario: The groups of the sample entity
+
+- **WHEN** the inspector gets the sample entity
+- **THEN** it shows the heading `Color, Counter`, the groups `Color` and `Counter` in this order, and one field row in each group
+
+### Requirement: The product panel
+
+The product panel SHALL show the entity list and the inspector on `surface`, with a line in `line` between them. At a viewport width of 768 pixels or more, the list SHALL be a column of 288 pixels at the start, and the inspector SHALL take the remaining width. At a smaller width, the list SHALL be above the inspector, and each field row SHALL show its label above its control. The list SHALL be in a `nav` element with the name `Entities`.
+
+#### Scenario: A narrow viewport
+
+- **WHEN** the product panel is shown in a viewport 390 pixels wide
+- **THEN** the list is above the inspector, and no part of the panel needs a horizontal scroll
+
+#### Scenario: A wide viewport
+
+- **WHEN** the product panel is shown in a viewport 1280 pixels wide
+- **THEN** the list is 288 pixels wide at the left, and the inspector is at its right
+
+### Requirement: The button
+
+The button SHALL show its label in control text, with the radius of 4 pixels. Its look in each variant and state SHALL follow "The button variants" and "The states of a button". A maker button marks an action of the designer. A disabled button SHALL keep the focus and its place in the tab order, SHALL have `aria-disabled`, and SHALL NOT call its function.
+
+#### Scenario: A maker button
+
+- **WHEN** the style guide shows "Button, maker" with the label `Run`
+- **THEN** the button has the `maker` fill, and the label has the color of `on-fill`
+
+#### Scenario: A disabled button
+
+- **WHEN** a disabled button gets a click, Enter, or Space
+- **THEN** it does not call its function, and it keeps the focus
+
+### Requirement: The run bar
+
+The run bar SHALL be a toolbar with the name `Product controls`. It SHALL hold, in this order, the mono label `Product`, the status as a mono label, the buttons `Run` or `Stop`, `Pause` or `Resume`, `Step`, and `Step back`, and the readout of the tick and the time as mono labels in `fg-muted`. `Run` and `Resume` SHALL be maker buttons.
+
+#### Scenario: Paused
+
+- **WHEN** the run bar gets the status `Paused` and the tick 42 of 50 milliseconds
+- **THEN** it shows `PAUSED` in `warning-text`, the buttons `Stop`, `Resume`, `Step`, and `Step back` enabled, and `TICK 42` and `2.10 S`
+
+#### Scenario: Arrow keys in the toolbar
+
+- **WHEN** the focus is on a button of the run bar, and the person presses the right arrow key
+- **THEN** the focus moves to the next enabled button
+
+### Requirement: The run bar shows the status in a status role
+
+The status of the run bar SHALL use `success-text` for `Running`, `warning-text` for `Paused`, `danger-text` for `Failed`, and `fg-muted` for each other status. A line of a refusal or of a failure SHALL be UI text in `danger-text` below the toolbar, with the role `alert`.
+
+#### Scenario: Failed
+
+- **WHEN** the run bar gets the status `Failed` and the message `Two behaviors have the ID sample-product/count.`
+- **THEN** it shows `FAILED` in `danger-text`, and a line with the role `alert` holds the message
+
+### Requirement: The stage frame
+
+The stage frame SHALL be a region with the name `Stage` on `ground`, with a 1-pixel border in `line` and the radius of 4 pixels. It SHALL hold the picture that it gets, or the zero state with the label `Stage` and the text that it gets. Its picture SHALL NOT get a color, a font, or a size from the frame.
+
+#### Scenario: No picture
+
+- **WHEN** the stage frame gets the text `Not running. Press Run to start the product.` and no picture
+- **THEN** it shows the zero state with the label `Stage` and that text
+
+### Requirement: The run controls are in the style guide
+
+The components section of the style guide SHALL show the button, the run bar, and the stage frame in each state, in light mode and in dark mode.
+
+#### Scenario: The specimens of the run controls
+
+- **WHEN** a person opens the components section
+- **THEN** it shows, in light mode and in dark mode, the specimens "Button", "Button, maker", "Button, disabled", "Run bar, not running", "Run bar, starting", "Run bar, running", "Run bar, paused", "Run bar, paused at the start", "Run bar, failed", "Run bar, not done", "Run bar, no link", "Stage, not running", "Stage, connecting", "Stage, no views", "Stage, not reachable", and "Stage, a picture"
+
+### Requirement: A button can have an accessible name
+
+A button SHALL be able to have an accessible name that is different from its label. That name SHALL start with the label. The look of the button SHALL NOT change.
+
+#### Scenario: An accessible name
+
+- **WHEN** a button has the label `Clear` and the accessible name `Clear count`
+- **THEN** it shows `Clear`, and its accessible name is `Clear count`
+
+### Requirement: The field row of a list of references
+
+The list control SHALL show each item as UI text with the short ID as a mono label in `fg-muted`, and each button `Remove` and `Add` as a neutral button. The select SHALL use the colors of the select of a `reference` field. The text `empty list` SHALL be a mono label in `fg-muted`. The items, the select, and the buttons SHALL be in a group whose accessible name is the label of the field.
+
+#### Scenario: The accessible names
+
+- **WHEN** the list control of the field `cards` shows the item `Card · e_2a3b4c5d`
+- **THEN** its button has the accessible name `Remove Card · e_2a3b4c5d`, and the select has the accessible name `Add to cards`
+
+#### Scenario: The specimen of a list
+
+- **WHEN** a person opens the specimen "Field row, reference list"
+- **THEN** it shows the label of the field, the mono label `REFERENCE-LIST`, two items with a button `Remove` each, a select, and a button `Add`
+
+#### Scenario: A list while a change waits
+
+- **WHEN** a change of the list control waits for its outcome
+- **THEN** each button and the select are disabled, the group has `aria-busy="true"`, and the mono label `Saving` shows beside the control
+
+#### Scenario: A row with no input port
+
+- **WHEN** the list control gets no change function
+- **THEN** each button and the select are disabled, and the row shows the items

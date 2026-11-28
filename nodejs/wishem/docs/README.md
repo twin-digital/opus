@@ -41,6 +41,7 @@ Text with no label has no status. It is explanation, an example, or the reading 
 | Start the brainstorm for a milestone         | The GitHub issue of the milestone. See `roadmap.md`.               |
 | Check if a question is already settled       | `rules.md`, then the GitHub issue for the topic. See `roadmap.md`. |
 | See what the workbench is made of            | `architecture/README.md`                                           |
+| Work with little help from the owner         | `autonomous-flow.md`                                               |
 | Learn why the design has this shape          | `brainstorm.md`                                                    |
 
 ## Files
@@ -49,8 +50,8 @@ Text with no label has no status. It is explanation, an example, or the reading 
 - `brand.md`: the colors, type, and voice of Wishem, and how to tell the story of the name. This file uses the brand voice, not the plain style of the other files, and it has no status labels.
 - `design-system/style-guide-preview.html`: a static page that shows the design tokens, the typography, and the components of the brainstorm for [Workbench design system](https://github.com/twin-digital/opus/issues/496). It is the record of that brainstorm, not a specification. The style guide of `workbench-app` shows each component of the workbench.
 - `../workbench-app/`: the workbench application. Its style guide is the record of how the colors and the type are implemented. It shows the design tokens, the typography, and each component in each state. To start it, run `pnpm --filter @thrashplay/wishem-workbench-app style-guide`.
-- `architecture/`: what the workbench is made of, with two diagrams: the processes, and the path from a file to a picture. `render.mjs` writes the SVG files of the diagrams.
-- `concepts.md`: the project and its two parts, the entity and component model, the three kinds of directive, subsystems, and contracts.
+- `architecture/`: what the workbench is made of. It holds four kinds of C4 diagram (a system context diagram, a container diagram, a dynamic diagram of the path of a change, and two component diagrams of the page and the workbench process), an entity diagram of the model folder, and the package dependency view (not a C4 diagram). `render.mjs` writes the SVG files of the diagrams.
+- `concepts.md`: the project and its two parts, the entity and component model, constructs, the hub and the subsystems, time, storage, processes and links, renderers, the three kinds of directive, and contracts.
 - `glossary.md`: one term for each concept, and the terms that are not used.
 - `rules.md`: the numbered rules that every part of Wishem obeys, with the reason for each rule and the alternatives that were rejected. This file is the record of what is decided until a specification exists.
 - `examples/`: worked examples of a designer and the agent, and a wireframe of the editor. An example is an illustration. It is not a rule or a requirement.

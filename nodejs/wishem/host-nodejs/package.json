@@ -2,7 +2,7 @@
   "private": true,
   "name": "@thrashplay/wishem-host-nodejs",
   "version": "0.0.0",
-  "description": "The Node.js host of Wishem. Reads a model folder, serves the snapshot over local HTTP, and provides the wishem command.",
+  "description": "Runs a Wishem construct in a Node.js process. Reads and writes a model folder and serves the link of the hub over local WebSocket.",
   "type": "module",
   "exports": {
     "./index": null,
@@ -22,11 +22,7 @@
       }
     }
   },
-  "bin": {
-    "wishem": "./bin/wishem.js"
-  },
   "files": [
-    "bin",
     "dist",
     "!dist/**/*.d.ts.map"
   ],
@@ -40,15 +36,19 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@thrashplay/wishem-core": "workspace:*"
+    "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-hub": "workspace:*",
+    "ws": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@thrashplay/wishem-clock": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/ws": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",

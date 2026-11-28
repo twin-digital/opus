@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FIELD_TYPES } from './model.js'
 import { validateModel } from './validate-model.js'
 
 const CT = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
@@ -7,7 +8,13 @@ const FLD = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
 const FLD2 = 'fld_11111111-2222-4333-8444-555555555555'
 const ENT = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
 const ENT2 = 'e_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+const FLD3 = 'fld_22222222-3333-4444-8555-666666666666'
+const FLD4 = 'fld_33333333-4444-4555-8666-777777777777'
+const FLD5 = 'fld_44444444-5555-4666-8777-888888888888'
+const ENT3 = 'e_bbbbbbbb-cccc-4ddd-8eee-ffffffffffff'
+const MISSING = 'e_00000000-0000-4000-8000-000000000000'
 const CT3 = 'ct_55555555-6666-4777-8888-999999999999'
+const CT4 = 'ct_66666666-7777-4888-9999-aaaaaaaaaaaa'
 
 const appBar = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   id: CT,
@@ -85,12 +92,29 @@ describe('validateModel', () => {
     })
 
     it('names the component type and the field for a type that is not known', () => {
-      const bad = appBar({ fields: [{ id: FLD, label: 'title', type: 'number' }] })
+      const bad = appBar({ fields: [{ id: FLD, label: 'title', type: 'date' }] })
       const problems = errors(model([bad], []))
       expect(problems[0]?.path).toEqual(['definitions', 0, 'fields', 0, 'type'])
       expect(problems[0]?.message).toContain('AppBar')
       expect(problems[0]?.message).toContain('title')
-      expect(problems[0]?.message).toContain('number')
+      expect(problems[0]?.message).toContain('has the type "date"')
+      for (const type of ['string', 'number', 'boolean', 'reference', 'reference-list']) {
+        expect(problems[0]?.message).toContain(`"${type}"`)
+      }
+    })
+
+    it('accepts a component type with a field of each type and keeps each type', () => {
+      const fields = [
+        { id: FLD, label: 'a', type: 'string' },
+        { id: FLD2, label: 'b', type: 'number' },
+        { id: FLD3, label: 'c', type: 'boolean' },
+        { id: FLD4, label: 'd', type: 'reference' },
+        { id: FLD5, label: 'e', type: 'reference-list' },
+      ]
+      const result = validateModel(model([appBar({ fields })], []))
+      expect(result.ok && result.model.definitions[0]?.fields.map((field) => field.type)).toEqual(
+        FIELD_TYPES as unknown as string[],
+      )
     })
 
     it('rejects a component type with no `fields` list', () => {
@@ -295,6 +319,215 @@ describe('validateModel', () => {
       expect(problems[0]?.message).toContain('title')
     })
 
+    describe('values of the four types', () => {
+      const fields = [
+        { id: FLD, label: 'a', type: 'string' },
+        { id: FLD2, label: 'b', type: 'number' },
+        { id: FLD3, label: 'c', type: 'boolean' },
+        { id: FLD4, label: 'd', type: 'reference' },
+      ]
+      const typed = appBar({ fields })
+      const withValues = (values: Record<string, unknown>, others: unknown[] = []) =>
+        model([typed], [entity({ [CT]: values }), ...others])
+
+      it('accepts a value of each type', () => {
+        const result = validateModel(withValues({ [FLD]: 'x', [FLD2]: -2.5, [FLD3]: false, [FLD4]: ENT }))
+        expect(result.ok).toBe(true)
+        expect(result.ok && result.model.entities[0]?.components[CT]).toEqual({
+          [FLD]: 'x',
+          [FLD2]: -2.5,
+          [FLD3]: false,
+          [FLD4]: ENT,
+        })
+      })
+
+      it.each([
+        ['a string field with 42', FLD, 42, 'string'],
+        ['a number field with "42"', FLD2, '42', 'number'],
+        ['a boolean field with "true"', FLD3, 'true', 'boolean'],
+        ['a reference field with 7', FLD4, 7, 'reference'],
+        ['a number field with null', FLD2, null, 'number'],
+        ['a boolean field with 1', FLD3, 1, 'boolean'],
+      ])('names the entity, the field, and the type for %s', (_name, field, value, type) => {
+        const problems = errors(withValues({ [field]: value }))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, field])
+        const label = fields.find((candidate) => candidate.id === field)?.label
+        expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain(`for the field "${label}" of "AppBar"`)
+        expect(problems[0]?.message).toContain(`"${type}"`)
+      })
+
+      it.each([
+        ['NaN', Number.NaN],
+        ['Infinity', Number.POSITIVE_INFINITY],
+        ['-Infinity', Number.NEGATIVE_INFINITY],
+      ])('rejects %s for a number field', (name, value) => {
+        const problems = errors(withValues({ [FLD2]: value }))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD2])
+        expect(problems[0]?.message).toContain(`has the value ${name} for the field`)
+      })
+
+      it.each([
+        ['a number', FLD, 42, 'has the value 42 for'],
+        ['a boolean', FLD2, true, 'has the value true for'],
+        ['null', FLD2, null, 'has the value null for'],
+        ['a string', FLD2, '42', 'has the value "42" for'],
+        ['an object', FLD3, { a: 1 }, 'has the value {"a":1} for'],
+      ])('shows %s as its value in the message of a type mismatch', (_name, field, value, text) => {
+        const problems = errors(withValues({ [field]: value }))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.message).toContain(text)
+      })
+
+      it('accepts a reference to a later entity and a reference of an entity to itself', () => {
+        const later = entity({ [CT]: { [FLD4]: ENT2 } }, ENT)
+        const self = entity({ [CT]: { [FLD4]: ENT2 } }, ENT2)
+        expect(validateModel(model([typed], [later, entity({}, ENT2)])).ok).toBe(true)
+        expect(validateModel(model([typed], [self])).ok).toBe(true)
+      })
+
+      it('accepts a reference to an earlier entity', () => {
+        const first = entity({}, ENT)
+        const second = entity({ [CT]: { [FLD4]: ENT } }, ENT2)
+        expect(validateModel(model([typed], [first, second])).ok).toBe(true)
+      })
+
+      it('names the entity, the field, and the ID for a reference to an entity that does not exist', () => {
+        const missing = 'e_00000000-0000-4000-8000-000000000000'
+        const problems = errors(withValues({ [FLD4]: missing }))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD4])
+        expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain('the field "d" of "AppBar"')
+        expect(problems[0]?.message).toContain(missing)
+      })
+
+      it('names each reference to an entity that does not exist', () => {
+        const missing = 'e_00000000-0000-4000-8000-000000000000'
+        const other = 'e_00000000-0000-4000-8000-000000000001'
+        const second = entity({ [CT]: { [FLD4]: other } }, ENT2)
+        const problems = errors(withValues({ [FLD4]: missing }, [second]))
+        expect(problems.map((problem) => problem.path)).toEqual([
+          ['entities', 0, 'components', CT, FLD4],
+          ['entities', 1, 'components', CT, FLD4],
+        ])
+        expect(problems[0]?.message).toContain(missing)
+        expect(problems[1]?.message).toContain(other)
+      })
+
+      it('names the entity and the field for a reference that is not an entity ID', () => {
+        const problems = errors(withValues({ [FLD4]: 'hero' }))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD4])
+        expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain('"hero"')
+        expect(problems[0]?.message).toContain('the field "d" of "AppBar"')
+      })
+
+      it('names the prefix e_ for a reference with the prefix ct_', () => {
+        const problems = errors(withValues({ [FLD4]: CT }))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD4])
+        expect(problems[0]?.message).toContain('"e_"')
+        expect(problems[0]?.message).toContain('"ct_"')
+      })
+
+      it('reports a wrong type and a reference that does not exist together', () => {
+        const missing = 'e_00000000-0000-4000-8000-000000000000'
+        const problems = errors(withValues({ [FLD2]: 'x', [FLD4]: missing }))
+        expect(problems.map((problem) => problem.path)).toEqual([
+          ['entities', 0, 'components', CT, FLD2],
+          ['entities', 0, 'components', CT, FLD4],
+        ])
+      })
+    })
+
+    describe('values of the type reference-list', () => {
+      const typed = appBar({ fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] })
+      const holder = (value: unknown, id = ENT) => entity({ [CT]: { [FLD5]: value } }, id)
+      const withList = (value: unknown) => model([typed], [holder(value), entity({}, ENT2), entity({}, ENT3)])
+      const listPath = (...rest: number[]) => ['entities', 0, 'components', CT, FLD5, ...rest]
+
+      it('accepts a list of two entities in that order', () => {
+        const result = validateModel(withList([ENT3, ENT2]))
+        expect(result.ok && result.model.entities[0]?.components[CT]?.[FLD5]).toEqual([ENT3, ENT2])
+      })
+
+      it('accepts an empty list and keeps it', () => {
+        const result = validateModel(withList([]))
+        expect(result.ok && result.model.entities[0]?.components[CT]).toEqual({ [FLD5]: [] })
+      })
+
+      it('accepts a list that names its own entity', () => {
+        expect(validateModel(withList([ENT])).ok).toBe(true)
+      })
+
+      it('accepts an omitted field', () => {
+        const result = validateModel(model([typed], [entity({ [CT]: {} })]))
+        expect(result.ok && result.model.entities[0]?.components[CT]).toEqual({})
+      })
+
+      it('names the entity, the field, and the type for a string', () => {
+        const problems = errors(withList(ENT2))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath())
+        expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain('"cards"')
+        expect(problems[0]?.message).toContain('"reference-list"')
+      })
+
+      it('names the index of an item that is not an entity ID', () => {
+        const problems = errors(withList(['hero']))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath(0))
+        expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain('"hero"')
+      })
+
+      it.each([
+        ['an object', {}],
+        ['null', null],
+        ['a number', 3],
+      ])('names the entity and the field for %s', (_name, value) => {
+        const problems = errors(withList(value))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath())
+        expect(problems[0]?.message).toContain('"cards"')
+        expect(problems[0]?.message).toContain('"reference-list"')
+      })
+
+      it('names an item that is not a string', () => {
+        const problems = errors(withList([ENT2, 7]))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath(1))
+      })
+
+      it('names the ID and the index of an item that names no entity', () => {
+        const problems = errors(withList([ENT2, MISSING]))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath(1))
+        expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain(MISSING)
+        expect(problems[0]?.message).toContain('the index 1')
+      })
+
+      it('names the ID and the later index of an ID two times', () => {
+        const problems = errors(withList([ENT2, ENT3, ENT2]))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath(2))
+        expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain(ENT2)
+        expect(problems[0]?.message).toContain('the index 2')
+      })
+
+      it('names each item that has a fault', () => {
+        const problems = errors(withList(['hero', MISSING]))
+        expect(problems.map((problem) => problem.path)).toEqual([listPath(0), listPath(1)])
+      })
+    })
+
     it('accepts an omitted field', () => {
       expect(validateModel(model([appBar()], [entity({ [CT]: {} })])).ok).toBe(true)
     })
@@ -375,23 +608,78 @@ describe('validateModel', () => {
         expect(warning?.message).toContain('AppBar')
         expect(warning?.message).toContain(CT)
         expect(warning?.message).toContain(CT2)
-        expect(warning?.path).toEqual(['definitions'])
+        expect(warning?.path).toEqual(['definitions', 1, 'label'])
       }
+    })
+
+    it('gives the index of the later definition when another definition lies between', () => {
+      const result = validateModel(model([appBar(), appBar({ id: CT2, label: 'Other' }), appBar({ id: CT3 })], []))
+      expect(result.ok && result.warnings.map((warning) => warning.path)).toEqual([['definitions', 2, 'label']])
     })
 
     it('warns for each component type that repeats a label', () => {
       const result = validateModel(model([appBar(), appBar({ id: CT2 }), appBar({ id: CT3 })], []))
       expect(result.ok && result.warnings).toHaveLength(2)
       if (result.ok) {
+        expect(result.warnings.map((warning) => warning.path)).toEqual([
+          ['definitions', 1, 'label'],
+          ['definitions', 2, 'label'],
+        ])
         expect(result.warnings.every((warning) => warning.message.includes(CT))).toBe(true)
         expect(result.warnings.some((warning) => warning.message.includes(CT2))).toBe(true)
         expect(result.warnings.some((warning) => warning.message.includes(CT3))).toBe(true)
       }
     })
 
+    it('names the earlier ID and then the later ID in the message', () => {
+      const result = validateModel(model([appBar(), appBar({ id: CT2 })], []))
+      expect(result.ok && result.warnings.map((warning) => warning.message)).toEqual([
+        `Component types ${CT} and ${CT2} have the same label "AppBar"`,
+      ])
+    })
+
+    it('gives the warnings in the order of the first definition of each label', () => {
+      const definitions = [
+        appBar(),
+        appBar({ id: CT2, label: 'Other' }),
+        appBar({ id: CT3, label: 'Other' }),
+        appBar({ id: CT4 }),
+      ]
+      const result = validateModel(model(definitions, []))
+      expect(result.ok && result.warnings.map((warning) => warning.path)).toEqual([
+        ['definitions', 3, 'label'],
+        ['definitions', 2, 'label'],
+      ])
+    })
+
     it('does not warn for component types with different labels', () => {
       const result = validateModel(model([appBar(), appBar({ id: CT2, label: 'Other' })], []))
       expect(result.ok && result.warnings).toEqual([])
+    })
+  })
+  describe('a list of references shares no array with the input', () => {
+    it('gives a new array with the same IDs in the same order', () => {
+      const list = [ENT2, ENT]
+      const definitions = [{ id: CT, label: 'Deck', fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] }]
+      const entities = [entity({ [CT]: { [FLD5]: list } }), entity({}, ENT2)]
+      const result = validateModel({ definitions, entities })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const copy = result.model.entities[0]?.components[CT]?.[FLD5]
+        expect(copy).toEqual([ENT2, ENT])
+        expect(copy).not.toBe(list)
+      }
+    })
+    it('gives a new array for an empty list', () => {
+      const list: string[] = []
+      const definitions = [{ id: CT, label: 'Deck', fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] }]
+      const result = validateModel({ definitions, entities: [entity({ [CT]: { [FLD5]: list } })] })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const copy = result.model.entities[0]?.components[CT]?.[FLD5]
+        expect(copy).toEqual([])
+        expect(copy).not.toBe(list)
+      }
     })
   })
 })

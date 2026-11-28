@@ -95,11 +95,11 @@ describe('PromptBox', () => {
 
     it('disables Make a wish with no text or only spaces', () => {
       draw()
-      expect(button('Make a wish')?.disabled).toBe(true)
+      expect(button('Make a wish')?.getAttribute('aria-disabled')).toBe('true')
       type(area(), '  ')
-      expect(button('Make a wish')?.disabled).toBe(true)
+      expect(button('Make a wish')?.getAttribute('aria-disabled')).toBe('true')
       type(area(), 'a')
-      expect(button('Make a wish')?.disabled).toBe(false)
+      expect(button('Make a wish')?.hasAttribute('aria-disabled')).toBe(false)
     })
 
     it('starts with defaultValue and ignores a later change of the prop', () => {
@@ -244,7 +244,7 @@ describe('PromptBox', () => {
       expect(document.activeElement).toBe(button('Stop'))
       redraw({ working: false })
       expect(area().value).toBe('')
-      expect(button('Make a wish')?.disabled).toBe(true)
+      expect(button('Make a wish')?.getAttribute('aria-disabled')).toBe('true')
       expect(document.activeElement).toBe(area())
     })
 
@@ -267,7 +267,7 @@ describe('PromptBox', () => {
     it('disables the text area and the button and shows the reason', () => {
       draw({ disabled: true, disabledReason: 'Not connected', defaultValue: 'text' })
       expect(area().disabled).toBe(true)
-      expect(button('Make a wish')?.disabled).toBe(true)
+      expect(button('Make a wish')?.getAttribute('aria-disabled')).toBe('true')
       expect(box().textContent).toContain('Not connected')
       expect(box().textContent).not.toContain('Enter to send')
     })
@@ -276,7 +276,7 @@ describe('PromptBox', () => {
       draw({ disabled: true, working: true, defaultValue: 'text' })
       expect(area().disabled).toBe(true)
       expect(button('Stop')).toBeUndefined()
-      expect(button('Make a wish')?.disabled).toBe(true)
+      expect(button('Make a wish')?.getAttribute('aria-disabled')).toBe('true')
       expect(box().textContent).not.toContain('Wishem is working')
     })
 

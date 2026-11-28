@@ -1,4 +1,4 @@
-import { createRef } from 'react'
+import { act, createRef } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { useRender } from '../test/render.js'
 import { Button } from './Button.js'
@@ -48,6 +48,25 @@ describe('Button', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  it('uses surface, fg, the control border, the small radius, and control text by default', () => {
+    view.draw(<Button>Run</Button>)
+    for (const name of ['bg-surface', 'text-fg', 'border-control-border', 'rounded-sm', 'text-control']) {
+      expect(button()?.classList.contains(name), name).toBe(true)
+    }
+  })
+
+  it('draws maker with the maker fill and on-fill text', () => {
+    view.draw(<Button variant='maker'>Run</Button>)
+    expect(button()?.classList.contains('bg-maker')).toBe(true)
+    expect(button()?.classList.contains('text-on-fill')).toBe(true)
+    expect(button()?.classList.contains('border-control-border')).toBe(false)
+  })
+
+  it('has a focus ring in maker-text', () => {
+    view.draw(<Button>Run</Button>)
+    expect(button()?.classList.contains('st-focus-visible:outline-maker-text')).toBe(true)
+  })
+
   it('does not call onClick when it is disabled', () => {
     const onClick = vi.fn()
     view.draw(
@@ -57,7 +76,62 @@ describe('Button', () => {
     )
     button()?.click()
     expect(onClick).not.toHaveBeenCalled()
-    expect(button()?.disabled).toBe(true)
+    expect(button()?.getAttribute('aria-disabled')).toBe('true')
+  })
+
+  it('is dimmed, has aria-disabled, and stays focusable when it is disabled', () => {
+    view.draw(<Button disabled>Step</Button>)
+    const element = button() as HTMLButtonElement
+    expect(element.getAttribute('aria-disabled')).toBe('true')
+    expect(element.disabled).toBe(false)
+    expect(element.classList.contains('opacity-45')).toBe(true)
+    element.focus()
+    expect(document.activeElement).toBe(element)
+  })
+
+  it('has no hover style when it is disabled', () => {
+    view.draw(<Button disabled>Step</Button>)
+    expect(button()?.className).not.toContain('st-hover:')
+    view.draw(<Button>Step</Button>)
+    expect(button()?.className).toContain('st-hover:')
+  })
+
+  it('calls nothing on a click, Enter, or Space when it is disabled, and keeps the focus', () => {
+    const onClick = vi.fn()
+    view.draw(
+      <Button disabled onClick={onClick}>
+        Step
+      </Button>,
+    )
+    const element = button() as HTMLButtonElement
+    element.focus()
+    act(() => {
+      element.click()
+      // A button turns Enter and Space into a click.
+      element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+      element.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }))
+      element.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true }))
+      element.click()
+    })
+    expect(onClick).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(element)
+  })
+
+  it('keeps the label when it loads', () => {
+    view.draw(<Button loading>Run</Button>)
+    expect(button()?.getAttribute('aria-busy')).toBe('true')
+    expect(button()?.textContent).toBe('Run')
+  })
+
+  it('has no aria-label by default', () => {
+    view.draw(<Button>Run</Button>)
+    expect(button()?.hasAttribute('aria-label')).toBe(false)
+  })
+
+  it('shows the label and has the accessible name when it has accessibleName', () => {
+    view.draw(<Button accessibleName='Clear count'>Clear</Button>)
+    expect(button()?.textContent).toBe('Clear')
+    expect(button()?.getAttribute('aria-label')).toBe('Clear count')
   })
 
   it('is busy, not disabled, and shows the spinner when it loads', () => {

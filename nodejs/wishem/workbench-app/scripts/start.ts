@@ -1,13 +1,25 @@
-// Starts the core of the workbench and the page server in one Node.js process.
-// Usage: node start.ts [--model <folder>] [--port <number>] [--core-port <number>]
-//   [--views <folder>] [--no-view-types]
-import type { AddressInfo } from 'node:net'
+// Starts the construct of the workbench and the page server in one Node.js process.
+// Usage: node start.ts [--model <folder>] [--product <folder>] [--product-code <module>] [--port <number>] [--hub-port <number>]
+//   [--product-views <folder>] [--views <folder>] [--no-view-types]
+import { existsSync, readdirSync, statSync } from 'node:fs'
+import type { IncomingMessage } from 'node:http'
+import { connect, type AddressInfo, type Socket } from 'node:net'
+import type { Duplex } from 'node:stream'
 import { dirname, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
-import { createServer, type ViteDevServer } from 'vite'
-import { ModelError, type Core } from '@thrashplay/wishem-core'
-import { startHost } from '@thrashplay/wishem-host-nodejs'
+import { createServer, searchForWorkspaceRoot, type Plugin, type ViteDevServer } from 'vite'
+import {
+  attachConstructManager,
+  checkProductCode,
+  childProcessLauncher,
+  type ConstructManager,
+} from '@thrashplay/wishem-construct-manager/node'
+import { createConstructList } from '@thrashplay/wishem-construct-manager'
+import { ModelError, type Model } from '@thrashplay/wishem-core'
+import { startConstruct } from '@thrashplay/wishem-host-nodejs'
 import { formatProblem } from '@thrashplay/wishem-host-nodejs/format'
+import type { Hub } from '@thrashplay/wishem-hub'
 import { modelFolder } from '@thrashplay/wishem-workbench'
 import { generateViewTypes } from './view-types.ts'
 import { viewTypesLines } from './view-types-report.ts'
@@ -15,10 +27,16 @@ import { viewTypesLines } from './view-types-report.ts'
 export interface WorkbenchOptions {
   /** Default: the model folder of the base workbench. */
   model?: string
+  /** The folder of a product model to mount as the store `product`. Default: no product. */
+  product?: string
+  /** The module with the export `behaviors`: a package name, or a path that starts with `.` or `/`. Needs `product`. */
+  productCode?: string
+  /** The folder of the React views and sidecars of the product. Needs `product`. Default: no views. */
+  productViews?: string
   /** Default 5173. Use 0 to let the system select a port. */
   port?: number
   /** Default 4747. Use 0 to let the system select a port. */
-  corePort?: number
+  hubPort?: number
   /** The folder whose generated files follow the model. Default: `src/views` of the package. */
   views?: string
   /** Default `true`. */
@@ -30,8 +48,8 @@ export interface WorkbenchOptions {
 export interface Workbench {
   /** For example `http://127.0.0.1:5173/`. */
   pageUrl: string
-  /** For example `http://127.0.0.1:4747`. */
-  coreUrl: string
+  /** For example `ws://127.0.0.1:4747/link`. */
+  linkUrl: string
   close(): Promise<void>
 }
 
@@ -39,32 +57,166 @@ export interface Workbench {
 export class StartError extends Error {}
 
 const DEFAULT_PAGE_PORT = 5173
-const DEFAULT_CORE_PORT = 4747
+const DEFAULT_HUB_PORT = 4747
 const PAGE_ADDRESS = '127.0.0.1'
 const packageRoot = resolve(import.meta.dirname, '..')
 const SIDECAR_SUFFIX = '.view.json'
+const VIEW_SUFFIX = '.tsx'
+const TEST_VIEW_SUFFIX = '.test.tsx'
+const PRODUCT_VIEWS_PATH = '/@wishem/product-views.json'
+const PRODUCT_LINK_PATH = /^\/constructs\/([^/]+)\/link$/
+
+const isPathValue = (value: string) => value.startsWith('.') || value.startsWith('/')
+
+/** The file URL of the product code. A package name that does not resolve gives a `StartError` after its log line. */
+const productCodeUrl = (value: string, log: (line: string) => void): string => {
+  try {
+    return isPathValue(value) ?
+        pathToFileURL(resolve(process.env.INIT_CWD ?? process.cwd(), value)).href
+      : import.meta.resolve(value)
+  } catch (error) {
+    log(`wishem: the product code ${value} cannot be loaded: ${error instanceof Error ? error.message : String(error)}`)
+    throw new StartError('the product code cannot be loaded')
+  }
+}
+
+/** Checks the product code in a child process. Logs the reason and throws a `StartError` when it cannot be used. */
+const checkCode = async (value: string, url: string, log: (line: string) => void) => {
+  const check = await checkProductCode(url)
+  if (check.ok) {
+    return
+  }
+  if (check.reason === 'behaviors') {
+    log(`wishem: the product code has no correct list behaviors: ${check.message}`)
+    throw new StartError('the product code has no correct list behaviors')
+  }
+  log(`wishem: the product code ${value} cannot be loaded: ${check.message}`)
+  throw new StartError('the product code cannot be loaded')
+}
+
+interface ProductViewPair {
+  sidecar: string
+  view: string
+}
+
+/** The pairs of a sidecar and a view file in the folder. */
+const productViewPairs = (folder: string): ProductViewPair[] => {
+  const names = readdirSync(folder)
+  return names
+    .filter((name) => name.endsWith(SIDECAR_SUFFIX))
+    .map((name) => name.slice(0, -SIDECAR_SUFFIX.length))
+    .filter((base) => names.includes(`${base}${VIEW_SUFFIX}`))
+    .sort()
+    .map((base) => ({
+      sidecar: `/@fs${resolve(folder, `${base}${SIDECAR_SUFFIX}`)}`,
+      view: `/@fs${resolve(folder, `${base}${VIEW_SUFFIX}`)}`,
+    }))
+}
+
+const isProductViewFile = (path: string) =>
+  path.endsWith(SIDECAR_SUFFIX) || (path.endsWith(VIEW_SUFFIX) && !path.endsWith(TEST_VIEW_SUFFIX))
+
+/** Answers the list of the product views and reloads the page when a sidecar or a view file appears or goes. */
+const productViewsPlugin = (folder: string | undefined): Plugin => ({
+  name: 'wishem-product-views',
+  configureServer: (server) => {
+    server.middlewares.use(PRODUCT_VIEWS_PATH, (request, response, next) => {
+      if (request.method !== 'GET') {
+        next()
+        return
+      }
+      response.setHeader('Content-Type', 'application/json')
+      response.setHeader('Cache-Control', 'no-store')
+      response.end(JSON.stringify({ views: folder === undefined ? [] : productViewPairs(folder) }))
+    })
+    if (folder === undefined) {
+      return
+    }
+    const reload = (path: string) => {
+      if (dirname(path) === folder && isProductViewFile(path)) {
+        server.ws.send({ type: 'full-reload' })
+      }
+    }
+    server.watcher.add(folder)
+    server.watcher.on('add', reload).on('unlink', reload)
+  },
+})
+
+const NOT_FOUND = 'HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n'
+
+/** Passes the WebSocket at `/constructs/<id>/link` to the link of the running product construct `<id>`. */
+const passProductLinks = (server: ViteDevServer, manager: ConstructManager | undefined) => {
+  const open = new Set<Socket>()
+  const idOf = (request: IncomingMessage) => {
+    const path = (request.url ?? '').split('?')[0] ?? ''
+    const encoded = PRODUCT_LINK_PATH.exec(path)?.[1]
+    try {
+      return encoded === undefined ? undefined : decodeURIComponent(encoded)
+    } catch {
+      return ''
+    }
+  }
+
+  server.httpServer?.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+    const id = idOf(request)
+    if (id === undefined) {
+      return
+    }
+    const construct = manager?.running.get(id)
+    if (construct === undefined) {
+      socket.end(NOT_FOUND)
+      return
+    }
+    const target = connect({ host: PAGE_ADDRESS, port: Number(new URL(construct.linkUrl).port) })
+    open.add(target)
+    target.once('close', () => open.delete(target))
+    target.once('connect', () => {
+      const headers = request.rawHeaders.reduce(
+        (text, value, index) => `${text}${index % 2 === 0 ? `${value}: ` : `${value}\r\n`}`,
+        '',
+      )
+      target.write(`GET /link HTTP/1.1\r\n${headers}\r\n`)
+      target.write(head)
+      target.pipe(socket)
+      socket.pipe(target)
+    })
+    target.on('error', () => socket.destroy())
+    socket.on('error', () => target.destroy())
+    target.once('close', () => socket.destroy())
+    socket.once('close', () => target.destroy())
+  })
+
+  return {
+    close: () => {
+      open.forEach((target) => target.destroy())
+    },
+  }
+}
 
 const isPortInUse = (error: unknown) =>
   error instanceof Error &&
   ((error as { code?: string }).code === 'EADDRINUSE' || error.message.includes('already in use'))
 
 interface KeeperOptions {
-  core: Core
+  hub: Hub
   server: ViteDevServer
   views: string
   log: (line: string) => void
 }
 
 /** Runs the generator at the start, after a change to the definitions, and after a change to a sidecar. */
-const keepViewTypesCurrent = ({ core, server, views, log }: KeeperOptions) => {
+const keepViewTypesCurrent = ({ hub, server, views, log }: KeeperOptions) => {
   const state: { running?: Promise<void>; again: boolean } = { again: false }
-  let lastDefinitions = JSON.stringify(core.getSnapshot().definitions)
+  const port = hub.attach({ id: 'view-types', kind: 'output' })
+  const definitionsOf = () => (port.read().store as Model).definitions
+  let lastArray = definitionsOf()
+  let lastDefinitions = JSON.stringify(lastArray)
 
   const hasRequest = () => state.again
 
   const runOnce = async () => {
     try {
-      const result = await generateViewTypes({ definitions: core.getSnapshot().definitions, views })
+      const result = await generateViewTypes({ definitions: definitionsOf(), views })
       viewTypesLines(result).forEach(log)
     } catch (error) {
       log(`wishem: error: the generator failed (${error instanceof Error ? error.message : String(error)})`)
@@ -86,8 +238,16 @@ const keepViewTypesCurrent = ({ core, server, views, log }: KeeperOptions) => {
     })()
   }
 
-  const unsubscribe = core.subscribe((snapshot) => {
-    const definitions = JSON.stringify(snapshot.definitions)
+  const unsubscribe = port.subscribe((event) => {
+    if (event.type !== 'applied') {
+      return
+    }
+    const array = definitionsOf()
+    if (array === lastArray) {
+      return
+    }
+    lastArray = array
+    const definitions = JSON.stringify(array)
     if (definitions !== lastDefinitions) {
       lastDefinitions = definitions
       request()
@@ -107,6 +267,7 @@ const keepViewTypesCurrent = ({ core, server, views, log }: KeeperOptions) => {
   return {
     stop: async () => {
       unsubscribe()
+      port.close()
       server.watcher.off('add', onSidecar).off('change', onSidecar).off('unlink', onSidecar)
       server.watcher.unwatch(views)
       await state.running
@@ -117,8 +278,11 @@ const keepViewTypesCurrent = ({ core, server, views, log }: KeeperOptions) => {
 export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Workbench> => {
   const {
     model = modelFolder,
+    product,
+    productCode,
+    productViews,
     port = DEFAULT_PAGE_PORT,
-    corePort = DEFAULT_CORE_PORT,
+    hubPort = DEFAULT_HUB_PORT,
     views = resolve(packageRoot, 'src', 'views'),
     viewTypes = true,
   } = options
@@ -128,11 +292,43 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
       console.log(line)
     })
 
-  log(`wishem: model ${model}`)
+  if (productCode !== undefined && product === undefined) {
+    log('wishem: --product-code needs --product')
+    throw new StartError('--product-code needs --product')
+  }
 
-  let host
+  if (productViews !== undefined && product === undefined) {
+    log('wishem: --product-views needs --product')
+    throw new StartError('--product-views needs --product')
+  }
+
+  log(`wishem: model ${model}`)
+  if (product !== undefined) {
+    log(`wishem: product ${product}`)
+  }
+  let codeUrl: string | undefined
+  if (productCode !== undefined) {
+    log(`wishem: product code ${productCode}`)
+    codeUrl = productCodeUrl(productCode, log)
+    await checkCode(productCode, codeUrl, log)
+  }
+  if (productViews !== undefined) {
+    if (!existsSync(productViews) || !statSync(productViews).isDirectory()) {
+      log(`wishem: the product views folder ${productViews} does not exist`)
+      throw new StartError('the product views folder does not exist')
+    }
+    log(`wishem: product views ${productViews}`)
+  }
+
+  let construct
   try {
-    host = await startHost({ folder: model, port: corePort, log })
+    construct = await startConstruct({
+      folder: model,
+      product,
+      port: hubPort,
+      log,
+      subsystems: product === undefined ? undefined : [createConstructList()],
+    })
   } catch (error) {
     if (error instanceof ModelError) {
       error.problems.forEach((problem) => {
@@ -142,34 +338,51 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
       throw new StartError('the model is not correct')
     }
     if (isPortInUse(error)) {
-      log(`wishem: port ${corePort} is in use`)
-      throw new StartError('the port of the core is in use')
+      log(`wishem: port ${hubPort} is in use`)
+      throw new StartError('the port of the hub is in use')
     }
     throw error
   }
 
-  const proxy = { target: host.url, changeOrigin: false }
+  let manager: ConstructManager | undefined
+  try {
+    manager =
+      product === undefined ? undefined : (
+        attachConstructManager({
+          hub: construct.hub,
+          launch: childProcessLauncher({ productCode: codeUrl }),
+          log,
+        })
+      )
+  } catch (error) {
+    await construct.close()
+    throw error
+  }
+
+  const proxy = { target: construct.url, ws: true, changeOrigin: false }
   let server: ViteDevServer | undefined
+  let links: { close: () => void } | undefined
   try {
     server = await createServer({
       root: packageRoot,
       logLevel: 'warn',
+      plugins: [productViewsPlugin(productViews)],
+      ...(productViews === undefined ? {} : { resolve: { dedupe: ['react', 'react-dom'] } }),
       server: {
+        ...(productViews === undefined ? {} : { fs: { allow: [searchForWorkspaceRoot(packageRoot), productViews] } }),
         host: PAGE_ADDRESS,
         port,
         strictPort: true,
-        proxy: { '^/snapshots?$': proxy },
+        proxy: { '^/link$': proxy },
       },
     })
     await server.listen()
+    links = passProductLinks(server, manager)
   } catch (error) {
-    try {
-      await server?.close()
-    } catch {
-      // The start error below is the one to report.
-    } finally {
-      await host.close()
-    }
+    // Each part closes. The start error below is the one to report.
+    await server?.close().catch(() => undefined)
+    await manager?.close().catch(() => undefined)
+    await construct.close()
     if (isPortInUse(error)) {
       log(`wishem: port ${port} is in use`)
       throw new StartError('the port of the page is in use')
@@ -178,18 +391,29 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   }
 
   const pageUrl = `http://${PAGE_ADDRESS}:${String((server.httpServer?.address() as AddressInfo).port)}/`
-  log(`wishem: core at ${host.url}`)
+  log(`wishem: link at ${construct.linkUrl}`)
   log(`wishem: workbench at ${pageUrl}`)
 
-  const keeper = viewTypes ? keepViewTypesCurrent({ core: host.core, server, views, log }) : undefined
+  const keeper = viewTypes ? keepViewTypesCurrent({ hub: construct.hub, server, views, log }) : undefined
 
   return {
     pageUrl,
-    coreUrl: host.url,
+    linkUrl: construct.linkUrl,
     close: async () => {
-      await keeper?.stop()
-      await server.close()
-      await host.close()
+      try {
+        try {
+          await keeper?.stop()
+        } finally {
+          await manager?.close()
+        }
+      } finally {
+        try {
+          links.close()
+          await server.close()
+        } finally {
+          await construct.close()
+        }
+      }
     },
   }
 }
@@ -210,21 +434,51 @@ const main = async () => {
     const { values } = parseArgs({
       options: {
         model: { type: 'string' },
+        product: { type: 'string' },
+        'product-code': { type: 'string' },
+        'product-views': { type: 'string' },
         port: { type: 'string' },
-        'core-port': { type: 'string' },
+        'hub-port': { type: 'string' },
         views: { type: 'string' },
         'no-view-types': { type: 'boolean' },
       },
     })
+    if (values.product === '') {
+      throw new Error('--product must be a folder')
+    }
+    if (values['product-views'] === '') {
+      throw new Error('--product-views must be a folder')
+    }
+    if (values['product-code'] === '') {
+      throw new Error('--product-code must be a module')
+    }
+    // The handler is in place before the start prints the addresses.
+    const stopState: { requested: boolean; run?: () => void } = { requested: false }
+    const stop = () => {
+      if (stopState.requested) {
+        return
+      }
+      stopState.requested = true
+      stopState.run?.()
+    }
+    process.on('SIGINT', stop)
+    process.on('SIGTERM', stop)
     const workbench = await startWorkbench({
       // pnpm runs the script in the package folder and sets INIT_CWD to the folder of the person.
       model: values.model === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.model),
+      product:
+        values.product === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.product),
+      productCode: values['product-code'],
+      productViews:
+        values['product-views'] === undefined ?
+          undefined
+        : resolve(process.env.INIT_CWD ?? process.cwd(), values['product-views']),
       port: parsePort('--port', values.port, DEFAULT_PAGE_PORT),
-      corePort: parsePort('--core-port', values['core-port'], DEFAULT_CORE_PORT),
+      hubPort: parsePort('--hub-port', values['hub-port'], DEFAULT_HUB_PORT),
       views: values.views === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.views),
       viewTypes: values['no-view-types'] !== true,
     })
-    const stop = () => {
+    const stopWorkbench = () => {
       workbench.close().then(
         () => process.exit(0),
         (error: unknown) => {
@@ -234,9 +488,15 @@ const main = async () => {
       )
     }
     // Removes the exit handler of Vite, so that one handler stops both parts.
-    process.removeAllListeners('SIGTERM')
-    process.once('SIGINT', stop)
-    process.once('SIGTERM', stop)
+    for (const other of process.listeners('SIGTERM')) {
+      if (other !== stop) {
+        process.removeListener('SIGTERM', other)
+      }
+    }
+    stopState.run = stopWorkbench
+    if (stopState.requested) {
+      stopWorkbench()
+    }
   } catch (error) {
     if (!(error instanceof StartError)) {
       console.error(error instanceof Error ? `wishem: ${error.message}` : error)

@@ -5,14 +5,16 @@ import { Content } from './components/Content.js'
 import { Controls } from './components/Controls.js'
 import { Narrow } from './components/Narrow.js'
 import { Panels } from './components/Panels.js'
+import { ProductPanelSpecimens } from './components/ProductPanelSpecimens.js'
 import { PromptBoxes } from './components/PromptBoxes.js'
+import { RunControls } from './components/RunControls.js'
 import { SelectSpecimens } from './components/SelectSpecimens.js'
 
 /**
  * The components of the workbench, each in each state. One file of `components/` holds each group.
  */
 export const Components = () => (
-  <Section id='components' title='Components' layout='stacked'>
+  <Section id='components' title='Components' stacked>
     <AppBarAndZeroState />
     <Buttons />
     <Controls />
@@ -21,5 +23,7 @@ export const Components = () => (
     <Panels />
     <Content />
     <Narrow />
+    <ProductPanelSpecimens />
+    <RunControls />
   </Section>
 )

@@ -1,0 +1,349 @@
+import { InputRefusedError } from '@thrashplay/wishem-hub'
+import type { InputProblem, Input, ModelSubsystem, RecordedInput } from '@thrashplay/wishem-hub'
+import { ModelError } from './errors.js'
+import { deepFreeze, isEqual } from './equality.js'
+import type { Entity, FieldValue, Id, Model, Problem } from './model.js'
+import { validateModel } from './validate-model.js'
+
+export interface StoreOptions {
+  /** Default `store`. */
+  id?: string
+  /** The first model. Default: a model with no definitions and no entities. */
+  model?: unknown
+}
+
+export interface ReplaceModelPayload {
+  model: Model
+}
+
+export interface AddEntityPayload {
+  entity: Entity
+  /** The position of the entity, an integer from 0 to the number of entities. Default: the end. */
+  index?: number
+}
+
+export interface RemoveEntityPayload {
+  /** The ID of the entity. */
+  entity: Id
+}
+
+export interface SetFieldPayload {
+  /** The ID of the entity. */
+  entity: Id
+  /** The ID of the component type. */
+  componentType: Id
+  /** The ID of the field. */
+  field: Id
+  value: FieldValue
+}
+
+export interface ClearFieldPayload {
+  /** The ID of the entity. */
+  entity: Id
+  /** The ID of the component type. */
+  componentType: Id
+  /** The ID of the field. */
+  field: Id
+}
+
+export interface ReferencePayload {
+  /** The ID of the entity that holds the list. */
+  entity: Id
+  /** The ID of the component type. */
+  componentType: Id
+  /** The ID of a `reference-list` field. */
+  field: Id
+  /** The ID of the entity to add or to remove. */
+  reference: Id
+}
+
+export interface StoreInputs {
+  replaceModel(model: Model): Input
+  addEntity(entity: Entity, index?: number): Input
+  removeEntity(entity: Id): Input
+  setField(payload: SetFieldPayload): Input
+  clearField(payload: ClearFieldPayload): Input
+  addReference(payload: ReferencePayload): Input
+  removeReference(payload: ReferencePayload): Input
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const refuse = (message: string, path: (string | number)[]): never => {
+  throw new InputRefusedError([{ message, path }])
+}
+
+const toInputProblems = (problems: Problem[]): InputProblem[] =>
+  problems.filter((problem) => problem.severity === 'error').map(({ message, path }) => ({ message, path }))
+
+const replaceModel = (part: Model, payload: unknown): Model => {
+  if (!isRecord(payload)) {
+    return refuse('The payload is not an object', ['payload'])
+  }
+  if (!('model' in payload)) {
+    return refuse('The payload has no "model" key', ['payload', 'model'])
+  }
+  const result = validateModel(payload.model)
+  if (!result.ok) {
+    throw new InputRefusedError(toInputProblems(result.problems))
+  }
+  return isEqual(result.model, part) ? part : deepFreeze(result.model)
+}
+
+const requirePayload = (payload: unknown): Record<string, unknown> => {
+  if (!isRecord(payload)) {
+    return refuse('The payload is not an object', ['payload'])
+  }
+  return payload
+}
+
+const requireString = (payload: Record<string, unknown>, key: string): string => {
+  const value = payload[key]
+  if (typeof value !== 'string') {
+    return refuse(`The payload has no string "${key}" key`, ['payload', key])
+  }
+  return value
+}
+
+/** Returns the checked model, or throws the problems of `validateModel`. */
+const check = (next: unknown): Model => {
+  const result = validateModel(next)
+  if (!result.ok) {
+    throw new InputRefusedError(toInputProblems(result.problems))
+  }
+  return result.model
+}
+
+const isPosition = (value: unknown, count: number): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= count
+
+const addEntity = (part: Model, payload: unknown): Model => {
+  const { entity, index } = requirePayload(payload)
+  if (!isRecord(entity)) {
+    return refuse('The payload has no "entity" object', ['payload', 'entity'])
+  }
+  const problems: InputProblem[] = []
+  if (typeof entity.id !== 'string') {
+    problems.push({ message: 'The entity has no string "id" key', path: ['payload', 'entity', 'id'] })
+  }
+  if (!isRecord(entity.components)) {
+    problems.push({ message: 'The entity has no "components" object', path: ['payload', 'entity', 'components'] })
+  }
+  const count = part.entities.length
+  const requested = index === undefined ? count : index
+  const at = isPosition(requested, count) ? requested : undefined
+  if (at === undefined) {
+    problems.push({ message: `The index is not an integer from 0 to ${count}`, path: ['payload', 'index'] })
+  }
+  if (at === undefined || problems.length > 0) {
+    throw new InputRefusedError(problems)
+  }
+  if (part.entities.some((existing) => existing.id === entity.id)) {
+    return refuse(`An entity has the ID "${String(entity.id)}"`, ['payload', 'entity', 'id'])
+  }
+  const checked = check({
+    definitions: part.definitions,
+    entities: [...part.entities.slice(0, at), entity, ...part.entities.slice(at)],
+  })
+  return deepFreeze({
+    definitions: part.definitions,
+    entities: [...part.entities.slice(0, at), ...checked.entities.slice(at, at + 1), ...part.entities.slice(at)],
+  })
+}
+
+const removeEntity = (part: Model, payload: unknown): Model => {
+  const id = requireString(requirePayload(payload), 'entity')
+  if (!part.entities.some((entity) => entity.id === id)) {
+    return refuse(`No entity has the ID "${id}"`, ['payload', 'entity'])
+  }
+  const next = { definitions: part.definitions, entities: part.entities.filter((entity) => entity.id !== id) }
+  check(next)
+  return deepFreeze(next)
+}
+
+type Fields = Record<Id, FieldValue>
+
+interface Target {
+  fields: Record<string, unknown>
+  index: number
+  entity: Entity
+  componentType: string
+  field: string
+}
+
+/** Checks the keys `entity`, `componentType`, and `field` of a payload, and that each names a thing of the part. */
+const locate = (part: Model, payload: unknown, extraKeys: readonly string[]): Target => {
+  const fields = requirePayload(payload)
+  const problems: InputProblem[] = []
+  for (const key of ['entity', 'componentType', 'field'] as const) {
+    if (typeof fields[key] !== 'string') {
+      problems.push({ message: `The payload has no string "${key}" key`, path: ['payload', key] })
+    }
+  }
+  for (const key of extraKeys) {
+    if (!(key in fields)) {
+      problems.push({ message: `The payload has no "${key}" key`, path: ['payload', key] })
+    }
+  }
+  if (problems.length > 0) {
+    throw new InputRefusedError(problems)
+  }
+  const { entity: entityId, componentType, field } = fields
+
+  const index = part.entities.findIndex((entity) => entity.id === entityId)
+  const type = part.definitions.find((definition) => definition.id === componentType)
+  if (index < 0) {
+    problems.push({ message: `No entity has the ID "${String(entityId)}"`, path: ['payload', 'entity'] })
+  }
+  if (type === undefined) {
+    problems.push({
+      message: `No component type has the ID "${String(componentType)}"`,
+      path: ['payload', 'componentType'],
+    })
+  } else if (!type.fields.some((definition) => definition.id === field)) {
+    problems.push({
+      message: `The component type "${type.label}" has no field with the ID "${String(field)}"`,
+      path: ['payload', 'field'],
+    })
+  }
+  const entity = index < 0 ? undefined : part.entities[index]
+  if (problems.length > 0 || entity === undefined || typeof componentType !== 'string' || typeof field !== 'string') {
+    throw new InputRefusedError(problems)
+  }
+  return { fields, index, entity, componentType, field }
+}
+
+/** Gives the part with the entity at `index` replaced by a checked entity that has `components`. */
+const withComponent = (part: Model, { index, entity, componentType }: Target, component: Fields): Model => {
+  const candidate = { id: entity.id, components: { ...entity.components, [componentType]: component } }
+  const checked = check({
+    definitions: part.definitions,
+    entities: part.entities.map((existing, position) => (position === index ? candidate : existing)),
+  })
+  const next: Entity = {
+    id: entity.id,
+    components: { ...entity.components, [componentType]: checked.entities[index].components[componentType] },
+  }
+  return deepFreeze({
+    definitions: part.definitions,
+    entities: part.entities.map((existing, position) => (position === index ? next : existing)),
+  })
+}
+
+const componentOf = ({ entity, componentType }: Target): Fields | undefined =>
+  Object.hasOwn(entity.components, componentType) ? entity.components[componentType] : undefined
+
+const setField = (part: Model, payload: unknown): Model => {
+  const target = locate(part, payload, ['value'])
+  const { value } = target.fields
+  const component = componentOf(target)
+  if (component !== undefined && Object.hasOwn(component, target.field) && isEqual(component[target.field], value)) {
+    return part
+  }
+  return withComponent(part, target, { ...component, [target.field]: value as FieldValue })
+}
+
+const clearField = (part: Model, payload: unknown): Model => {
+  const target = locate(part, payload, [])
+  const component = componentOf(target)
+  if (component === undefined || !Object.hasOwn(component, target.field)) {
+    return part
+  }
+  const { [target.field]: _cleared, ...rest } = component
+  return withComponent(part, target, rest)
+}
+
+/** Locates the list of a `reference-list` field, and gives its items, or `undefined` when it has no value. */
+const locateList = (part: Model, payload: unknown) => {
+  const target = locate(part, payload, [])
+  const reference = requireString(target.fields, 'reference')
+  const type = part.definitions
+    .find((definition) => definition.id === target.componentType)
+    ?.fields.find((definition) => definition.id === target.field)
+  if (type?.type !== 'reference-list') {
+    return refuse(`The field "${type?.label ?? target.field}" does not have the type "reference-list"`, [
+      'payload',
+      'field',
+    ])
+  }
+  const component = componentOf(target)
+  const items = component !== undefined && Object.hasOwn(component, target.field) ? component[target.field] : undefined
+  return { target, reference, component, items: items as readonly Id[] | undefined }
+}
+
+const addReference = (part: Model, payload: unknown): Model => {
+  const { target, reference, component, items } = locateList(part, payload)
+  if (!part.entities.some((entity) => entity.id === reference)) {
+    return refuse(`No entity has the ID "${reference}"`, ['payload', 'reference'])
+  }
+  if (items?.includes(reference) === true) {
+    return part
+  }
+  return withComponent(part, target, { ...component, [target.field]: [...(items ?? []), reference] })
+}
+
+const removeReference = (part: Model, payload: unknown): Model => {
+  const { target, reference, component, items } = locateList(part, payload)
+  if (items?.includes(reference) !== true) {
+    return part
+  }
+  return withComponent(part, target, { ...component, [target.field]: items.filter((item) => item !== reference) })
+}
+
+const OPERATIONS = [
+  'replace-model',
+  'add-entity',
+  'remove-entity',
+  'set-field',
+  'clear-field',
+  'add-reference',
+  'remove-reference',
+] as const
+
+const handlers: Record<(typeof OPERATIONS)[number], (part: Model, payload: unknown) => Model> = {
+  'replace-model': replaceModel,
+  'add-entity': addEntity,
+  'remove-entity': removeEntity,
+  'set-field': setField,
+  'clear-field': clearField,
+  'add-reference': addReference,
+  'remove-reference': removeReference,
+}
+
+/** Throws a `ModelError` when the first model is not correct. */
+export const createStore = (options: StoreOptions = {}): ModelSubsystem<Model> => {
+  const id = options.id ?? 'store'
+  const first = validateModel(options.model === undefined ? { definitions: [], entities: [] } : options.model)
+  if (!first.ok) {
+    throw new ModelError(first.problems)
+  }
+  const types = OPERATIONS.map((operation) => `${id}/${operation}`)
+
+  return {
+    id,
+    inputs: types,
+    initial: deepFreeze(first.model),
+    apply: (part: Model, input: RecordedInput): Model => {
+      const operation = OPERATIONS.find((name) => `${id}/${name}` === input.type)
+      if (operation === undefined) {
+        return refuse(`The store "${id}" does not apply the input type "${input.type}"`, ['type'])
+      }
+      return handlers[operation](part, input.payload)
+    },
+  }
+}
+
+/** The functions that make the inputs of a store. Default ID: `store`. */
+export const storeInputs = (id = 'store'): StoreInputs => ({
+  replaceModel: (model) => ({ type: `${id}/replace-model`, payload: { model } }),
+  addEntity: (entity, index) => ({
+    type: `${id}/add-entity`,
+    payload: index === undefined ? { entity } : { entity, index },
+  }),
+  removeEntity: (entity) => ({ type: `${id}/remove-entity`, payload: { entity } }),
+  setField: (payload) => ({ type: `${id}/set-field`, payload }),
+  clearField: (payload) => ({ type: `${id}/clear-field`, payload }),
+  addReference: (payload) => ({ type: `${id}/add-reference`, payload }),
+  removeReference: (payload) => ({ type: `${id}/remove-reference`, payload }),
+})

@@ -1,0 +1,310 @@
+import { createHub, hubInputs } from '@thrashplay/wishem-hub'
+import { describe, expect, it } from 'vitest'
+import type { Model } from './model.js'
+import { createStore, storeInputs } from './store.js'
+
+const CT = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
+const FLD = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
+const ENT = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
+const ENT2 = 'e_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+
+const model: Model = {
+  definitions: [{ id: CT, label: 'AppBar', fields: [{ id: FLD, label: 'title', type: 'string' }] }],
+  entities: [{ id: ENT, components: { [CT]: { [FLD]: 'Wishem' } } }],
+}
+
+const start = (options: { id?: string } = {}) => {
+  const hub = createHub({ subsystems: [createStore({ ...options, model })] })
+  const form = hub.attach({ id: 'form', kind: 'input' })
+  hub.start()
+  return { hub, form }
+}
+
+describe('a store in a hub', () => {
+  it('puts the model of the store in the joined state under the key store', () => {
+    const { hub } = start()
+    const part = hub.read().store as Model
+    expect(part.definitions[0]?.label).toBe('AppBar')
+    expect(part.entities[0]?.id).toBe(ENT)
+  })
+
+  it('puts a store with a different ID under that ID and applies only its input types', async () => {
+    const { hub, form } = start({ id: 'product' })
+    const own = await form.submit(
+      storeInputs('product').setField({ entity: ENT, componentType: CT, field: FLD, value: 'Product' }),
+    )
+    const other = await form.submit(
+      storeInputs().setField({ entity: ENT, componentType: CT, field: FLD, value: 'Other' }),
+    )
+    expect(own).toEqual({ ok: true, seq: 1 })
+    expect(other).toMatchObject({ ok: false, reason: 'unknown-type' })
+    expect(hub.read()).toHaveProperty('product')
+    expect(hub.read()).not.toHaveProperty('store')
+  })
+
+  it('refuses a payload with no entity and keeps the part and the record', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({ type: 'store/add-entity', payload: {} })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(result.ok ? [] : result.problems.length).toBeGreaterThan(0)
+    expect(hub.read().store).toBe(before)
+    expect(hub.record()).toEqual([])
+  })
+
+  it('refuses a model with two component types that have one ID and keeps the model', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const duplicate = { definitions: [...model.definitions, ...model.definitions], entities: [] }
+    const result = await form.submit({ type: 'store/replace-model', payload: { model: duplicate } })
+    expect(result.ok).toBe(false)
+    expect(result.ok ? '' : (result.problems[0]?.message ?? '')).toContain(CT)
+    expect(hub.read().store).toBe(before)
+    expect(hub.record()).toHaveLength(0)
+  })
+
+  it('keeps the same part object after a refused remove-entity', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({ type: 'store/remove-entity', payload: { entity: 7 } })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('keeps the same part object after a refused set-field', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({ type: 'store/set-field', payload: { entity: ENT } })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('keeps the same part object after an input that changes nothing', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit(storeInputs().replaceModel(model))
+    expect(result).toEqual({ ok: true, seq: 1 })
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('keeps the earlier part and the unchanged entity after a change', async () => {
+    const second = { id: ENT2, components: {} }
+    const hub = createHub({
+      subsystems: [createStore({ model: { ...model, entities: [...model.entities, second] } })],
+    })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+    const before = hub.read().store as Model
+    await form.submit(storeInputs().setField({ entity: ENT, componentType: CT, field: FLD, value: 'New' }))
+    const after = hub.read().store as Model
+    expect(before.entities[0]?.components[CT]?.[FLD]).toBe('Wishem')
+    expect(after.entities[0]?.components[CT]?.[FLD]).toBe('New')
+    expect(after.entities[1]).toBe(before.entities[1])
+  })
+})
+
+describe('a store with the five field types in a hub', () => {
+  const F = ['string', 'number', 'boolean', 'reference', 'reference-list'].map((type, i) => ({
+    id: `fld_0000000${i}-0000-4000-8000-000000000000`,
+    label: type,
+    type,
+  }))
+  const typed = {
+    definitions: [{ id: CT, label: 'Item', fields: F }],
+    entities: [
+      {
+        id: ENT,
+        components: { [CT]: { [F[0].id]: 'x', [F[1].id]: 3, [F[2].id]: false, [F[3].id]: ENT2, [F[4].id]: [ENT2] } },
+      },
+      { id: ENT2, components: {} },
+    ],
+  }
+  const startTyped = () => {
+    const hub = createHub({ subsystems: [createStore({ model: typed })] })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+    return { hub, form }
+  }
+
+  it.each([
+    ['string', 0, 'x'],
+    ['number', 1, 3],
+    ['boolean', 2, false],
+    ['reference', 3, ENT2],
+    ['reference-list', 4, [ENT2]],
+  ])('accepts and records the same value of a %s field and keeps the part', async (_type, index, value) => {
+    const { hub, form } = startTyped()
+    const before = hub.read().store
+    const result = await form.submit(
+      storeInputs().setField({ entity: ENT, componentType: CT, field: F[index].id, value }),
+    )
+    expect(result).toEqual({ ok: true, seq: 1 })
+    expect(hub.record()).toHaveLength(1)
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('keeps the same part object for an equal list in a new object', async () => {
+    const { hub, form } = startTyped()
+    const before = hub.read().store
+    const result = await form.submit(
+      storeInputs().setField({ entity: ENT, componentType: CT, field: F[4].id, value: [...[ENT2]] }),
+    )
+    expect(result.ok).toBe(true)
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('gives a new part for the same IDs in a new order', async () => {
+    const hub = createHub({
+      subsystems: [
+        createStore({
+          model: {
+            ...typed,
+            entities: [
+              { id: ENT, components: { [CT]: { [F[4].id]: [ENT2, ENT] } } },
+              { id: ENT2, components: {} },
+            ],
+          },
+        }),
+      ],
+    })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+    const before = hub.read().store
+    await form.submit(storeInputs().setField({ entity: ENT, componentType: CT, field: F[4].id, value: [ENT, ENT2] }))
+    expect(hub.read().store).not.toBe(before)
+    expect(JSON.stringify(hub.read().store)).toContain(`"${F[4].id}":["${ENT}","${ENT2}"]`)
+  })
+
+  it('refuses the removal of an entity that another entity refers to and keeps the part', async () => {
+    const { hub, form } = startTyped()
+    const before = hub.read().store
+    const result = await form.submit(storeInputs().removeEntity(ENT2))
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+    expect(hub.record()).toHaveLength(0)
+  })
+})
+
+describe('clear-field in a hub', () => {
+  it('refuses an input with no field, keeps the part, and gives no record', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({ type: 'store/clear-field', payload: { entity: ENT, componentType: CT } })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+    expect(hub.record()).toHaveLength(0)
+  })
+
+  it('records a clear, and a rewind restores the value', async () => {
+    const { hub, form } = start()
+    const result = await form.submit(storeInputs().clearField({ entity: ENT, componentType: CT, field: FLD }))
+    expect(result).toEqual({ ok: true, seq: 1 })
+    expect((hub.read().store as Model).entities[0]?.components[CT]).toEqual({})
+    expect(await form.submit(hubInputs.rewind(0))).toMatchObject({ ok: true })
+    expect((hub.read().store as Model).entities[0]?.components[CT]?.[FLD]).toBe('Wishem')
+  })
+})
+
+describe('add-reference in a hub', () => {
+  const listModel: Model = {
+    definitions: [{ id: CT, label: 'Deck', fields: [{ id: FLD, label: 'cards', type: 'reference-list' }] }],
+    entities: [
+      { id: ENT, components: {} },
+      { id: ENT2, components: {} },
+    ],
+  }
+  const startList = () => {
+    const hub = createHub({ subsystems: [createStore({ model: listModel })] })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+    return { hub, form }
+  }
+
+  it('records an accepted add-reference and no refused one', async () => {
+    const { hub, form } = startList()
+    const payload = { entity: ENT, componentType: CT, field: FLD, reference: ENT2 }
+    const accepted = await form.submit(storeInputs().addReference(payload))
+    const refused = await form.submit(
+      storeInputs().addReference({ ...payload, reference: 'e_00000000-0000-4000-8000-000000000000' }),
+    )
+    expect(accepted).toEqual({ ok: true, seq: 1 })
+    expect(refused).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.record()).toHaveLength(1)
+    expect(hub.record()[0]?.type).toBe('store/add-reference')
+    expect((hub.read().store as Model).entities[0]?.components[CT]?.[FLD]).toEqual([ENT2])
+  })
+})
+
+describe('add-entity with an index in a hub', () => {
+  const ids = (hub: { read: () => Record<string, unknown> }) => (hub.read().store as Model).entities.map((e) => e.id)
+
+  it('refuses a bad index with the reason invalid and keeps the record', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({
+      type: 'store/add-entity',
+      payload: { entity: { id: ENT2, components: {} }, index: 5 },
+    })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+    expect(hub.record()).toEqual([])
+    expect(ids(hub)).toEqual([ENT])
+  })
+
+  it('removes an entity that was added at the index 0 with a rewind', async () => {
+    const { hub, form } = start()
+    expect(await form.submit(storeInputs().addEntity({ id: ENT2, components: {} }, 0))).toEqual({ ok: true, seq: 1 })
+    expect(ids(hub)).toEqual([ENT2, ENT])
+    expect(await form.submit(hubInputs.rewind(0))).toMatchObject({ ok: true })
+    expect(ids(hub)).toEqual([ENT])
+  })
+})
+
+describe('the record of a hub', () => {
+  it('gives the same model in a second hub that gets the inputs in order', async () => {
+    const first = start()
+    const inputs = storeInputs()
+    await first.form.submit(inputs.addEntity({ id: ENT2, components: {} }))
+    await first.form.submit(inputs.setField({ entity: ENT2, componentType: CT, field: FLD, value: 'Second' }))
+    await first.form.submit(inputs.removeEntity(ENT))
+    await first.form.submit(inputs.removeEntity(ENT))
+
+    const second = start()
+    for (const recorded of first.hub.record()) {
+      await second.form.submit({ type: recorded.type, payload: recorded.payload })
+    }
+    expect(first.hub.record()).toHaveLength(3)
+    expect(second.hub.read().store).toEqual(first.hub.read().store)
+    expect((second.hub.read().store as Model).entities.map((entity) => entity.id)).toEqual([ENT2])
+  })
+})
+
+describe('the example of the README', () => {
+  it('sets a field and refuses the removal of an entity that does not exist', async () => {
+    const hub = createHub({ subsystems: [createStore({ model })] })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+
+    const result = await form.submit(
+      storeInputs().setField({
+        entity: 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2',
+        componentType: 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34',
+        field: 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62',
+        value: 'Wishem workbench',
+      }),
+    )
+    // { ok: true, seq: 1 }
+
+    const refused = await form.submit(storeInputs().removeEntity('e_00000000-0000-4000-8000-000000000000'))
+    // { ok: false, reason: 'invalid', problems: [{ message: 'No entity has the ID "e_00000000-0000-4000-8000-000000000000"', path: ['payload', 'entity'] }] }
+
+    expect(result).toEqual({ ok: true, seq: 1 })
+    expect(refused).toEqual({
+      ok: false,
+      reason: 'invalid',
+      problems: [
+        { message: 'No entity has the ID "e_00000000-0000-4000-8000-000000000000"', path: ['payload', 'entity'] },
+      ],
+    })
+  })
+})

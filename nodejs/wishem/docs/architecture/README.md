@@ -2,88 +2,308 @@
 
 > Blueprint, not a specification. See [`../README.md`](../README.md) for the status labels. The specifications in the last section override this file.
 
-This file describes what the workbench is made of. The workbench draws one element: an app bar. The app bar is an entity in the authored state of the workbench, and a view draws it.
+This file describes what Wishem is made of. It uses the [C4 model](https://c4model.com/): a system context diagram, a container diagram, a dynamic diagram, and two component diagrams (the page and the workbench process). It also has an entity diagram of the model folder and the package dependency view. The package dependency view is not a C4 diagram. Three parts of Wishem run now. The workbench draws one element: an app bar. The app bar is an entity in the authored state of the workbench, and a view draws it. The React page, the PixiJS page, and the Godot application each draw one color that a construct with a clock changes two times each second.
 
-## The processes of the workbench
+In a C4 diagram, a container is a unit that runs or a store of data. The package dependency view shows the packages. A container is not a Docker container. A component is a part of one container. A C4 component is not a component of an entity in the model.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="processes-dark.svg">
-  <img alt="The designer edits the model folder, runs the start script, and opens the page. The start script starts one Node.js process with the host and the Vite development server. The host reads the model folder. Each snapshot goes through the Vite development server to the page in the web browser." src="processes-light.svg">
-</picture>
-
-Amber arrows show the path of a change: from the designer, through the model folder, the host, and the Vite development server, to the page. Gray arrows show the other connections.
-
-- **Designer.** The designer runs the `start` script of `workbench-app`, opens the address of the page in a web browser, and edits files in the model folder. Ctrl+C stops the script.
-- **Model folder.** The folder holds the definition files and `state.json`. To change the picture by hand, edit a file and save it.
-- **Host.** The host reads and watches the model folder. The `start` script starts the host and the Vite development server in one Node.js process.
-- **Vite development server.** It serves the page code and the view modules to the page. It passes `GET /snapshot` and `GET /snapshots` from the page to the host. It passes each snapshot from the host to the page.
-- **Page.** The page runs in the web browser. It holds the client of the core, the renderer, and the `AppBar` view.
-
-To start the workbench, see [`workbench-app/README.md`](../../workbench-app/README.md).
-
-## From a file to a picture
+## System context diagram: Wishem
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="picture-dark.svg">
-  <img alt="The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The view file and its sidecar make the table of views, which is keyed by the component type ID. The renderer draws the app bar in a marked element." src="picture-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="context-dark.svg">
+  <img alt="System context diagram of Wishem. The designer starts the workbench in a terminal, edits the model files in a text editor, and looks at the page in a web browser. Wishem connects to no external system." src="context-light.svg">
 </picture>
 
-Amber arrows show the data on its way to the picture. Gray arrows show where the views come from.
+The designer is the one person who uses Wishem. Wishem connects to no external system.
 
-- **Definition file and state file.** `definitions/ct_….json` defines the component type of the app bar and its field. `state.json` holds one `AppBar` entity.
-- **Host.** `readModelFolder` reads the two files and `validateModel` checks them. `createCore` makes the core that gives the snapshot.
-- **Snapshot.** The snapshot holds the definitions and the entities, as JSON. The page gets it from `GET /snapshots` through the Vite development server.
-- **View file.** `src/views/AppBar.tsx` has a React component as its default export. The file states no ID.
-- **Sidecar.** `src/views/AppBar.view.json` holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.
-- **Generated types.** `src/views/AppBar.view.gen.ts` has the type `Props` of the view, with one member for each field of the component type. The `generate` script of `workbench-app` writes it from the definition file and the sidecar. The type check reads it. The page does not.
-- **Table of views.** `collectViews` pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view. The Vite development server serves the view files.
-- **Renderer.** For each entity and each component type that has a view, the renderer gives the view one prop for each field of the definition. It takes the prop names from the labels of the fields in the snapshot. It mounts the view as a React component.
-- **Marked element.** The renderer wraps the picture of the view in an element with `data-wishem-entity` and `data-wishem-component-type`. The dashed outline in the diagram marks it.
+| Element  | Type            | Responsibility                                                                     |
+| -------- | --------------- | ---------------------------------------------------------------------------------- |
+| Designer | Person          | Makes a product with the workbench. Starts it, edits files, and looks at the page. |
+| Wishem   | Software System | Holds a model and draws it. The containers of Wishem are in the next diagram.      |
 
-## The path of a change
+## Container diagram: Wishem
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="containers-dark.svg">
+  <img alt="Container diagram of Wishem. The designer starts the workbench process, the Wishem command process, the React page server, the sample construct process, the PixiJS process, and the Godot runner, edits the model folder and the product model folder, and looks at the page, the React page, and the PixiJS page. The page gets page code [HTTP] from the workbench process and connects to the hub and to each product construct through a WebSocket link. The workbench process starts, stops, and reaches a product construct process for each product construct [child process, link over IPC], and passes the WebSocket links of the product constructs to it. The workbench process and the Wishem command process each read, watch, and write the model folder and the product model folder. The Wishem command process starts, stops, and reaches a product construct process for each product construct [child process, link over IPC]. The React page and the PixiJS page get page code [HTTP] from their page servers and connect to the hub through a WebSocket link. The React page server and the PixiJS process pass the link [WebSocket] to the sample construct process. The sample construct process reads the product model folder. The Godot runner starts the Godot application in Docker and copies its screenshots. The Godot application connects to the hub through a WebSocket link that the Godot runner carries over TCP to the sample construct process." src="containers-light.svg">
+</picture>
+
+Amber arrows show the primary path: a change to the model becomes a new picture. Gray arrows show the other relationships.
+
+The `start` script of `workbench-app` starts one Node.js process. That process holds the construct and the Vite development server. The Vite development server serves the page code to the page. It passes the WebSocket at `/link` from the page to the server of the construct, with the `Origin` header of the page. It passes the WebSocket at `/constructs/<id>/link` to the link of the running product construct `<id>`, and it answers `404` when no such construct runs. It passes no other path. It also answers `GET /@wishem/product-views.json` with the list of the React views of the product.
+
+The Wishem command process starts product construct processes in the same way as the workbench process. It passes no link: a client connects to the address of a product construct process, which the part `constructs` and the terminal line give.
+
+The construct of the workbench process is the construct of `host-nodejs` at run time. The `start` script calls `startConstruct`.
+
+`@thrashplay/wishem-workbench-app` is not a container of its own. It holds the page and the `start` script. They are in the page and in the workbench process.
+
+The `start` script of `pixi-page` starts one Node.js process, the PixiJS process. That process holds a Vite development server, with no HMR. The server serves the PixiJS page and passes the WebSocket at `/link` to the sample construct process on the hub port (default 4750). It starts also when no construct runs. The PixiJS process holds no hub, no clock, and no store. `@thrashplay/wishem-pixi-page` holds the PixiJS page and the PixiJS process.
+
+The product model folder is a second folder that the workbench process mounts. The option `--product <folder>` of the `start` script gives it. The construct holds its model as the store `product`, with a storage subsystem of its own, and the page shows it in the product panel. With no option, the workbench process mounts no product. `@thrashplay/wishem-sample-product` (`model/`) is the example folder.
+
+Each product construct runs in a product construct process, a Node.js child process of the workbench process. The process holds a hub with the parts `time` and `store`, the update subsystem with the behaviors of the product, a clock, and its own link on a port that the system selects. The workbench process reaches the hub of the child over an IPC channel, and passes the WebSocket link of each product construct to the link of its child. A renderer in a different process can connect to that link. The construct manager starts and stops the product construct processes that the construct list wants. The workbench process stops them before it stops the workbench hub. A product construct process that ends or does not answer gives the status `failed` in the construct list. When the workbench process ends, each product construct process ends.
+
+The option `--product-code <module>` of the `start` script names the product code. The module exports `behaviors`, the list of the native behaviors of the product. The workbench process never loads the module. Before the construct of the workbench starts, a short child process loads it and checks the list with `checkBehaviors` of `update` (`checkProductCode`). Each product construct process loads the current file again at each start and runs the behaviors in its update subsystem. A value that starts with `.` or `/` is a path, relative to the folder where the person runs the command. Each other value is a package name. The package `sample-product` is the one product code. The option needs `--product`. With no option, a product construct has no behaviors.
+
+This is the path from a change of the product model to a running product construct.
+
+1. The storage subsystem of the store `product` reads the product folder, or a client sends an input to the store `product`.
+2. The construct manager reads the part `product` after each applied input and gets the inputs that change the old product model into the new one (`productChanges`).
+3. The construct manager sends the inputs to the hub of each running product construct, through the launcher and the IPC channel of its product construct process.
+4. The store of the product construct applies them, and the behaviors of the product and the clock continue to run.
+5. The hub of the product construct sends the `applied` message on each open link.
+
+The `godot` script starts the Godot runner, a Node.js process. The runner starts the Godot application in a Docker container. The container cannot reach `127.0.0.1` of the computer of the runner, so the runner carries the bytes of the link. A relay in the container (`docker exec`) accepts the connection of the application. The runner connects to the sample construct process over TCP (default port 4750) and carries the bytes in both directions. It starts also when no construct runs, and the application tries again. The application writes a PNG file for each new picture, and the runner copies each file to `shots/` of the package. The designer looks at these files. No part of Wishem reads them, so the diagram shows no store for them.
+
+The Godot runner imports no package of Wishem. The Godot application is GDScript and imports no TypeScript package. `@thrashplay/wishem-renderer-godot` is not a container of its own: no other package builds on it, and its parts are the Godot runner and the Godot application.
+
+The `construct` script of `three-renderers` starts one Node.js process, the sample construct process. That process holds the sample construct (`startSampleConstruct`): the product construct of the sample product, with the `time` subsystem, the update subsystem with the count behavior and the color behavior, and a clock with a step of 500 milliseconds. It reads the product model folder of `sample-product` with `readModelFolder` of `host-nodejs`, and it writes no file. It serves the link at `ws://127.0.0.1:4750/link`. It serves no page. `@thrashplay/wishem-three-renderers` holds the sample construct process, the React page server, and the React page.
+
+The `react-page` script of `three-renderers` starts one Node.js process, the React page server. It holds a Vite development server, with no HMR, that serves the React page and passes the WebSocket at `/link` to the sample construct on the hub port (default 4750). It starts also when no construct runs. The React page opens one link at `/link` with `connectLink` of `hub`, with one output subsystem and no input subsystem, and gives its remote port to `Renderer` of `renderer-react`. The view `ClearColor` fills the box with the `color` field. The page sends no input.
+
+To start the sample construct and the React page, see [`three-renderers/README.md`](../../three-renderers/README.md). To start the workbench, see [`workbench-app/README.md`](../../workbench-app/README.md). To start the PixiJS page, see [`pixi-page/README.md`](../../pixi-page/README.md). To start the Godot runner and the Godot application, see [`renderer-godot/README.md`](../../renderer-godot/README.md).
+
+This is the path of a tick from the clock in the sample construct process to the picture in the React page.
+
+1. The clock sends `time/advance` of 500 milliseconds to the hub, through its input subsystem `clock`.
+2. The part `time` counts the tick. The update subsystem runs the color behavior.
+3. The hub sends the `applied` message with the new parts on each open link. The React page server passes the WebSocket to the React page.
+4. The remote port of the React page tells its subscribers about the `applied` event.
+5. `Renderer` reads the part `store` and draws the view `ClearColor` with the new `color`.
+6. The browser draws the new color in the box.
+
+This is the path of a tick from the clock in the sample construct process to the picture in the PixiJS page.
+
+1. The clock sends `time/advance` of 500 milliseconds to the hub, through its input subsystem `clock`.
+2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the field `color` to the color at the position `ticks` modulo 4.
+3. The hub sends the `applied` message with the new parts on each open link. The Vite development server of the PixiJS process passes the WebSocket to the PixiJS page.
+4. The remote port of the PixiJS page tells its subscribers about the `applied` event.
+5. `startRenderer` reads the part `store`, calls `update` of the `ClearColor` view, and the view sets the tint of its sprite.
+6. PixiJS draws the sprite on the canvas in the next frame.
+
+| Element                   | Type                           | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Packages                                                                                                                                                                |
+| ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page                      | Container: React, web browser  | Draws each component that has a view. It holds the client of the hub, the views, and the components. A view sends an input through the prop `wishem`. It holds the run controls and the stage of the product construct `play`.                                                                                                                                                                                                                                                                       | `workbench-app` (`src/main.tsx`, `src/Page.tsx`, `src/hub-client.ts`, `src/views/`, `src/components/`), `hub`, `renderer-react`                                         |
+| Workbench process         | Container: Node.js             | Runs the construct and the Vite development server, and serves the page. With `--product`, it mounts a product model folder, starts a product construct process for each product construct, and passes `/constructs/<id>/link` to the link of each one. With `--product-code`, it checks the product code in a child process. With `--product-views`, it serves the list of the React views of the product at `/@wishem/product-views.json`.                                                         | `workbench-app` (`scripts/start.ts`), `host-nodejs`, `construct-manager`, `core`, `hub`, `renderer-react` (entry `view-types`), `workbench` (export `modelFolder`)      |
+| Product construct process | Container: Node.js             | Runs one product construct with its clock and its update subsystem. It loads the product code, serves the link of the construct on a port that the system selects, and ends when its parent process ends. The parent process is the workbench process or the Wishem command process. It writes no file.                                                                                                                                                                                              | `construct-manager` (`src/product-construct-process.ts`), `update`, `clock`, `host-nodejs` (`serveHub`), `hub`, `core`, the product code (for example `sample-product`) |
+| Model folder              | Container: JSON files          | The folder of the model of the workbench. It holds the definition files and `state.json`.                                                                                                                                                                                                                                                                                                                                                                                                            | `workbench` (`model/definitions/`, `model/state.json`, export `modelFolder`)                                                                                            |
+| Product model folder      | Container: JSON files          | The folder of the model of the mounted product. It has the same layout as the model folder.                                                                                                                                                                                                                                                                                                                                                                                                          | `sample-product` (`model/`) is the example                                                                                                                              |
+| Wishem command process    | Container: Node.js             | Runs one construct for a model folder, with no page and no Vite development server. With `--product`, it mounts a product model folder, holds the construct list, and starts a product construct process for each product construct. With `--product-code`, each product construct process loads the product code, and the command checks the code in a child process before the start. It serves the link on a port (`--port`). The `start` script of `workbench` runs it (`wishem start ./model`). | `command` (bin `wishem`, `src/cli.ts`), `host-nodejs` (`src/start-construct.ts`), `construct-manager`, `core`, `hub`, `workbench` (the folder `model/`)                 |
+| PixiJS page               | Container: PixiJS, web browser | Draws the color of the construct on a canvas, shows the state of the link, and sends the keys as inputs.                                                                                                                                                                                                                                                                                                                                                                                             | `pixi-page` (`src/main.ts`, `src/page.ts`, `src/keys.ts`, `src/views/`), `renderer-pixi`, `hub`, `clock`                                                                |
+| React page server         | Container: Node.js             | Serves the React page with a Vite development server and passes the WebSocket at `/link` to the sample construct process.                                                                                                                                                                                                                                                                                                                                                                            | `three-renderers` (`scripts/react-page.ts`)                                                                                                                             |
+| React page                | Container: React, web browser  | Draws the color of the sample construct with `Renderer` and the view `ClearColor`, and shows the state of the link. It sends no input.                                                                                                                                                                                                                                                                                                                                                               | `three-renderers` (`src/main.tsx`, `src/ReactPage.tsx`, `src/views/`), `hub`, `renderer-react`                                                                          |
+| PixiJS process            | Container: Node.js             | Serves the PixiJS page with a Vite development server and passes the WebSocket at `/link` to the sample construct process.                                                                                                                                                                                                                                                                                                                                                                           | `pixi-page` (`scripts/start.ts`)                                                                                                                                        |
+| Sample construct process  | Container: Node.js             | Runs the sample construct, a product construct of the sample product, with its clock, and serves the link at `ws://127.0.0.1:4750/link`. It reads the product model folder and writes no file.                                                                                                                                                                                                                                                                                                       | `three-renderers` (`scripts/construct.ts`, `src/sample-construct.ts`), `construct-manager`, `host-nodejs`, `sample-product`                                             |
+| Godot runner              | Container: Node.js             | Starts the Godot application in Docker, carries the bytes of the link to the sample construct process, and copies the screenshots to `shots/`.                                                                                                                                                                                                                                                                                                                                                       | `renderer-godot` (`scripts/godot.ts`, `src/runner/`)                                                                                                                    |
+| Godot application         | Container: GDScript, Docker    | Draws the construct with the Godot renderer and the view `ClearColor`, and writes a screenshot for each new picture. It holds the remote port in GDScript.                                                                                                                                                                                                                                                                                                                                           | `renderer-godot` (`godot/`)                                                                                                                                             |
+
+This is the path of a tick from the clock in the sample construct process to the screenshot.
+
+1. The clock sends `time/advance` of 500 milliseconds to the hub, through its input subsystem `clock`.
+2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the field `color` to the color at the position `ticks` modulo 4.
+3. The hub sends the `applied` message with the new parts on the open link. `serveHub` sends it over the connection that the Godot runner carries.
+4. The remote port in GDScript of the Godot application tells its subscribers about the `applied` event.
+5. The Godot renderer reads the part `store`, calls `update` of the `ClearColor` view, and the view sets the color of its `ColorRect`.
+6. The application writes the image of the viewport to a PNG file and prints the line `shot <n> ...`. The Godot runner copies the file to `shots/`.
+
+## Dynamic diagram: a change to the model becomes a new picture
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="dynamic-change-dark.svg">
+  <img alt="Dynamic diagram of a change to the model. Step 1: the designer saves a model file in the model folder. Step 2: the workbench process reads after the watch event. Step 3: the process sends the changed parts to the page over the WebSocket link. Step 4: the page shows the new picture to the designer." src="dynamic-change-light.svg">
+</picture>
+
+The page opens one link to the hub. On that link, the process sends each changed part of the joined state. Step 3 shows the direction of the data, from the workbench process to the page. The container diagram shows the page as the client of the link.
 
 This is the path from a saved `state.json` to a new picture.
 
 1. The designer saves `state.json` in the model folder.
-2. The host reads the model folder again (`readModelFolder`) and checks it (`validateModel`). If a file is not correct, the host prints each problem in the terminal. The page keeps the last picture.
-3. The host gives the new model to the core (`setModel`). The core tells its subscribers.
-4. The host sends the new snapshot on each open stream of `GET /snapshots`. The Vite development server passes the stream to the page.
-5. The client of the core (`connect()` in `src/renderer/connect.ts`) parses the snapshot. It ignores a snapshot that has the same text as the last one. Then it tells its subscribers.
-6. The `Renderer` reads the new snapshot. `viewWarnings` compares each sidecar with the definitions. A sidecar for a component type that is not defined, or two labels that give one prop name, gives a warning in the browser console.
+2. The storage subsystem of the construct reads the model folder again (`readModelFolder`) and checks it (`validateModel`). If a file is not correct, it prints each problem in the terminal. The page keeps the last picture.
+3. The storage subsystem sends the input `store/replace-model` to the hub. The store applies it. When the model is equal to the old one, the store keeps the same part.
+4. The hub sends the `applied` message with the new part `store` on each open link. The Vite development server passes the WebSocket to the page.
+5. The port of the link tells its subscribers about the `applied` event. The client of the hub (`connectHub()` in `src/hub-client.ts`) gave this port to the page after the `welcome` message.
+6. The `Renderer` of `renderer-react` reads the part `store` of the port and compares it with the last one by identity. For a new part, it reads the new model. `viewWarnings` compares each sidecar with the definitions. A warning in the browser console names one of five problems: a sidecar for a component type that is not defined (`component-type-not-defined`), two labels that give one prop name (`same-name`), a label that gives a reserved prop name, `wishem` or `key` (`reserved-name`), a label that gives an empty prop name (`empty-name`), or a reference that leads back to its holder (`reference-cycle`).
 7. For each entity and each component type that has a view, the `Renderer` gives the view one prop for each field of the definition, with the name that the label of the field gives. It mounts the view as a React component.
 8. The `Renderer` puts the result in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`. The wrapper is the map from a point on the screen to an entity.
 9. React updates the page. The app bar shows the new title.
 
-After a change to a definition file that the core accepts, or to a sidecar, the `start` script runs the generator (`generateViewTypes`). The generator writes the generated types, and the script prints one line for each file that changed.
+Steps 2 and 3 of the list are step 2 of the diagram. Step 4 of the list is step 3 of the diagram. Steps 5 to 9 of the list are step 4 of the diagram.
 
-## What each package holds
+After a change to a definition file that the hub accepts, or to a sidecar, the `start` script runs the generator (`generateViewTypes`). The generator writes the generated types, and the script prints one line for each file that changed. This step is inside the workbench process, so the diagram does not show it.
 
-| Package                            | Holds                                                                                                                                                                                  |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@thrashplay/wishem-core`          | The model types, `validateModel`, `createCore`, and `ModelError`. The core has `getSnapshot` and `subscribe`. It uses no Node.js API.                                                  |
-| `@thrashplay/wishem-host-nodejs`   | `startHost` and `readModelFolder`. The host reads and watches a model folder, and serves `GET /snapshot` and `GET /snapshots`.                                                         |
-| `@thrashplay/wishem-workbench`     | The model folder of the base workbench: `model/definitions/` and `model/state.json`. It exports `modelFolder`.                                                                         |
-| `@thrashplay/wishem-workbench-app` | The HTML renderer (`src/renderer/`), the views (`src/views/`), the components (`src/components/`), the page (`src/Page.tsx`, `src/main.tsx`), `scripts/start.ts`, and the style guide. |
+| Element           | Type                          | Responsibility                                        |
+| ----------------- | ----------------------------- | ----------------------------------------------------- |
+| Designer          | Person                        | Saves the model file and looks at the new picture.    |
+| Model folder      | Container: JSON files         | Holds the file that the designer saves.               |
+| Workbench process | Container: Node.js            | Reads after the watch event. Sends the changed parts. |
+| Page              | Container: React, web browser | Shows the new picture.                                |
 
-`@thrashplay/wishem-workbench-app` depends on the other three packages. `@thrashplay/wishem-workbench` does not depend on `@thrashplay/wishem-workbench-app`.
+## Component diagram: the page of the workbench
 
-The HTML renderer is a folder of modules in `workbench-app`. It is not a package. `src/renderer/` holds `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, `connect`, and `Renderer`. The `generate` script in `scripts/` writes the generated types of the views.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="components-page-dark.svg">
+  <img alt="Component diagram of the page of the workbench. The client of the hub connects to the workbench process through the WebSocket link. The renderer reads the part store from the output port that the client gives, and sends the inputs of the views through the input port. A view sends an input through the prop wishem. The renderer finds the view in the table of views, and mounts the view with props. The table of views reads the sidecars and collects the views. The views draw with the catalog. The product panel reads the part product from the output port, sends product/set-field and product/clear-field through the input port, and draws with the catalog. The run controls read the part constructs from the output port, send the controls through the input port, read the part time of the stage, and draw with the catalog. The stage connects to the workbench process through its own WebSocket link to the product construct, mounts the views of the product, and draws with the catalog." src="components-page-light.svg">
+</picture>
+
+Amber arrows show the primary path inside the page: how the changed parts of step 3 of the dynamic diagram become the picture of step 4. Gray arrows show where the table of views gets its content, and what the product panel, the run controls, and the stage read, send, and draw with.
+
+`src/main.tsx` connects the client of the hub. After each `welcome` message, it draws the `Page` with the output port and the input port of the new link and the table of views. A view sends an input through the prop `wishem`. The `Renderer` sends it through the input port. The `Renderer` mounts each view in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`.
+
+The sidecars are source files of `workbench-app`. Each sidecar sits beside the view that it describes. `src/views/AppBar.view.gen.ts` has the type `Props` of the view, with one member for each field of the component type. The `generate` script of `workbench-app` writes it from the definition file and the sidecar. The type check reads it. The page does not.
+
+The `Page` shows the product panel in the space below the pictures when the output port reads a part `product`. In each other case, it shows the zero state (`ZeroState`) of the catalog in that space. The diagram does not show the `Page` module.
+
+The `Page` shows the run area when the output port reads a part `constructs`. The run area has the run controls (`RunTool`) and the stage. `runState` gives the status, the enabled controls, and the readout of the run controls from the construct list and from the part `time` of the stage. The run controls send the inputs of the controls through the input port, and they draw `RunBar` of the catalog. They control the product construct `play`.
+
+The stage opens its own link at `/constructs/play/link` (`useStageLink`) while `play` runs. The link has one output subsystem. The stage reads the part `store` of that link and draws it with `Renderer` and the views of the product. It gives the views no input port. `StageFrame` of the catalog frames the picture. `loadProductViews` in `src/tools/product-views.ts` fetches `/@wishem/product-views.json`, imports each file in the list, and collects the views. `src/main.tsx` calls it once and gives the result to the `Page`.
+
+| Element              | Type                          | Responsibility                                                                                                                                                                                                                                                    |
+| -------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client of the hub    | Component: `connectHub`       | `connectHub()` in `src/hub-client.ts`. It opens the link at `/link` with an output subsystem and an input subsystem, and gives the two ports of each link to the page.                                                                                            |
+| Renderer             | Component: `renderer-react`   | `Renderer` in `renderer-react`. It reads the part `store` of the output port, and it sends the inputs of the views through the input port. It gives each view one prop for each field of the definition, and mounts the view in a marked element.                 |
+| Table of views       | Component: `renderer-react`   | `collectViews` in `renderer-react`. It pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view.                                                                                                         |
+| Sidecars             | Component: JSON files         | `src/views/*.view.json`. Each one holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.                                                                                                              |
+| Views                | Component: React              | `src/views/*.tsx`. Each view has a React component as its default export. The file states no ID.                                                                                                                                                                  |
+| Product panel        | Component: React              | `ProductTool` in `src/tools/`. It reads the part `product` from the output port, and it sends `product/set-field`, `product/clear-field`, `product/add-reference`, and `product/remove-reference` through the input port. It draws `ProductPanel` of the catalog. |
+| Run controls         | Component: React              | `RunTool` and `runState` in `src/tools/`. They read the part `constructs` from the output port, and they send the controls of `play` through the input port. They read the part `time` of the stage, and they draw `RunBar` of the catalog.                       |
+| Stage                | Component: `renderer-react`   | `useStageLink` in `src/tools/` opens the link to `play`. The stage draws its part `store` with `Renderer` and the views of the product, and it draws `StageFrame` of the catalog.                                                                                 |
+| Views of the product | Component: dynamic `import()` | `loadProductViews` in `src/tools/product-views.ts`. It loads the sidecars and the view files that the list `/@wishem/product-views.json` names, for example `views/react/` of `sample-product`.                                                                   |
+| Catalog              | Component: React              | `src/components/`. It holds the components of the workbench, such as `AppBar`, `ZeroState`, the parts of the product panel, `Button`, `RunBar`, and `StageFrame`.                                                                                                 |
+
+The React renderer is the package `renderer-react`. It holds `Renderer`, `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, and the generator. The page keeps `connectHub`, the views, and the sidecars.
+
+## Component diagram: the workbench process
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="components-workbench-process-dark.svg">
+  <img alt="Component diagram of the workbench process. The page gets page code from the Vite development server and connects to the hub and to each product construct through it. The Vite development server passes the WebSocket link to the workbench construct, and the WebSocket link of each product construct to its product construct process. The start script checks the product code with the launcher, starts the workbench construct and the Vite development server, and attaches the construct manager with the launcher. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads and reports through ports of the workbench construct, and starts, stops, and updates the product constructs through the launcher. The launcher starts, stops, and reaches each product construct process through a child process link, outside the boundary. The generator of the view types reads the definitions from the workbench construct." src="components-workbench-process-light.svg">
+</picture>
+
+Amber arrows show the primary paths: how the page reaches the workbench construct and the product constructs, and how the construct manager runs the product constructs through the launcher. Gray arrows show the other relationships.
+
+`startConstruct` of `host-nodejs` makes the workbench construct. It reads and checks the model folders, builds the hub with the stores `store` and `product` and the construct list, attaches the storage subsystems, and serves the link. `attachModelFolderStorage` makes one storage subsystem for each model folder. A storage subsystem has an input port that sends the files to the hub and an output port that writes each change back to the files.
+
+`attachConstructManager` attaches the input port `construct-manager` and the output port `construct-manager-reader` to the workbench hub. It reads the part `product` and the construct list. It starts one product construct for each construct that the list wants, through the launcher (`childProcessLauncher`), and sends the changes of the product model to it. It reports the state of each product construct in the construct list.
+
+The launcher (`childProcessLauncher`) starts one product construct process (`product-construct-process.ts`) for each product construct. It gives the construct manager a port to the hub of the child over the IPC channel, and it reads the output of the child. `checkProductCode` starts a short child process that loads the product code and checks it with `checkBehaviors`. The `start` script calls it before the workbench construct starts, so the workbench process never loads the product code. The product construct process is a hub with a store, an update subsystem (`createUpdate`), a clock (`startClock`), and its own link (`serveHub`). A renderer in a different process can open that link. The Vite development server passes the WebSocket at `/constructs/<id>/link` to the link of the running product construct `<id>` (`passProductLinks` in `scripts/start.ts`). It answers `404` when `<id>` does not run. The Vite development server also answers `GET /@wishem/product-views.json` with the pairs of a sidecar and a view file in the folder of `--product-views`, and it reloads the page when a pair appears or goes.
+
+`keepViewTypesCurrent` in `scripts/start.ts` attaches the output port `view-types` to the workbench hub. It runs the generator after each change to the definitions. The generator writes `src/views/*.view.gen.ts`. The page does not read these files.
+
+| Element                     | Type                           | Responsibility                                                                                                                                                       | Module                                                                            |
+| --------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Start script                | Component: `workbench-app`     | Reads the options, checks the product code, and starts the construct, the construct manager, and the Vite development server.                                        | `workbench-app` (`scripts/start.ts`)                                              |
+| Vite development server     | Component: Vite                | Serves the page code and the list of the product views. It passes `/link` to the workbench construct and `/constructs/<id>/link` to the product construct processes. | `vite` (`createServer` in `scripts/start.ts`)                                     |
+| Workbench construct         | Component: `host-nodejs`       | Holds the hub, the stores `store` and `product`, and the construct list. It serves the link.                                                                         | `host-nodejs` (`startConstruct`), `construct-manager` (`createConstructList`)     |
+| Storage subsystems          | Component: `host-nodejs`       | Read, watch, and write the model folder and the product model folder. They send the model to the hub.                                                                | `host-nodejs` (`attachModelFolderStorage`)                                        |
+| Construct manager           | Component: `construct-manager` | Starts, stops, and updates the product constructs through the launcher, and reports their state in the construct list.                                               | `construct-manager` (`attachConstructManager`)                                    |
+| Launcher                    | Component: `construct-manager` | Starts, stops, and reaches a product construct process over an IPC channel, and checks the product code in a child process.                                          | `construct-manager` (`childProcessLauncher`, `checkProductCode`)                  |
+| Generator of the view types | Component: `renderer-react`    | Writes the types of the props of each view from the definitions.                                                                                                     | `renderer-react` (`generateViewTypes`), `workbench-app` (`scripts/view-types.ts`) |
+
+## Package dependency view: Wishem
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="packages-dark.svg">
+  <img alt="Package dependency view of Wishem. Six layers hold 16 packages. Layer 1 is at the bottom and layer 6 is at the top. Each of 42 arrows goes down from a package to a package that it uses at run time. A package uses only packages in its own layer or in a lower layer. The line Tests with on a card names the packages that its package has only in devDependencies." src="packages-light.svg">
+</picture>
+
+The view is not a C4 diagram. `render.mjs` makes it from the `package.json` files of the packages in `nodejs/wishem/`. Each card names one package. Each arrow goes from a package to a package of Wishem that it uses at run time: one in `dependencies` or `peerDependencies`. Each arrow goes down. The line `Tests with:` on a card lists each package of Wishem that is only in `devDependencies`. A test dependency has no arrow.
+
+The layers are data in `render.mjs`. A package uses only packages in its own layer or in a lower layer. A package can test with a package in any layer.
+
+The script fails when a package has no layer or is in two layers, when a runtime dependency goes to a higher layer, when the table below has no row for a package, when the runtime dependencies of one layer make a cycle, when an arrow crosses a card or a layer label, shares a line with another arrow, or does not go down, or when a package is not a development dependency of `docs-check`. This command fails when a file is out of date. The merge checks of each pull request and the tests of `@thrashplay/wishem-docs-check` run it.
+
+```
+node nodejs/wishem/docs/architecture/render.mjs --check
+```
+
+| Package             | Layer | Responsibility                                                                                                                                                    |
+| ------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hub`               | 1     | The hub, the ports, the record, and the link. It uses no Node.js API.                                                                                             |
+| `core`              | 2     | The model types, the validation, `isEqual`, and the store. It uses no Node.js API.                                                                                |
+| `clock`             | 2     | The `time` subsystem and the clock. It uses no Node.js API.                                                                                                       |
+| `update`            | 2     | The update subsystem. It runs the native behaviors of a product in each tick.                                                                                     |
+| `host-nodejs`       | 3     | Runs a construct in a Node.js process, serves the link, and writes `state.json`.                                                                                  |
+| `construct-manager` | 3     | The construct list and `productChanges`. The entry `node` holds the construct manager, the launchers, `checkProductCode`, and the product construct process.      |
+| `renderer-react`    | 3     | The React renderer. It draws React views from a port, and it writes the types of the props of the views.                                                          |
+| `renderer-pixi`     | 3     | The PixiJS renderer. It draws PixiJS views from a port.                                                                                                           |
+| `renderer-godot`    | 3     | The Godot renderer: the remote port in GDScript, the Godot application, and the Godot runner.                                                                     |
+| `sample-product`    | 3     | The sample product: a model folder with a color and a count, the count behavior, the table of color cases (`color-cases`), and the React views in `views/react/`. |
+| `command`           | 4     | The `wishem` command. It starts a construct for a model folder.                                                                                                   |
+| `workbench`         | 5     | The base workbench. It holds the first model and a `start` script.                                                                                                |
+| `workbench-app`     | 5     | The browser application of the workbench: the page, the client of the hub, the views, and the `start` script.                                                     |
+| `pixi-page`         | 5     | The PixiJS page that draws a construct through the link, and a `start` script that serves it.                                                                     |
+| `three-renderers`   | 5     | The sample construct process, the React page server, and the React page.                                                                                          |
+| `docs-check`        | 6     | Tests that this document agrees with the packages.                                                                                                                |
+
+## Entity diagram: the model folder
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="entities-model-folder-dark.svg">
+  <img alt="Entity diagram of the model folder. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference-list refers to zero or more entities." src="entities-model-folder-light.svg">
+</picture>
+
+The diagram applies to each model folder: the model folder of the workbench and the product model folder have the same entities. The sidecars are source files of `workbench-app`, so the diagram shows no entity for them.
+
+The schema has the names `ComponentTypeDefinition`, `FieldDefinition`, `Entity`, and `FieldValue`. The schema has no type name for a component. A component is one record in `components` of an entity, and the ID of its component type is the key of the record. The diagram uses the name `Component` for it, as the glossary does. A field value is one entry of that record, and the ID of its field is the key of the entry. The diagram uses the schema name `FieldValue`.
+
+The keys of a `FieldDefinition`, a `Component`, and a `FieldValue` include the IDs of their parents. A `FieldDefinition` has the ID of its component type and its own `id`. The `id` of a `FieldDefinition` is unique in its component type only. A `Component` has no fields of its own. It holds the values. A `FieldValue` has the ID of its entity, the ID of its component type, and the ID of its field.
+
+The diagram does not show these fields:
+
+- `ComponentTypeDefinition` has a `label` and a list of `fields`.
+- `FieldDefinition` has a `label` and a `type`. The `type` is `string`, `number`, `boolean`, `reference`, or `reference-list`.
+
+The model has these rules, and the diagram does not show them. The field of a `FieldValue` must be a field of the component type of its `Component`. A value agrees with the type of its field: a string, a finite number, a boolean, the ID of an entity of the model for a `reference`, or a list of IDs of entities of the model for a `reference-list`, with no ID two times. The entity can be the entity of the value. The line "Refers to" shows this rule: a `FieldValue` of the type `reference` or `reference-list` names zero or more `Entity` records, and an `Entity` can be named by zero or more `FieldValue` records. An entity has at most one component of each component type. A component can have no value for a field.
+
+| Entity                    | Purpose                                                                  | Schema                                                                    |
+| ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `ComponentTypeDefinition` | Declares a component type: its ID, its label, and its fields.            | [`model.ts`](../../core/src/model.ts) (`ComponentTypeDefinition`)         |
+| `FieldDefinition`         | Declares one field of a component type: its ID, its label, and its type. | [`model.ts`](../../core/src/model.ts) (`FieldDefinition`)                 |
+| `Entity`                  | A thing in the model. It holds its components.                           | [`model.ts`](../../core/src/model.ts) (`Entity`)                          |
+| `Component`               | The data of one component type in one entity.                            | [`model.ts`](../../core/src/model.ts) (`Entity.components`)               |
+| `FieldValue`              | The value of one field in one component.                                 | [`model.ts`](../../core/src/model.ts) (`FieldValue`, `Entity.components`) |
+
+The files of the model folder are `definitions/*.json` for the component types and `state.json` for the entities. [`validate-model.ts`](../../core/src/validate-model.ts) checks the relationships.
 
 ## The specifications
 
+- [`wishem/architecture/diagrams`](../../../../openspec/specs/wishem/architecture/diagrams/spec.md): the diagrams of this document.
 - [`wishem/renderer-html/views`](../../../../openspec/specs/wishem/renderer-html/views/spec.md): the view files, the sidecars, and the table of views.
-- [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the core, and the marked element.
+- [`wishem/renderer-html/view-types`](../../../../openspec/specs/wishem/renderer-html/view-types/spec.md): the generated types of the props of a React view.
+- [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the hub, and the marked element.
+- [`wishem/renderer-html/renderer`](../../../../openspec/specs/wishem/renderer-html/renderer/spec.md): the React renderer package and what it draws from a port.
+- [`wishem/renderer-html/react-page`](../../../../openspec/specs/wishem/renderer-html/react-page/spec.md): the React page and its page server.
+- [`wishem/renderer-pixi/renderer`](../../../../openspec/specs/wishem/renderer-pixi/renderer/spec.md): the PixiJS renderer package and the PixiJS view.
+- [`wishem/renderer-pixi/page`](../../../../openspec/specs/wishem/renderer-pixi/page/spec.md): the PixiJS page, its keys, and its status line.
+- [`wishem/renderer-godot/remote-port`](../../../../openspec/specs/wishem/renderer-godot/remote-port/spec.md): the remote port in GDScript.
+- [`wishem/renderer-godot/renderer`](../../../../openspec/specs/wishem/renderer-godot/renderer/spec.md): the Godot renderer and the Godot view.
+- [`wishem/renderer-godot/application`](../../../../openspec/specs/wishem/renderer-godot/application/spec.md): the Godot application, the runner, and the screenshots.
+- [`wishem/renderers/sample-construct`](../../../../openspec/specs/wishem/renderers/sample-construct/spec.md): the sample construct and its command `construct`.
+- [`wishem/renderers/end-to-end-test`](../../../../openspec/specs/wishem/renderers/end-to-end-test/spec.md): the test of the three renderers on one hub.
 - [`wishem/workbench/start`](../../../../openspec/specs/wishem/workbench/start/spec.md): the `start` script of the workbench.
-- [`wishem/core/snapshot`](../../../../openspec/specs/wishem/core/snapshot/spec.md): the snapshot and the read interface of the core.
+- [`wishem/workbench/mount`](../../../../openspec/specs/wishem/workbench/mount/spec.md): the mount of a product in the workbench construct.
+- [`wishem/workbench/construct-list`](../../../../openspec/specs/wishem/workbench/construct-list/spec.md): the model subsystem `constructs` and its inputs.
+- [`wishem/workbench/construct-manager`](../../../../openspec/specs/wishem/workbench/construct-manager/spec.md): the construct manager and the product constructs.
+- [`wishem/sample-product/model`](../../../../openspec/specs/wishem/sample-product/model/spec.md): the model of the sample product, its count behavior, and its color behavior.
+- [`wishem/core/model`](../../../../openspec/specs/wishem/core/model/spec.md): the data of a model, its IDs, and the rules of a correct model.
+- [`wishem/core/store`](../../../../openspec/specs/wishem/core/store/spec.md): the store.
+- [`wishem/host-nodejs/cli`](../../../../openspec/specs/wishem/host-nodejs/cli/spec.md): the `wishem` command.
+- [`wishem/host-nodejs/model-folder`](../../../../openspec/specs/wishem/host-nodejs/model-folder/spec.md): the model folder, the storage subsystem, and `state.json`.
+- [`wishem/host-nodejs/server`](../../../../openspec/specs/wishem/host-nodejs/server/spec.md): the local server that carries the link as a WebSocket.
+- [`wishem/clock/time`](../../../../openspec/specs/wishem/clock/time/spec.md): the `time` subsystem and the clock.
+- [`wishem/update/update-subsystem`](../../../../openspec/specs/wishem/update/update-subsystem/spec.md): the update subsystem and the native behaviors.
+- [`wishem/hub/construct`](../../../../openspec/specs/wishem/hub/construct/spec.md): the hub, the ports, and the record.
+- [`wishem/hub/link`](../../../../openspec/specs/wishem/hub/link/spec.md): the link between two processes.
+- [`wishem/hub/record`](../../../../openspec/specs/wishem/hub/record/spec.md): the record, the checkpoints, the rewind, and the replay.
 
 ## Change the diagrams
 
-`render.mjs` writes the four SVG files. It describes each diagram one time and writes one file for each theme. It reads the colors from `workbench-app/src/styles/tokens.css`.
+`render.mjs` writes the SVG files of the diagrams. It describes each diagram one time and writes one file for each theme. It reads the colors from `workbench-app/src/styles/tokens.css`.
 
 ```
 node nodejs/wishem/docs/architecture/render.mjs
 ```
 
-Commit the SVG files that change.
+Commit the SVG files that change. Run the script two times. The second run changes no file.
 
-The diagrams use the standard typefaces of the system of the reader and the colors of the role tokens. The `picture` element selects the file for the theme.
+The diagrams use the standard typefaces of the system of the reader and the colors of the role tokens. The `picture` element selects the file for the theme. Do not edit an SVG file by hand. See [`docs/diagrams.md`](../../../../docs/diagrams.md) for the rules.

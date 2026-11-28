@@ -12,7 +12,7 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "preview": "vite preview",
-    "start": "node scripts/start.ts",
+    "start": "exec node scripts/start.ts",
     "style-guide": "vite --open /style-guide.html",
     "test": "opus-test",
     "test:ui": "node scripts/browser-server.ts playwright test",
@@ -21,9 +21,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@base-ui/react": "^1.9.0",
+    "@base-ui/react": "catalog:",
+    "@thrashplay/wishem-clock": "workspace:*",
+    "@thrashplay/wishem-construct-manager": "workspace:*",
     "@thrashplay/wishem-core": "workspace:*",
     "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-renderer-react": "workspace:*",
+    "@thrashplay/wishem-update": "workspace:*",
     "@thrashplay/wishem-workbench": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
@@ -36,6 +41,7 @@
     "@fontsource/jetbrains-mono": "catalog:",
     "@playwright/test": "catalog:",
     "@tailwindcss/vite": "^4.3.3",
+    "@thrashplay/wishem-sample-product": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

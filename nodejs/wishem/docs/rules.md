@@ -8,18 +8,18 @@ These rules apply to every part of Wishem and to every product made with it. A d
 
 ## State and time
 
-**R1. All state and all rules are in the model and its simulations.** (**Agreed**)
-None is in an I/O subsystem. The model and a simulation never depend on a renderer, a sound system, or an input device.
-Reason: the agent must be able to read, change, and rerun the product without a window.
+**R1. All state and all rules are in the model and in the model subsystems of its constructs.** (**Agreed**)
+None is in an I/O subsystem. The model and a model subsystem never depend on a renderer, a sound system, or an input device.
+Reason: the agent must be able to read, change, and replay the product without a window.
 Rejected: to take physics, scenes, and animation from a renderer library as they are. Those parts hold state.
 
 **R2. A library can hold state only if it passes the model contract.** (**Agreed**)
 The contract is in `concepts.md`. An I/O subsystem holds no state and follows lighter rules.
-Reason: a library that hides state makes rewind and rerun impossible.
+Reason: a library that hides state makes rewind and replay impossible.
 Rejected: to ban each outside library that holds state. That is too strict, because some libraries pass the contract.
 
-**R3. Game time can be stepped, recorded, replayed, and rewound.** (**Agreed**)
-The same starting state and the same inputs always give the same result.
+**R3. A construct can be stepped, recorded, replayed, and rewound.** (**Agreed**)
+The same starting state and the same inputs always give the same result. The hub keeps each input in the record. A construct that has no clock has the record, rewind, and replay. Pause and step need the clock. (**Proposed**)
 Reason: "make the jump high enough so I would have made this" needs the agent to run the designer's exact inputs again.
 
 **R4. All state lives in declared component fields. Behavior code keeps no state of its own.** (**Proposed**)
@@ -39,6 +39,7 @@ Reason: the agent must discover the vocabulary of the product. Tools such as tab
 
 **R7. Nothing is built before a design needs it.** (**Agreed**)
 The model, the tools, and the library adapters grow when a product first needs them.
+Exception: the PixiJS renderer and the Godot renderer, each with one view, are built before a product needs them. They are the proof that the hub and the link serve more than one renderer.
 Reason: the engine is meant to "self-construct" as features are needed to support a design.
 Rejected: to build a complete engine and editor before a product. The complexity is too high as a first step.
 Rejected: to build a kit for one genre before the first game. A kit is what the first game leaves behind.
@@ -85,18 +86,35 @@ When the agent chooses a value or a meaning without asking, the designer can see
 
 ## Scope
 
-**R17. The first renderer is one off-the-shelf library behind an adapter. Other engines wait.** (**Agreed**)
-The model imports nothing from the renderer, and a simulation runs with no window. No wire protocol between a simulation and a renderer is built now. If a renderer in a different engine is wanted later, a protocol is made along the line between the simulation and the adapter.
-A renderer can run in a different process from the core when its runtime makes this necessary. The renderer then gets the core as an object, and only one client module knows the transport. The transport has no promise: it has no version, and it can change in any release. A protocol with a promise is the work of [Processes of a product and the protocol between them](https://github.com/twin-digital/opus/issues/503).
-Reason: this keeps each benefit for the agent, such as rerun and fast tests with no window, and it does not include the most expensive part of the first notes.
-Rejected: a wire protocol from the first day, with a second client to test it. It delays each part that makes Wishem different.
+**R17. Each renderer is behind an adapter. A link connects a renderer in a different process to the hub.** (**Agreed**)
+The model imports nothing from a renderer, and a construct can run with no window. A link between processes is built now. Three renderers use the same TypeScript hub: the React renderer, the PixiJS renderer, and the Godot renderer. No single interface hides different renderer libraries: each renderer has its own kind of view.
+Each renderer reads the hub through a port. The link has a versioned protocol. (**Proposed**)
+Reason: a process has one language, so a renderer in a different language, such as Godot, needs a link. Three renderers on one hub prove that the hub and the link do not depend on one renderer.
 
 **R18. No single interface hides different model libraries.** (**Agreed**)
 Each product picks its own model libraries. A model library becomes part of the model of that product. The libraries for I/O subsystems are also selected for each product.
-Reason: one interface makes the code portable and leaves the product not portable. The same jump value gives a different path in each physics library. Each tuned value, each recording, and each check breaks when the library changes. The interface also gives only the features that all the libraries have.
+Reason: one interface makes the code portable and leaves the product not portable. The same jump value gives a different path in each physics library. Each tuned value, each record, and each check breaks when the library changes. The interface also gives only the features that all the libraries have.
 Rejected: one physics interface with more than one library below it.
 
 **R19. A feature is justified by the conversation between a designer and the agent, not by the needs of one product.** (**Agreed**)
 Wishem is the thing to build. A product is a consumer of Wishem and is separate from Wishem. The first game still decides the order of the work, because it is the test.
 Rejected: to build the game on an engine that exists, such as Godot. That is the fastest way to a game, but it does not build Wishem.
 Rejected: the wire protocol as the thing to build. It is for the games of other people in other engines.
+
+## Structure
+
+**R20. A subsystem communicates only with the hub.** (**Agreed**)
+A subsystem has three operations on the hub: send an input, read the joined state, and get the hub events. A subsystem does not address a different subsystem, and it has no way to ask a different subsystem to do something. Control is state: pause is an input that sets `running` in the `time` part, and the clock reads `running`. This applies when the subsystem and the hub are in one process, and when they are in different processes.
+Reason: the hub keeps the record of inputs. A replay gives the same result only if the hub sees each thing that changes state.
+Rejected: a direct request from one subsystem to a different subsystem, for control such as pause. Control that the record does not hold makes a replay give a different result.
+Rejected: a mesh, in which subsystems communicate with each other and the hub is one peer. A message between two subsystems is state that the hub did not see. The hub could not keep a record that gives the same result again.
+
+**R21. The hub of a construct runs in a Node.js process.** (**Agreed**)
+For the first versions of Wishem, the hub of each construct is in a Node.js process. A renderer is in a different process, such as a page in a web browser or an engine, and it reaches the hub through the link. Each renderer must work through the link. A demonstration of a renderer has a construct of its own and does not use the hub of the workbench.
+Reason: the link between a hub and a renderer in different processes is the thing that the renderers must prove. A hub in the page of a renderer proves only that a library can draw from a port.
+Rejected: a hub in the page of a renderer, with no link. The owner rejected it for the PixiJS renderer on 2026-11-27.
+
+**R22. One model subsystem is the update subsystem of a tick. A behavior is data and code that this subsystem runs. A behavior is not a subsystem.** (**Agreed**)
+The update subsystem runs the behaviors in an order that the specification of the update subsystem gives. It gives each behavior the delta of the tick. Rule R4 gives the contract of a behavior.
+Reason: the order of the rules of a tick is in one place, and the workbench can show it. A rule can read what an earlier rule did in the same tick. No rule wraps the store by itself.
+Rejected: each rule is a model subsystem of its own, in the order of a list in code. The order is then the order of the wraps. A rule cannot easily read what a different rule did in the same tick. Each rule that changes entities wraps the store again.

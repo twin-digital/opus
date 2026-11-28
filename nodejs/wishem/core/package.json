@@ -2,7 +2,7 @@
   "private": true,
   "name": "@thrashplay/wishem-core",
   "version": "0.0.0",
-  "description": "The model, the validation, and the core of Wishem. Runs with no Node.js API.",
+  "description": "The model, the validation, and the store of Wishem. Runs with no Node.js API.",
   "type": "module",
   "exports": {
     ".": {
@@ -34,6 +34,9 @@
     "test": "opus-test",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@thrashplay/wishem-hub": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

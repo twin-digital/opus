@@ -96,16 +96,44 @@
       ],
       "outputs": ["coverage.json"]
     },
-    "@thrashplay/wishem-host-nodejs#test": {
+    "@thrashplay/wishem-command#test": {
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build", "^build", "build"],
       "inputs": [
         "src/**",
         "behavior_pack/**",
+        "$TURBO_ROOT$/nodejs/wishem/workbench/model/**",
         "package.json",
         "vitest.config.ts",
         "vitest.config.d/**",
         "tsconfig.json",
         "tsconfig.*.json"
+      ],
+      "outputs": ["coverage.json"]
+    },
+    "@thrashplay/wishem-construct-manager#test": {
+      "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build", "^build", "build"],
+      "inputs": [
+        "src/**",
+        "package.json",
+        "vitest.config.ts",
+        "vitest.config.d/**",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ],
+      "outputs": ["coverage.json"]
+    },
+    "@thrashplay/wishem-docs-check#test": {
+      "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],
+      "inputs": [
+        "src/**",
+        "package.json",
+        "vitest.config.ts",
+        "vitest.config.d/**",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "$TURBO_ROOT$/nodejs/wishem/*/package.json",
+        "$TURBO_ROOT$/nodejs/wishem/docs/architecture/**",
+        "$TURBO_ROOT$/nodejs/wishem/workbench-app/src/styles/tokens.css"
       ],
       "outputs": ["coverage.json"]
     },
@@ -169,6 +197,32 @@
         "WISHEM_BROWSER_HOST"
       ]
     },
+    "@thrashplay/wishem-renderer-godot#test:ui": {
+      "dependsOn": ["upstream-sources", "^build"],
+      "inputs": [
+        "package.json",
+        "scripts/**",
+        "$TURBO_ROOT$/nodejs/wishem/workbench/model/**",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
+        "src/**",
+        "tests/**",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "godot/**",
+        "docker/**"
+      ],
+      "outputs": [],
+      "passThroughEnv": [
+        "DOCKER_CERT_PATH",
+        "DOCKER_CONFIG",
+        "DOCKER_CONTEXT",
+        "DOCKER_HOST",
+        "DOCKER_TLS_VERIFY",
+        "SSH_AGENT_PID",
+        "SSH_AUTH_SOCK",
+        "WISHEM_BROWSER_HOST"
+      ]
+    },
     "test:watch": {
       "dependsOn": ["@twin-digital/vitest-config#build"],
       "cache": false,
@@ -180,6 +234,11 @@
       "outputs": []
     },
     "@twin-digital/credential-shelf#typecheck": {
+      "dependsOn": ["upstream-sources", "build"],
+      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**", "bin/**"],
+      "outputs": []
+    },
+    "@thrashplay/wishem-command#typecheck": {
       "dependsOn": ["upstream-sources", "build"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**", "bin/**"],
       "outputs": []

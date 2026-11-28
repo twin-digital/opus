@@ -106,5 +106,6 @@ components before adding new ones; update the style guide in the same change as 
 
 Diagrams follow [`docs/diagrams.md`](docs/diagrams.md): Mermaid in a temporary context (a conversation, an issue, a pull
 request, an OpenSpec change), and a rendered SVG file in permanent documentation. Architecture diagrams use the C4
-model, and each product with two or more containers has an architecture document. Use the `diagrams` skill to make an
+model, and each product with two or more containers has an architecture document. A container is a unit that runs or a
+store. A generated package dependency view shows the packages and their dependencies. Use the `diagrams` skill to make an
 SVG diagram.

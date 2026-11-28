@@ -31,17 +31,19 @@
     "clean": "clean",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "start": "wishem start ./model",
+    "start": "exec wishem start ./model",
     "test": "opus-test",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@thrashplay/wishem-core": "workspace:*",
-    "@thrashplay/wishem-host-nodejs": "workspace:*"
+    "@thrashplay/wishem-command": "workspace:*",
+    "@thrashplay/wishem-core": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-hub": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

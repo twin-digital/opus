@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "types": [],
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"]
+  }
+}

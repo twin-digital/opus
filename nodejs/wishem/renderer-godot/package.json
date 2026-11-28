@@ -1,0 +1,71 @@
+{
+  "private": true,
+  "name": "@thrashplay/wishem-renderer-godot",
+  "version": "0.0.0",
+  "description": "The Godot renderer of Wishem: a Godot project that draws a construct through the link, and the runner that runs it in Docker.",
+  "type": "module",
+  "exports": {
+    "./index": null,
+    "./index.js": null,
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "godot": "exec node scripts/godot.ts run",
+    "godot:image": "node scripts/godot.ts image",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "test": "opus-test",
+    "test:godot": "exec node scripts/godot.ts test",
+    "test:ui": "pnpm test:godot && node --test \"tests/*.test.ts\"",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@thrashplay/wishem-clock": "workspace:*",
+    "@thrashplay/wishem-construct-manager": "workspace:*",
+    "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-sample-product": "workspace:*",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pngjs": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "pngjs": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

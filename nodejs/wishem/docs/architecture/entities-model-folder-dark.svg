@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 632" width="880" height="632" role="img" aria-labelledby="title desc">
+<title id="title">Entity diagram: the model folder</title>
+<desc id="desc">The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference-list has zero or more entities, and an entity has zero or more field values that refer to it.</desc>
+<defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.5"/></filter></defs>
+<rect width="880" height="632" fill="#121222"/>
+<text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#ececf3" text-anchor="start">Entity diagram: the model folder</text>
+<rect x="48" y="72" width="290" height="84" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="60" y="96" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">ComponentTypeDefinition</text>
+<path d="M48 108 h290" stroke="#45455d"/>
+<text x="60" y="124" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK</text>
+<text x="112" y="124" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">id</text>
+<rect x="542" y="72" width="290" height="84" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="554" y="96" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">FieldDefinition</text>
+<path d="M542 108 h290" stroke="#45455d"/>
+<text x="554" y="124" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK, FK</text>
+<text x="606" y="124" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">ComponentTypeDefinition.id</text>
+<text x="554" y="144" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK</text>
+<text x="606" y="144" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">id</text>
+<rect x="48" y="252" width="290" height="104" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="60" y="276" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">Component</text>
+<path d="M48 288 h290" stroke="#45455d"/>
+<text x="60" y="304" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK, FK</text>
+<text x="112" y="304" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">Entity.id</text>
+<text x="60" y="324" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK, FK</text>
+<text x="112" y="324" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">ComponentTypeDefinition.id</text>
+<rect x="542" y="252" width="290" height="104" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="554" y="276" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">FieldValue</text>
+<path d="M542 288 h290" stroke="#45455d"/>
+<text x="554" y="304" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK, FK</text>
+<text x="606" y="304" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">Entity.id</text>
+<text x="554" y="324" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK, FK</text>
+<text x="606" y="324" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">ComponentTypeDefinition.id</text>
+<text x="554" y="344" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK, FK</text>
+<text x="606" y="344" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">FieldDefinition.id</text>
+<rect x="48" y="452" width="290" height="64" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="60" y="476" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">Entity</text>
+<path d="M48 488 h290" stroke="#45455d"/>
+<text x="60" y="504" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK</text>
+<text x="112" y="504" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#ececf3" text-anchor="start">id</text>
+<path d="M338 114 L542 114" fill="none" stroke="#6b6b88" stroke-width="2"/>
+<path d="M348 107 L348 121 M354 107 L354 121" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M528 114 L542 121 M528 114 L542 114 M528 114 L542 107" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="520" cy="114" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M193 156 L193 252" fill="none" stroke="#6b6b88" stroke-width="2"/>
+<path d="M200 166 L186 166 M200 172 L186 172" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M193 238 L186 252 M193 238 L193 252 M193 238 L200 252" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="193" cy="230" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M193 452 L193 356" fill="none" stroke="#6b6b88" stroke-width="2"/>
+<path d="M186 442 L200 442 M186 436 L200 436" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M193 370 L200 356 M193 370 L193 356 M193 370 L186 356" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="193" cy="378" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M338 304 L542 304" fill="none" stroke="#6b6b88" stroke-width="2"/>
+<path d="M348 297 L348 311 M354 297 L354 311" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M528 304 L542 311 M528 304 L542 304 M528 304 L542 297" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="520" cy="304" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M687 156 L687 252" fill="none" stroke="#6b6b88" stroke-width="2"/>
+<path d="M694 166 L680 166 M694 172 L680 172" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M687 238 L680 252 M687 238 L687 252 M687 238 L694 252" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="687" cy="230" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M698 356 L338 484" fill="none" stroke="#6b6b88" stroke-width="2"/>
+<path d="M684.81 360.69 L700.35 362.6 M684.81 360.69 L698 356 M684.81 360.69 L695.65 349.4" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="677.27" cy="363.37" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<path d="M351.19 479.31 L335.65 477.4 M351.19 479.31 L338 484 M351.19 479.31 L340.35 490.6" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="358.73" cy="476.63" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<rect x="474.6" y="408" width="86.8" height="24" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="518" y="424.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Refers to</text>
+<rect x="24" y="564" width="832" height="44" rx="12" fill="#1b1b30" stroke="#45455d"/>
+<text x="40" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">Legend</text>
+<rect x="100.64" y="578" width="26" height="16" rx="5" fill="#1b1b30" stroke="#45455d"/>
+<text x="134.64" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Entity</text>
+<text x="195.84" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">PK</text>
+<text x="229.84" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Primary key</text>
+<text x="327.04" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">FK</text>
+<text x="361.04" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Foreign key</text>
+<path d="M458.24 586 L484.24 586" stroke="#6b6b88" stroke-width="2"/>
+<path d="M474.24 593 L474.24 579 M468.24 593 L468.24 579" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<text x="492.24" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">One</text>
+<path d="M531.84 586 L557.84 586" stroke="#6b6b88" stroke-width="2"/>
+<path d="M543.84 586 L557.84 593 M543.84 586 L557.84 586 M543.84 586 L557.84 579" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<circle cx="535.84" cy="586" r="4.5" fill="#121222" stroke="#6b6b88" stroke-width="2" stroke-linecap="round"/>
+<text x="565.84" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Zero or more</text>
+</svg>

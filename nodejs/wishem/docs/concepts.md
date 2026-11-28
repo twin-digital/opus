@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `README.md` for the status labels. Terms are defined in `glossary.md`.
 
+This file gives the design. `architecture/README.md` gives what the code does now.
+
 The examples in this file use the quarry room from `examples/interactions.md`. That room has a gap that the player crosses with a grapple, two goats, and a shift whistle.
 
 ## The project (**Agreed**)
@@ -11,38 +13,42 @@ A **project** is what a designer makes with Wishem. It has two parts:
 - the **product**: the part that the designer ships.
 - the **workbench**: the part that the designer uses to make the product.
 
-Each part is a model, and each model has its own core.
+The workbench holds one authored model. That model contains the model of the product. The product knows nothing about the workbench.
 
-The workbench is a model that is made with Wishem. It is not a game. The workbench shows and changes the product.
+The workbench is a model that is made with Wishem. It is not a game. The workbench shows and changes the product. See "Workbench and product".
 
 "Product" is an internal term. With the designer, the agent says the word for the kind of product, such as "the game".
 
 ## The model
 
-The **model** is what a core runs. It has three parts:
+The **model** has three parts:
 
 - the **definitions**: the declared kinds, such as component types, entity definitions, and relations. They say what can exist.
 - the behaviors: the code that changes state during play.
-- the authored state: the things that are stored in files. A simulation starts from them.
+- the authored state: the things that the designer or the agent makes and that Wishem keeps. A construct of a product starts from them.
 
-A **simulation** is one running instance of the model. It has its own live state, its own position in time, its own source of inputs, and its own recording. The core advances a simulation in steps. A simulation runs with no window. An I/O subsystem can be attached to a simulation and is not part of it.
+A **construct** is one hub and all its subsystems. It is the structure that a product has while it runs. Each running copy of a product is one construct. (**Agreed**)
 
-More than one simulation of the same model can run at the same time. The designer plays in one simulation while the agent runs others, for example to rerun a jump or to do checks.
+The model is not a property of the hub. The model subsystems of a construct hold the model. (**Agreed**)
 
-"Simulation" is an internal term. With the designer, the agent says the word for the kind of product, such as "the game".
+More than one construct of the same model can run at the same time. The designer plays in one construct while the agent runs others, for example to replay a jump or to do checks. Each one is a full construct with its own live state and its own record. The constructs have different sets of subsystems. (**Agreed**)
 
-The renderer draws a picture of a simulation and never owns any of it.
+A construct can run with no window.
+
+"Construct" is an internal term. With the designer, the agent says the word for the kind of product, such as "the game".
+
+A renderer draws a picture of the live state of a construct and owns none of that state.
 
 ### Entities and components (**Agreed**)
 
 - An **entity** is a thing in a model: the hero, a goat, an iron ring, a door.
 - A **component** is a declared set of fields with optional behavior. An entity is the set of its components.
-- A **component type** is the declaration of a component: its label and its fields. The declaration is data in the model folder, not code. A component type can have behaviors.
+- A **component type** is the declaration of a component: its label and its fields. The declaration is data in the model, not code. A component type can have behaviors.
 - Each component has a component type. No component exists without a type. A component type that only one entity uses is normal.
 
 This is the model that Unity developers know: game objects with attached components that carry state and behavior. Making a game is mostly the work of creating and managing the correct components. That is also the work of the agent.
 
-The entity and component model is the language that the agent speaks. It is the same in every product (rule R5). What stores the entities and components is a built-in subsystem. See "Subsystems".
+The entity and component model is the language that the agent speaks. It is the same in every product (rule R5). What stores the entities and components is a built-in subsystem. See "Storage".
 
 There is one difference from Unity (**Proposed**). All state lives in declared fields, and behavior code keeps no state of its own (rule R4). This is what allows a snapshot, a rewind, and the replacement of code in a running product.
 
@@ -62,13 +68,15 @@ Every component type and every other kind of thing is registered (rule R6). The 
 
 The registry reports the definitions. It does not hold the things themselves. The things are in the authored state and the live state.
 
+The registry is not a job of the hub. A subsystem holds it: the store. (**Proposed**)
+
 Example: before the agent adds a `docile` status, it asks which behaviors read the statuses of an entity. The answer can be the chase behavior, the contact damage behavior, and the movement behavior. The agent then knows what a status is able to change. It asks the designer where the answer is a design choice.
 
 ### Relations between entities (**Agreed**)
 
 Entities relate to each other. A room contains the entities in it. An entity can be attached to another, as a held item is attached to the hero.
 
-A relation is a declared field that refers to another entity. It is part of a snapshot, and the registry reports it, in the same way as any other field.
+A relation is a field of the type `reference` or `reference-list`. The value of a `reference` is the ID of one entity of the same model. The value of a `reference-list` is a list of such IDs, with no ID two times. The order of the list is part of the value. The store refuses the removal of an entity that a reference or a list of a different entity names. It is part of a snapshot, and the registry reports it, in the same way as any other field.
 
 Which relations exist in every product, and which a product adds, is an open question.
 
@@ -87,7 +95,7 @@ The ways that exist now:
 The cases to list in the brainstorm:
 
 - a reference to a different component of the same entity
-- a reference to a different entity
+- a reference to a different entity, in one store: a `reference` field or a `reference-list` field (settled)
 - a reference to a component of a different entity
 - each of these when the two components are in the same subsystem, and when they are in different subsystems
 
@@ -95,45 +103,210 @@ A component is in one subsystem. An entity is not in a subsystem, because its co
 
 ### Authored state and live state
 
-- **Authored state** is what is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the model.
-- **Live state** is the state of one simulation. A simulation makes its live state from the authored state when it starts.
+- **Authored state** is the part of the model that the designer or the agent makes and that Wishem keeps: rooms, entity definitions, prompts, expectations, assets.
+- **Live state** is the joined state of one construct of a product. A construct makes its live state from the authored state when it starts.
 
 "State" means the authored state and the live state together.
 
-A change that the agent makes in a paused simulation is written back to the authored state, so that the change is still there the next day.
+A change that the agent makes in a paused construct is also made in the authored state, so that the change is still there the next day.
+
+"Storage" says what holds each state and what keeps it.
+
+## Constructs and subsystems
+
+A construct is assembled from one hub and subsystems. A **subsystem** is a part of a construct that has one job. Wishem provides a subsystem itself, or a library provides it through an adapter. (**Agreed**)
+
+- A **built-in subsystem** is a subsystem that Wishem provides. It is in every product. Example: the store, which holds the definitions and the entities.
+- Each product chooses its other subsystems. Examples: physics, the renderer, sound.
+
+### The hub (**Agreed**)
+
+The **hub** is the part of a construct that connects the subsystems.
+
+- The hub knows each subsystem.
+- A subsystem communicates only with the hub. A subsystem does not address a different subsystem (rule R20).
+- The hub joins the model data that the model subsystems hold. It gives that data to each subsystem that asks.
+- The hub carries hub events. The hub events are few, because a hub event for each change costs too much in a game.
+- The hub keeps the ordered record of inputs that rewind and replay use.
+- A job belongs in the hub only if a subsystem cannot do it.
+
+The hub code is the same TypeScript code for each construct. A workbench construct and a product construct have the same hub code and different subsystems. (**Proposed**)
+
+### Kinds of subsystem
+
+A subsystem has one kind. The hub knows the kind. (**Proposed**)
+
+| Kind                 | What it does                                                                                                        | Examples                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Model subsystem**  | Gives the state and the rules of one part of the joined state. The part changes only when the hub applies an input. | The store, the `time` subsystem, physics |
+| **Input subsystem**  | Sends inputs to the hub.                                                                                            | Gamepad, keyboard, touch, the clock      |
+| **Output subsystem** | Only reads. It shows or plays a construct.                                                                          | Renderer, sound                          |
+
+Output subsystems and input subsystems together are the **I/O subsystems**.
+
+### The port
+
+A subsystem has three operations on the hub: send an input, read the joined state, and get the hub events. A subsystem has no way to ask a different subsystem to do something. (**Agreed**)
+
+Control is state. Example: pause is an input that sets `running` in the `time` part of the joined state, and the clock reads `running`. (**Agreed**)
+
+An I/O subsystem uses the three operations through a **port** (**Proposed**):
+
+| Operation             | Meaning               | Which subsystem can use it |
+| --------------------- | --------------------- | -------------------------- |
+| `submit(input)`       | Send an input.        | An input subsystem only    |
+| `read()`              | Get the joined state. | Each I/O subsystem         |
+| `subscribe(listener)` | Get the hub events.   | Each I/O subsystem         |
+
+These items are **Proposed**:
+
+- A model subsystem gets no port. It cannot send an input.
+- A part that draws and also sends, such as a page with a form, attaches two subsystems: one output subsystem and one input subsystem.
+- A part that reads and also sends for one job, such as the storage subsystem or the construct manager, also attaches two subsystems: one output subsystem and one input subsystem.
+
+A request with a reply through the hub is a possible later addition. (**Agreed**) It is for a query of an output subsystem, such as a screenshot. It is not for control. See "The renderer contract". (**Proposed**)
+
+### Model subsystems
+
+A model subsystem gives state or rules. It has one of two forms. (**Proposed**)
+
+- **A pure function.** The model subsystem gets its part of the state and an input, and it returns the new part. The hub holds the parts. A part that did not change is the same object.
+- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. The design of this form is **Open**. See [#574](https://github.com/twin-digital/opus/issues/574).
+
+A model subsystem declares the types of input that it applies. It can read the joined state while it applies an input. (**Proposed**)
+
+A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
+
+1. Its whole state can be read and written as data.
+2. Its state can be saved and restored exactly.
+3. The same input always gives the same result.
+4. It runs with no window, faster than real time.
+
+Candidates discussed (**Unverified**):
+
+| Candidate                     | Model contract | Notes                                                               |
+| ----------------------------- | -------------- | ------------------------------------------------------------------- |
+| ECS library such as bitECS    | Passes         | State is plain arrays. Components are declared.                     |
+| Rapier physics (WASM)         | Passes         | Has snapshot and restore, and a deterministic build.                |
+| Matter.js, Planck.js          | Partly         | Runs with no window. Save and restore needs custom work.            |
+| Phaser Arcade physics         | Fails          | Tied to Phaser scenes and frame timing. No snapshot.                |
+| PixiJS or Phaser display tree | Fails          | Holds GPU objects. Suitable as an output subsystem only.            |
+| Three.js `Object3D` tree      | Partly         | Works with no renderer and has a JSON format. Uses renderer words.  |
+| LDtk or Tiled level files     | Passes         | For authored scenes. LDtk has a world grid of rooms with neighbors. |
+
+A top-down game in a 16-bit style does not need a physics engine. Its movement is tile collision with integer positions.
+
+### I/O subsystems
+
+An I/O subsystem holds no state. (**Agreed**)
+
+An I/O subsystem connects a construct to something that is not a model subsystem. Examples: the player, real time, the disk, a different construct.
+
+These rules apply (**Proposed**):
+
+- **I/O rule.** A construct gives the same result from the same record when an I/O subsystem is removed.
+- **Output rule.** The agent can learn what an output subsystem showed or played. For a renderer this is a screenshot. For sound this is a record of the sounds that played.
+- **Input rule.** Each input that an input subsystem sends is in the record. A record or the agent can take the place of an input subsystem.
+
+The control of an I/O subsystem is also state. That state is in a part of the joined state. An input changes it, and the I/O subsystem reads it. (**Agreed**)
+
+What an output subsystem holds is derived from the live state and can be built again from it at any time.
+
+## Inputs and the record
+
+An **input** is data: a type and a payload. The type has the form `<subsystem>/<name>`. Examples: `store/set-field` and `time/advance`. (**Proposed**)
+
+The hub does these things with each input (**Proposed**):
+
+1. The hub rejects an input when no model subsystem declares its type.
+2. The hub gives the input a sequence number and records the source of the input.
+3. The hub appends the input to the **record**.
+4. The hub gives the input to each model subsystem that declares the type, in the order of registration.
+
+The record is a record of inputs. It is not a record of each change of a value. (**Proposed**)
+
+The record has a start and a list of inputs. The start is a checkpoint: the joined state after one sequence number. For a new hub, the start is the sequence number 0 and the first joined state. The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of the checkpoint interval (default 100), and after each rewind. A checkpoint refers to the parts and makes no copy. (**Proposed**)
+
+The record has a limit (default 100000 inputs after the start). When the list is longer, the hub moves the start to a checkpoint and removes the earlier inputs and checkpoints. (**Proposed**)
+
+The ID `hub` and the input types `hub/<name>` belong to the hub. No model subsystem or I/O subsystem uses them. (**Proposed**)
+
+A write from the workbench or from the agent is an input. Thus the record is also the record of changes with their sources, which provenance and undo need. (**Proposed**)
+
+## Joined state and hub events
+
+The **joined state** is the state of a construct that the hub gives to a reader. It has one part for each model subsystem, under the key of that model subsystem. (**Proposed**)
+
+- The hub holds the parts. Each part is immutable. A part that did not change is the same object. (**Proposed**)
+- A reader in the process of the hub gets the parts with no copy. Thus a renderer can read the joined state on each frame. (**Proposed**)
+- Hub events do not carry the state. A subsystem that needs the state reads it. (**Proposed**)
+
+The hub has these hub events (**Proposed**):
+
+- The construct started.
+- An input was applied. The hub event has the sequence number and the type of the input. A rewind is an applied input of the type `hub/rewind`.
+- The construct stops.
+
+The hub has no hub event for each change of a value.
+
+### How the live state is composed (**Proposed**)
+
+The live state of a construct is its joined state. Each model subsystem contributes its part. A built-in model subsystem contributes its part in the same way as one that a library provides.
+
+- A checkpoint is the joined state at one sequence number of the record. The hub keeps it. For a model subsystem that is a pure function, the checkpoint refers to the part and makes no copy.
+- The registry reports each definition together with the model subsystem that owns it.
+- A construct passes the model contract when each model subsystem passes it.
+- The entity is what joins the parts. The physics part and the store part refer to the same goat by one entity ID.
+- The source of the input that makes an entity supplies the entity ID. Thus a replay gives the same ID.
+- The store holds the list of entities. No part of the hub knows an entity.
 
 ## Time
 
-A simulation advances in fixed steps. Random values come from a seed. Every input is recorded. (rule R3)
+Each input is in the record. The same starting state and the same inputs always give the same result. Random values come from a seed. (rule R3)
 
-These operations follow from that:
+The **clock** is a subsystem that sends ticks at an interval. A product that is not a game has no clock. (**Agreed**) [The game loop](#the-game-loop) says how the clock and the other parts work together.
 
-| Operation    | Meaning                                                                         |
-| ------------ | ------------------------------------------------------------------------------- |
-| **Step**     | Advance a simulation by a number of steps with given inputs.                    |
-| **Snapshot** | Save the whole live state of a simulation as data.                              |
-| **Restore**  | Load a snapshot.                                                                |
-| **Rewind**   | Return to an earlier point of the current play session.                         |
-| **Rerun**    | Run recorded inputs again in a new simulation, with or without a changed value. |
-| **Bookmark** | Give a name to a point in a recording.                                          |
+A tick is the input `time/advance`. A listener sees a tick as the hub event for an applied input. (**Agreed**)
 
-A rerun with a changed value answers a question such as "would I have made the jump".
+A construct that has no clock has the record, rewind, and replay. (**Proposed**)
+
+Time has two subsystems (**Proposed**):
+
+- `time` is a model subsystem. Its state is the time of the construct, the count of ticks, and `running`. It declares the input types `time/advance` and `time/set-running`.
+- The clock is an input subsystem. While `running` is true, the clock sends `time/advance` at an interval.
+
+These operations follow from the record and the two subsystems (**Proposed**):
+
+| Operation         | Meaning                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Pause**, resume | Send `time/set-running`.                                                                                       |
+| **Step**          | Send one `time/advance` while the clock is paused.                                                             |
+| **Snapshot**      | A model library that holds its own state saves that state as data.                                             |
+| **Checkpoint**    | The hub keeps the joined state at one sequence number of the record.                                           |
+| **Restore**       | Load a checkpoint into a construct.                                                                            |
+| **Rewind**        | Restore the last checkpoint at or before the target, then apply the record from that checkpoint to the target. |
+| **Replay**        | Apply a record to a new construct, with or without a changed value. The hub option `record` does it.           |
+| **Bookmark**      | Give a name to a point in a record.                                                                            |
+
+The agent sends `time/advance` inputs to run a construct faster than real time. (**Proposed**)
+
+A replay with a changed value answers a question such as "would I have made the jump".
 
 ### Bookmarks (**Agreed**)
 
-A **bookmark** is a named point in a recording. Rewind and rerun use a bookmark as their target.
+A **bookmark** is a named point in a record. Rewind and replay use a bookmark as their target.
 
 A bookmark gives the designer and the agent a shared name for a moment, in the way that an entity name gives them a shared name for a thing:
 
 - "Go back to when I entered the room."
-- "Rerun from where I picked up the grapple, with the higher jump."
+- "Replay from where I picked up the grapple, with the higher jump."
 
-A simulation makes bookmarks automatically at registered events. Examples:
+A construct makes bookmarks automatically at registered events. Examples:
 
 - the player enters a room
 - the player gets an item or an ability
 - the player takes damage or fails
-- the designer pauses the simulation
+- the designer pauses the construct
 - the agent makes a change: one bookmark before the change and one after it
 - a check of an expectation fails
 
@@ -146,6 +319,177 @@ A bookmark has more uses:
 - **A report.** "It breaks here" is a bookmark that the agent can open.
 
 A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the product changes. See [#479](https://github.com/twin-digital/opus/issues/479).
+
+## The game loop
+
+A game loop has these jobs: a fixed step, an accumulator, a catch-up with a limit, a source of real time, an update of the rules, and a render. This section says which part of Wishem has each job. The facts come from `clock/src/clock.ts` and `clock/src/time.ts`.
+
+| Job                   | Part of Wishem                                                                                                                                                                                         | State                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Fixed step            | The clock. Each tick is `time/advance { ms: stepMs }`, with the same `ms` each time (50 ms by default). The reason is rule R3.                                                                         | Built                                                           |
+| Accumulator           | The clock. At each call of its timer it sends `floor((real time - last) / stepMs)` ticks and moves `last` by that number of steps.                                                                     | Built                                                           |
+| Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                                                                                           | Built                                                           |
+| Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                                                                                  | Built                                                           |
+| Pause, step, rewind   | The part `time` (`running` and `stepMs`) and the inputs `time/set-running` and `hub/rewind`. After `time/set-running` and `hub/rewind`, and when the clock starts, the clock measures real time again. | Built                                                           |
+| Update of the rules   | One model subsystem, the update subsystem. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.                                                                 | Built ([#617](https://github.com/twin-digital/opus/issues/617)) |
+| Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                                                                                | Built, with no interpolation                                    |
+
+### Fixed step
+
+A tick has the same length each time, so the same record gives the same state (rule R3). Rewind and replay need this. The delta of a tick is the payload `ms` of `time/advance`. The part `time` holds `now` (the sum of the deltas), `ticks`, and `running`. It can also hold `stepMs`, the length of a tick.
+
+### Catch-up and the source of real time
+
+The accumulator keeps the time of the construct near the real time. When the timer is late, the clock sends more than one tick in the call. When more than `maxTicksPerCall` ticks are due, the time of the construct runs slower than the real time for that moment. This stops a loop of more and more work.
+
+`performance.now()` does not jump when the user or the system changes the clock of the computer. A timer such as `setInterval` is not exact, and the accumulator corrects the count of ticks. The hub runs in a Node.js process (rule R21). The clock of a construct runs in the same process. A tab of a web browser can slow a timer when the tab is not in front, and a Node.js process does not have this problem.
+
+### Not built
+
+- **Interpolation.** No renderer draws a frame between two ticks.
+- **A step length that changes.** The step length is set when the clock starts. A product cannot ask for a different rate while it runs.
+- **The cost of a tick.** Each tick is an input in the record and goes to each listener and through each link. The cost for each tick of each listener is not measured. The record has a limit ([#533](https://github.com/twin-digital/opus/issues/533)).
+
+### Decision: the update subsystem (**Agreed**)
+
+One model subsystem is the update subsystem. It runs the behaviors in an order that the specification of the update subsystem gives. A behavior is data and code that this subsystem runs. It is not a subsystem. (rule R22)
+
+The count behavior and the color behavior of the sample product are its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
+
+### Decision: interpolation in a renderer (**Agreed**)
+
+The direction is interpolation in a renderer. A renderer keeps the state of the last two ticks. At each frame of its own, it draws a value between them from its own real time. A user sees smooth motion at each frame rate, one tick late.
+
+The model says which fields a renderer draws between two values (for example a position) and which fields jump (for example a text or a color name). This fact belongs in the design of the field types.
+
+A renderer is not built this way until a product with motion needs it (rule R7). Until then, a renderer draws each state as it comes. The planning of the first product with motion creates the task of interpolation.
+
+## Storage
+
+The text that defines Wishem does not say "folder" or "file" for where a model is stored. Storage in files is the method of one storage subsystem. (**Agreed**)
+
+These items are **Proposed**:
+
+- The **store** is the built-in model subsystem that holds the definitions and the entities. A write is an input to the store. The package `core` holds the code of the store. `core` is a current name in the code.
+- The authored state is the state of the stores of the workbench construct. A storage subsystem keeps each store.
+- A **storage subsystem** keeps the authored state. It has one job, and it attaches two subsystems. Its output subsystem writes each change to files. Its input subsystem sends an input when a file changes on the disk. Only the storage subsystem knows that the authored state is in files.
+- The live state is the joined state of a product construct. The store of that construct starts from the authored model that the workbench gives to the construct.
+- The live state is in memory. Its durable form is a checkpoint and the record.
+
+## Processes and links
+
+A **process** is a running thing that holds subsystems. (**Agreed**)
+
+- A process has one language. Example: a hub in a Node.js process, and a renderer and physics in a Godot process. (**Agreed**)
+- A construct runs in one process or in more than one. (**Agreed**)
+- Inside one process, a subsystem and the hub use direct calls. Between two processes, they use a connection. (**Agreed**)
+- A process holds zero or more hubs. Example: fifty previews of a sprite are fifty small constructs in one process. A page that holds only a renderer has no hub. (**Proposed**)
+
+These items are **Proposed**:
+
+- In the process of the hub, a port is direct calls.
+- Between processes, a **link** carries a port. A link is a versioned protocol of JSON messages on a WebSocket.
+- One link carries the subsystems of one process.
+- The side of the hub sends the joined state at the start. With each hub event, it sends the parts that changed. The other side sends inputs.
+- A process that does not hold that hub holds a **remote port**. The remote port keeps the link, and it gives the subsystems of that process the three operations of a port.
+- A remote port exists in TypeScript, for a page in a web browser, and in GDScript, for Godot. The package `renderer-godot` holds the remote port in GDScript.
+- A model subsystem in a process that does not hold that hub must apply each input and confirm it before the hub continues. The protocol reserves the messages for this case. The design has no such model subsystem.
+- Two subsystems in one process that does not hold that hub can share data that is derived from the joined state. State that is not derived goes through the hub, as a part of a model subsystem.
+
+## Workbench and product
+
+The workbench is its own construct. It does not hold the subsystems of the product. (**Agreed**)
+
+These items are **Proposed**:
+
+- The workbench construct has the store `store` for the model of the workbench. It has the store `product` for the **mounted** product. The store `product` validates the product model alone, and the product model refers to nothing of the workbench.
+- The workbench construct has the model subsystem `constructs`, which holds the list of the product constructs that must run.
+- The `wishem` command with `--product` holds the construct list and the construct manager in the same way, with no page.
+- The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
+  - It starts and stops the product constructs. A product construct is a hub in a product construct process, a child process of the workbench process, with the parts `time` and `store`, the rules of the product, a clock, and its own link.
+  - It gives each product construct the product model.
+  - A fault of the product code ends or fails one product construct process. The workbench continues.
+  - It sends each later change of the product model to the product construct as an input.
+  - It reports the status of each product construct to the workbench hub as inputs.
+- To a product construct, the construct manager is also an output subsystem and an input subsystem. A hub does not connect to a hub.
+- Only the construct manager can rewind a product construct. A rewind of the workbench is an undo of the authored state, and the product construct follows it.
+- A client steps a product construct back with the input `constructs/rewind`. The construct manager keeps a history of the ticks of each product construct. It rewinds the product construct to the state before an earlier tick. The product construct keeps its `running` value and the changes of the authored state that were made after that tick. A rewind or a replay of the workbench does not step the product construct back again.
+- The workbench page has the **run controls** and the **stage** for the product construct `play`. The run controls send each input through the input port of the page to the workbench construct, so the record of the workbench holds each action of the designer. The stage reads the product construct through its own link, at the path `/constructs/<id>/link` of the page address, and it has no input port.
+- The agent connects to the workbench construct through a link.
+- The workbench construct has no clock. It has the record, so it has undo and rewind.
+
+## Renderers
+
+### The renderer contract
+
+A renderer is an output subsystem with more requirements. It follows the **renderer contract**:
+
+1. It draws from the live state of a construct.
+2. It gives a screenshot on request.
+3. It maps a point on the screen back to the entity drawn there.
+4. It draws tool overlays, such as a ring that shows a distance.
+
+Item 3 is what resolves "the platform to my right" and a click to inspect.
+
+Items 2 and 3 are requests that need a reply. They have no path through the hub. (**Proposed**) A request with a reply through the hub is a possible later addition. (**Agreed**)
+
+The renderer keeps its own objects, such as sprites, layers, and draw order. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the live state has no such order.
+
+Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.js, and a card game can pick plain HTML and CSS.
+
+### The three renderers
+
+Wishem has three renderers: the React renderer, the PixiJS renderer, and the Godot renderer. The three renderers use the same TypeScript hub (rule R17). (**Agreed**)
+
+- Each renderer reads the hub through a port. The Godot renderer uses a remote port in GDScript. (**Proposed**)
+- The React renderer is the package `renderer-react`. It runs React views and reads a port. The page gives the port. (**Proposed**) The requirements of the package are in `wishem/renderer-html/renderer`.
+- The PixiJS renderer and the Godot renderer each have one view. (**Agreed**)
+- The Godot renderer is in the package `renderer-godot`. Its view is the Godot view (sidecar kind `godot`). Its runner runs in a Node.js process and starts the Godot application in Docker. (**Proposed**)
+- The PixiJS renderer is the package `renderer-pixi`. Its view is the PixiJS view (sidecar kind `pixi`). The package `pixi-page` holds a page that reads the sample construct through a link. (**Proposed**)
+- The view of the PixiJS renderer is `ClearColor`. The view of the Godot renderer is the same. Each clears the viewport to a color that a field gives. (**Proposed**)
+- The proof that a renderer works is a screenshot that changes when the clock advances. (**Proposed**)
+
+### Views (**Agreed**)
+
+A **view** is content of the product. A renderer supplies the code that loads, mounts, and runs views.
+
+- Each renderer provides its own kind of view. Wishem does not define one set of visual components for all renderers.
+- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the hub never loads it, and a view changes state only through the inputs that it sends with `wishem`. The store changes the state.
+- A sidecar attaches a view to its component type by the ID of the component type. A component type that has no view is not drawn.
+- The fields in the component type definition are the source. The types of the props of a view are generated.
+- A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. A field of the type `reference` gives the view the picture of the entity that it names. A field of the type `reference-list` gives the view a list of such pictures, in the order of the value. An entity that a component with a view names is held: the renderer draws it only in the picture of its holder, and a reference to an entity on the path draws nothing.
+- A view is a pure function of its props. A view holds no state.
+- A renderer imports the model. The model never imports a renderer (rule R1).
+
+The views of a product are with the product, in one folder for each renderer. (**Proposed**)
+
+A product has two sides (**Proposed**). The **model side** is the definitions, the behaviors, and the authored state. The **presentation side** is the views for one output subsystem. The presentation side is code of the product and is not part of the model. The I/O rule is the test: the model gives the same result when the output subsystem is removed. A workbench has the same two sides.
+
+A component of a renderer can hold **transient state**. State is transient when all three of these things are true:
+
+1. A reload of the page loses it with no harm to the designer.
+2. No other part of the page, and no behavior, reads it.
+3. The agent does not need it to know what the designer did.
+
+Examples of transient state: hover, focus, the open state of a select, the scroll position, the caret, and text in a control before the designer commits it. The text in the prompt box is transient now. The selection of the product panel is also transient state.
+
+Each other state is in the model. An event in a view sends an input to the hub.
+
+Reason: the web browser holds focus, hover, the scroll position, and the caret, so no HTML renderer can put them in the model. Each change of a value in the store of the workbench is an input, and the storage subsystem writes it.
+
+### Adapters
+
+An adapter connects a library to a subsystem. An adapter is written when a product first picks that library (rule R7). The first game pays for one adapter in each subsystem that a library provides. The PixiJS renderer and the Godot renderer are the exception that rule R7 gives.
+
+A built-in subsystem needs no adapter. A library can replace a built-in subsystem through an adapter. Example: an ECS library as the store.
+
+## Distribution
+
+- A product is distributed as a build that holds the hub, the subsystems, the model, and the page. (**Proposed**)
+- For the MVP, the hub of each construct is in a Node.js process, and each renderer reads it through a link. (**Agreed**, owner, 2026-11-27)
+- The workbench is distributed as an archive on a GitHub release. (**Proposed**)
+- No package of Wishem is published to npm unless the owner agrees. (**Agreed**)
+- The licence and the release channel are **Open**.
 
 ## Directives
 
@@ -194,6 +538,8 @@ A person can view and edit the code behind a behavior. The edit makes a new vers
 
 A native behavior is not locked. The designer can give it a new prompt. The agent then writes a new version, and the behavior is not native. (**Agreed**)
 
+The count behavior of the sample product is a native behavior that the update subsystem runs. It stands in for the behavior feature (issue #481).
+
 The agent starts the new version from the current code, as for each other prompt change (rule R11). A hand edit to code has the same problems as a hand edit to a generated room: the prompt does not describe it, and a later change can remove it. (**Proposed**)
 
 ### Asset prompts
@@ -224,7 +570,7 @@ A request with no stored prompt cannot be applied again. For a reapply, it has t
 
 Provenance applies to authored state only. A thing that is made during play has no provenance. It has a link to the thing in the authored state that made it. Example: a goat that appears after the first crossing links to the rule that made it appear, and that rule has provenance.
 
-A change that the agent makes in a paused simulation gets provenance when it is written to the authored state.
+A change that the agent makes in a paused construct gets provenance when it is written to the authored state.
 
 A long chain of links between things that are made during play can make the first source slow to find. This is not a problem now, and no design exists for it.
 
@@ -270,122 +616,12 @@ An expectation states, in natural language, something that must stay true. It is
 - The agent does not simulate the whole game with every power-up to find effects that no expectation covers. (**Agreed**)
 - When the agent notices such an effect, it tells the designer as a remark and does not block the change. (**Proposed**)
 
-## Subsystems
-
-A product is assembled from subsystems. A **subsystem** is a part of a product that has one job. Wishem provides a subsystem itself, or a library provides it through an adapter. (**Agreed**)
-
-- A **built-in subsystem** is a subsystem that Wishem provides. It is in every product. Examples: the storage for entities and components, and the storage for authored state, which holds the registry and the directives.
-- Each product chooses its other subsystems. Examples: physics, the renderer, sound.
-
-The **core** is the part of Wishem that is not a subsystem. It runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings.
-
-There are three kinds of subsystem.
-
-| Kind                 | What it does                                       | Examples                                     |
-| -------------------- | -------------------------------------------------- | -------------------------------------------- |
-| **Model subsystem**  | Holds state or rules.                              | Live state storage, authored scenes, physics |
-| **Output subsystem** | Shows or plays a simulation.                       | Renderer, sound                              |
-| **Input subsystem**  | Changes what the player does into recorded inputs. | Gamepad, keyboard, touch                     |
-
-Output subsystems and input subsystems together are the **I/O subsystems**.
-
-### Model subsystems
-
-A model subsystem holds state or rules. A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
-
-1. Its whole state can be read and written as data.
-2. Its state can be saved and restored exactly.
-3. The same input always gives the same result.
-4. It runs with no window, faster than real time.
-
-Candidates discussed (**Unverified**):
-
-| Candidate                     | Model contract | Notes                                                               |
-| ----------------------------- | -------------- | ------------------------------------------------------------------- |
-| ECS library such as bitECS    | Passes         | State is plain arrays. Components are declared.                     |
-| Rapier physics (WASM)         | Passes         | Has snapshot and restore, and a deterministic build.                |
-| Matter.js, Planck.js          | Partly         | Runs with no window. Save and restore needs custom work.            |
-| Phaser Arcade physics         | Fails          | Tied to Phaser scenes and frame timing. No snapshot.                |
-| PixiJS or Phaser display tree | Fails          | Holds GPU objects. Suitable as an output subsystem only.            |
-| Three.js `Object3D` tree      | Partly         | Works with no renderer and has a JSON format. Uses renderer words.  |
-| LDtk or Tiled level files     | Passes         | For authored scenes. LDtk has a world grid of rooms with neighbors. |
-
-A top-down game in a 16-bit style does not need a physics engine. Its movement is tile collision with integer positions.
-
-### How the live state is composed (**Proposed**)
-
-The live state of a simulation is a record with one key for each model subsystem. Each model subsystem contributes its part. The live state is the view over all the parts. A built-in model subsystem contributes its part in the same way as one that a library provides.
-
-- A snapshot is the snapshot of each model subsystem, under the same keys.
-- The registry reports each definition together with the model subsystem that owns it.
-- A simulation passes the model contract when each model subsystem passes it.
-- The entity is what joins the parts. The physics part and the state storage part refer to the same goat by one entity.
-
-### I/O subsystems
-
-An I/O subsystem connects a simulation to the player. It holds no state. (**Agreed**)
-
-These rules apply (**Proposed**):
-
-- **I/O rule.** A simulation gives the same result when an I/O subsystem is removed.
-- **Output rule.** The agent can learn what an output subsystem showed or played. For a renderer this is a screenshot. For sound this is a record of the sounds that played.
-- **Input rule.** Each thing that an input subsystem sends to a simulation is recorded. A recording or the agent can take the place of an input subsystem.
-
-What an output subsystem holds is derived from the live state and can be built again from it at any time.
-
-### The renderer contract
-
-A renderer is an output subsystem with more requirements. It follows the **renderer contract**:
-
-1. It draws from the live state of a simulation.
-2. It gives a screenshot on request.
-3. It maps a point on the screen back to the entity drawn there.
-4. It draws tool overlays, such as a ring that shows a distance.
-
-Item 3 is what resolves "the platform to my right" and a click to inspect.
-
-The renderer keeps its own objects, such as sprites, layers, and draw order. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the live state has no such order.
-
-Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.js, and a card game can pick plain HTML and CSS.
-
-### Views (**Agreed**)
-
-A **view** is content of the product. A renderer supplies the code that loads, mounts, and runs views.
-
-- Each renderer provides its own kind of view. Wishem does not define one set of visual components for all renderers.
-- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the core never loads it, and a view changes no state.
-- A sidecar attaches a view to its component type by the ID of the component type. A component type that has no view is not drawn.
-- The fields in the component type definition are the source. The types of the props of a view are generated.
-- A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. References are **Open**.
-- A view is a pure function of its props. A view holds no state.
-- A renderer imports the model. The model never imports a renderer (rule R1).
-
-A product has two sides (**Proposed**). The **model side** is the definitions, the behaviors, and the authored state. The **presentation side** is the views for one output subsystem. The presentation side is code of the product and is not part of the model. The I/O rule is the test: the model gives the same result when the output subsystem is removed. A workbench has the same two sides.
-
-A component of a renderer can hold **transient state**. State is transient when all three of these things are true:
-
-1. A reload of the page loses it with no harm to the designer.
-2. No other part of the page, and no behavior, reads it.
-3. The agent does not need it to know what the designer did.
-
-Examples of transient state: hover, focus, the open state of a select, the scroll position, the caret, and text in a control before the designer commits it. The text in the prompt box is transient now.
-
-Each other state is in the model. An event in a view sends an input or a write to the core.
-
-Reason: the web browser holds focus, hover, the scroll position, and the caret, so no HTML renderer can put them in the model. The workbench has authored state only, so each value in the model is a write to a file.
-
-### Adapters
-
-An adapter connects a library to a subsystem. An adapter is written when a product first picks that library (rule R7). The first game pays for one adapter in each subsystem that a library provides.
-
-A built-in subsystem needs no adapter. A library can replace a built-in subsystem through an adapter. Example: an ECS library as the storage for entities and components.
-
 ## Tools
 
 The designer sees the product through tools: a view of the screen, an inspector, tables of the registered kinds, a world map. The workbench holds the tools. See the wireframe in `examples/`.
 
 - Tools are built as the project needs them. Each project can have tools that only it uses. (**Agreed**)
-- A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**)
+- A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**) The product panel of the workbench page is the first inspector (#537).
 - A toolkit exists so that the agent can add a tool without building an editor from nothing. (**Agreed** as an expected part of the base)
 
 ### Recognized names in text (**Proposed**)
