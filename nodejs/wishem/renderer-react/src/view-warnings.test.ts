@@ -113,6 +113,14 @@ describe('viewWarnings', () => {
     expect(viewWarnings(views, []).map((warning) => warning.componentType)).toEqual([APP_BAR, HEADER])
   })
 
+  it('sorts a warning with no name before the warnings with a name', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+
+    const result = viewWarnings(views, [definition(APP_BAR, 'b', 'B', '---')])
+
+    expect(result.map((warning) => warning.kind)).toEqual(['empty-name', 'same-name'])
+  })
+
   it('sorts the warnings of one sidecar by name', () => {
     const views = tableOf(entry('AppBar.view.json', APP_BAR))
 
