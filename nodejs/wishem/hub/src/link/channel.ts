@@ -45,12 +45,20 @@ const createEndpoint = (send: (text: string) => void, close: () => void): Endpoi
       onMessage: (listener, onBinary) => {
         messageListener = listener
         binaryListener = onBinary
+        let failure: { error: unknown } | undefined
         for (const entry of waiting.splice(0)) {
-          if (entry === undefined) {
-            onBinary?.()
-          } else {
-            listener(entry)
+          try {
+            if (entry === undefined) {
+              onBinary?.()
+            } else {
+              listener(entry)
+            }
+          } catch (error) {
+            failure ??= { error }
           }
+        }
+        if (failure !== undefined) {
+          throw failure.error
         }
       },
       onClose: (listener) => {
@@ -92,32 +100,18 @@ const createEndpoint = (send: (text: string) => void, close: () => void): Endpoi
 /** Makes two connected channels in memory. A message arrives in a later microtask. */
 export const createChannelPair = (): [Channel, Channel] => {
   let closed = false
-  const endpoints: [Endpoint, Endpoint] = [
-    createEndpoint(
-      (text) => {
-        if (!closed) {
-          void Promise.resolve().then(() => {
-            endpoints[1].deliver(text)
-          })
-        }
-      },
-      () => {
-        close()
-      },
-    ),
-    createEndpoint(
-      (text) => {
-        if (!closed) {
-          void Promise.resolve().then(() => {
-            endpoints[0].deliver(text)
-          })
-        }
-      },
-      () => {
-        close()
-      },
-    ),
-  ]
+  const endpoints: Endpoint[] = []
+  const sendTo = (target: 0 | 1) => (text: string) => {
+    if (!closed) {
+      void Promise.resolve().then(() => {
+        endpoints[target].deliver(text)
+      })
+    }
+  }
+  const closeBoth = () => {
+    close()
+  }
+  endpoints.push(createEndpoint(sendTo(1), closeBoth), createEndpoint(sendTo(0), closeBoth))
 
   const close = () => {
     if (closed) {
@@ -136,6 +130,10 @@ export const createChannelPair = (): [Channel, Channel] => {
 /** Resolves when the socket is open. Rejects when the socket fails before it opens. */
 export const webSocketChannel = (socket: WebSocketLike): Promise<Channel> =>
   new Promise<Channel>((resolve, reject) => {
+    if (socket.readyState >= 2) {
+      reject(new Error('The socket is closing or closed.'))
+      return
+    }
     let open = socket.readyState === 1
     let closing = false
     const endpoint = createEndpoint(
@@ -172,7 +170,13 @@ export const webSocketChannel = (socket: WebSocketLike): Promise<Channel> =>
       }
     }
     socket.addEventListener('close', fail)
-    socket.addEventListener('error', fail)
+    socket.addEventListener('error', () => {
+      const wasClosing = closing
+      fail()
+      if (open && !wasClosing) {
+        socket.close()
+      }
+    })
 
     if (open) {
       resolve(endpoint.channel)

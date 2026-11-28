@@ -51,13 +51,29 @@ A file with the name `*.test.ts` is never a view file.
 
 A view gets one prop for each field in the definition of its component type. The name of a prop comes from the label of the field. The words of the label are joined in camel case, and the first letter is a small letter. For example, the label `Max health` gives the prop `maxHealth`.
 
-A prop has no value when the component omits the field. For two fields with one name, the prop has the value of the first field.
+A prop has no value when the component omits the field. For two fields with one name, the prop has the value of the first field. The renderer writes one warning with `console.warn` for each later field of that name. The line of a warning is:
+
+```text
+wishem: the sidecar <sidecar>: the fields <first field ID> and <later field ID> of the component type <component type ID> give the same name "<name>". The prop has the value of the first field.
+```
 
 A field whose label gives an empty name (for example `???`) gives no prop. The renderer writes one warning with `console.warn` for each such field. The renderer writes the warnings again only when they change. The line of a warning is:
 
 ```text
 wishem: the sidecar <sidecar>: the label of the field <field ID> of the component type <component type ID> gives an empty name. The view does not get the field.
 ```
+
+The renderer sorts the warnings by sidecar, component type, name, and kind.
+
+## Warnings for a view that has no definition
+
+A view whose sidecar names a component type that has no definition draws nothing. The renderer writes one warning with `console.warn` for it. The line of the warning is:
+
+```text
+wishem: the sidecar <sidecar> names the component type <component type ID>, which no definition has. No view is drawn for it.
+```
+
+The renderer writes no warning when the joined state has no part `store`.
 
 ## The entity at a point
 

@@ -11,6 +11,7 @@ const ENT2 = 'e_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
 const FLD3 = 'fld_22222222-3333-4444-8555-666666666666'
 const FLD4 = 'fld_33333333-4444-4555-8666-777777777777'
 const CT3 = 'ct_55555555-6666-4777-8888-999999999999'
+const CT4 = 'ct_66666666-7777-4888-9999-aaaaaaaaaaaa'
 
 const appBar = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   id: CT,
@@ -540,6 +541,27 @@ describe('validateModel', () => {
         expect(result.warnings.some((warning) => warning.message.includes(CT2))).toBe(true)
         expect(result.warnings.some((warning) => warning.message.includes(CT3))).toBe(true)
       }
+    })
+
+    it('names the earlier ID and then the later ID in the message', () => {
+      const result = validateModel(model([appBar(), appBar({ id: CT2 })], []))
+      expect(result.ok && result.warnings.map((warning) => warning.message)).toEqual([
+        `Component types ${CT} and ${CT2} have the same label "AppBar"`,
+      ])
+    })
+
+    it('gives the warnings in the order of the first definition of each label', () => {
+      const definitions = [
+        appBar(),
+        appBar({ id: CT2, label: 'Other' }),
+        appBar({ id: CT3, label: 'Other' }),
+        appBar({ id: CT4 }),
+      ]
+      const result = validateModel(model(definitions, []))
+      expect(result.ok && result.warnings.map((warning) => warning.path)).toEqual([
+        ['definitions', 3, 'label'],
+        ['definitions', 2, 'label'],
+      ])
     })
 
     it('does not warn for component types with different labels', () => {

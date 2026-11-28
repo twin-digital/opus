@@ -28,15 +28,48 @@ describe('viewWarnings', () => {
     expect(warnings.map((warning) => warning.fields)).toEqual([['fld_0'], ['fld_2']])
   })
 
-  it('gives no warning for a name that starts with a digit, or for two labels with one name', () => {
-    const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [
-      definition(TYPE_A, '2nd line', 'Max health', 'max-health'),
-    ])
+  it('gives no warning for a name that starts with a digit', () => {
+    const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_A, '2nd line')])
     expect(warnings).toEqual([])
   })
 
-  it('gives no warning for a view whose component type has no definition', () => {
-    expect(viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_B, '???')])).toEqual([])
+  it('gives one warning for two labels that give the same name', () => {
+    const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_A, 'Max health', 'max-health')])
+    expect(warnings).toEqual([
+      {
+        kind: 'same-name',
+        sidecar: 'A.view.json',
+        componentType: TYPE_A,
+        name: 'maxHealth',
+        fields: ['fld_0', 'fld_1'],
+      },
+    ])
+  })
+
+  it('gives one warning for each later field of one name', () => {
+    const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_A, 'Color', 'color', 'color!')])
+    expect(warnings.map((warning) => warning.fields)).toEqual([
+      ['fld_0', 'fld_1'],
+      ['fld_0', 'fld_2'],
+    ])
+  })
+
+  it('sorts an empty-name warning before a same-name warning of one component type', () => {
+    const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [
+      definition(TYPE_A, '???', 'Max health', 'max-health'),
+    ])
+    expect(warnings.map((warning) => warning.kind)).toEqual(['empty-name', 'same-name'])
+  })
+
+  it('sorts the same-name warnings of one component type by name', () => {
+    const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_A, 'b', 'B', 'a', 'A')])
+    expect(warnings.map((warning) => warning.name)).toEqual(['a', 'b'])
+  })
+
+  it('gives one warning for a view whose component type has no definition', () => {
+    expect(viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_B, '???')])).toEqual([
+      { kind: 'component-type-not-defined', sidecar: 'A.view.json', componentType: TYPE_A },
+    ])
   })
 
   it('gives the warnings of a later view after a view with no definition', () => {
@@ -45,7 +78,10 @@ describe('viewWarnings', () => {
       [TYPE_B, { sidecar: 'B.view.json', componentType: TYPE_B, view }],
     ])
     const warnings = viewWarnings(table, [definition(TYPE_B, '???')])
-    expect(warnings.map((warning) => warning.componentType)).toEqual([TYPE_B])
+    expect(warnings).toEqual([
+      { kind: 'component-type-not-defined', sidecar: 'A.view.json', componentType: TYPE_A },
+      { kind: 'empty-name', sidecar: 'B.view.json', componentType: TYPE_B, fields: ['fld_0'] },
+    ])
   })
 
   it('sorts three warnings that the table gives in each order', () => {
@@ -98,6 +134,26 @@ describe('describeWarning', () => {
       describeWarning({ kind: 'empty-name', sidecar: 'A.view.json', componentType: TYPE_A, fields: ['fld_1'] }),
     ).toBe(
       `wishem: the sidecar A.view.json: the label of the field fld_1 of the component type ${TYPE_A} gives an empty name. The view does not get the field.`,
+    )
+  })
+
+  it('gives the line for two labels that give the same name', () => {
+    expect(
+      describeWarning({
+        kind: 'same-name',
+        sidecar: 'A.view.json',
+        componentType: TYPE_A,
+        name: 'maxHealth',
+        fields: ['fld_0', 'fld_1'],
+      }),
+    ).toBe(
+      `wishem: the sidecar A.view.json: the fields fld_0 and fld_1 of the component type ${TYPE_A} give the same name "maxHealth". The prop has the value of the first field.`,
+    )
+  })
+
+  it('gives the line for a component type with no definition', () => {
+    expect(describeWarning({ kind: 'component-type-not-defined', sidecar: 'A.view.json', componentType: TYPE_A })).toBe(
+      `wishem: the sidecar A.view.json names the component type ${TYPE_A}, which no definition has. No view is drawn for it.`,
     )
   })
 })

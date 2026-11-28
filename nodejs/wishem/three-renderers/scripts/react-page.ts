@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createServer } from 'vite'
+import { quietLinkErrors } from './proxy-errors.ts'
 
 export interface ReactPageOptions {
   /** The port of the page. Default 5175. Use 0 to let the system select a port. */
@@ -55,7 +56,14 @@ export const startReactPage = async (options: ReactPageOptions = {}): Promise<Re
         port,
         strictPort: true,
         ws: false,
-        proxy: { '^/link$': { target: `http://${ADDRESS}:${String(hubPort)}`, ws: true, changeOrigin: false } },
+        proxy: {
+          '^/link$': {
+            target: `http://${ADDRESS}:${String(hubPort)}`,
+            ws: true,
+            changeOrigin: false,
+            configure: quietLinkErrors(linkUrl, log),
+          },
+        },
       },
     })
     await server.listen()

@@ -39,7 +39,7 @@ The protocol has no maximum size for a message. The message `welcome` holds the 
 
 Each number of version 1 is an integer from 0 to 2^53 - 1. This applies to `protocol`, `seq`, `request`, each version of `supported`, and the target of `hub/rewind`. A JSON parser that gives each number as a floating-point number (for example the parser of GDScript) can give `3.0` for `3`. Convert each such number to an integer before you compare it or send it.
 
-A message of the hub side is malformed when `protocol` or `seq` of `welcome`, `seq` of the input of `applied`, or `request` of `result` is not an integer from 0 to 2^53 - 1.
+A message of the hub side is malformed when `protocol` or `seq` of `welcome`, `seq` of the input of `applied`, `request` of `result`, or `seq` of an accepted `result` is not an integer from 0 to 2^53 - 1.
 
 ### No keepalive
 
@@ -221,6 +221,9 @@ A `result` message is malformed when one of these is true:
 - `request` is not an integer from 0 to 2^53 - 1.
 - It has both keys `result` and `error`, or neither of them. A key with the value `null` is present.
 - `result` is present and is not an object with a boolean `ok`.
+- `result` has `ok: true`, and `seq` is not an integer from 0 to 2^53 - 1.
+- `result` has `ok: false`, and `reason` is not one of the reasons in the table below.
+- `result` has `ok: false`, and `problems` is not a list.
 - `error` is present and is not text.
 
 The hub side sends one of the two keys. A `result` message whose `request` matches no `submit` is not malformed. Ignore it and keep the link open.
@@ -238,6 +241,8 @@ The reasons of a rejection:
 | `not-running`   | The hub is not running.                                    |
 | `unknown-type`  | No model subsystem applies this input type.                |
 | `invalid`       | A model subsystem refused the input. `problems` tells why. |
+
+A client that gets a malformed `result` closes the connection and opens a new link, as for each other malformed message. A new reason needs a new protocol version, because a client of an older version ends the link for a reason that it does not know.
 
 Each item of `problems` is an object with a `message` (text) and an optional `path` (list of texts and numbers).
 

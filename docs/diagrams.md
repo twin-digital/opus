@@ -23,22 +23,33 @@ Architecture diagrams use the standard [C4 model](https://c4model.com/).
 
 - **Person:** a human who uses the product. Give the role, not the name of a person.
 - **Software system:** a product of this repository, or an external system that a product connects to. A product is the unit of `openspec/specs/<product>/`.
-- **Container:** a process, a service, a deployable unit, a store of persisted data, or a package that other packages build on. A container is not a Docker container.
+- **Container:** a process, a service, a deployable unit, a browser application, or a store of persisted data. A library package is not a container. A container is not a Docker container.
 - **Component:** a part of one container, such as a module, a folder of modules, or a group of functions with one purpose.
 - **Relationship:** a connection between two elements. It has a direction and a label.
 
 ### The diagrams of a product
 
-| Diagram                                                      | C4 name                  | Rule                                                              |
-| ------------------------------------------------------------ | ------------------------ | ----------------------------------------------------------------- |
-| The users of the product and the systems that it connects to | System context (level 1) | Required                                                          |
-| The runtime units, the stores, and their connections         | Container (level 2)      | Required                                                          |
-| The primary path of the product                              | Dynamic diagram          | Required, one for each product                                    |
-| A different flow                                             | Dynamic diagram          | Optional. The author decides.                                     |
-| The parts of one container                                   | Component (level 3)      | Optional. Only for a container that a new reader must understand. |
-| Classes and functions                                        | Code (level 4)           | Not drawn by hand                                                 |
+| Diagram                                                      | C4 name                          | Rule                                                                                                                                                                       |
+| ------------------------------------------------------------ | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The users of the product and the systems that it connects to | System context (level 1)         | Required                                                                                                                                                                   |
+| The runtime units, the stores, and their connections         | Container (level 2)              | Required                                                                                                                                                                   |
+| The primary path of the product                              | Dynamic diagram                  | Required, one for each product                                                                                                                                             |
+| A different flow                                             | Dynamic diagram                  | Optional. The author decides.                                                                                                                                              |
+| The parts of one container                                   | Component (level 3)              | Optional. Only for a container that a new reader must understand.                                                                                                          |
+| The packages and their dependencies                          | Package dependency view (not C4) | Required for a product with an architecture document and two or more packages that depend on one another. See [The package dependency view](#the-package-dependency-view). |
+| Classes and functions                                        | Code (level 4)                   | Not drawn by hand                                                                                                                                                          |
 
 A dynamic diagram shows the elements of one flow and numbers each relationship in the order of the flow.
+
+### The package dependency view
+
+The package dependency view is not a C4 diagram. It shows the packages of a product and the dependencies between them. A product needs it when the product has an architecture document and two or more packages that depend on one another.
+
+- **Source.** A script makes the view from the `package.json` files of the packages. Do not draw it by hand.
+- **Layers.** Each package sits on a card in a layer band. A runtime dependency goes down to a lower layer or row.
+- **Arrows.** Each runtime dependency has one arrow. An arrow crosses no card. Two arrows share no line. An arrow has no label chip. The legend gives the meaning of the arrow.
+- **Test dependencies.** The card of a package shows its test dependencies as text.
+- **Check.** A check fails when a file of the view is out of date. For Wishem, the command is `node nodejs/wishem/docs/architecture/render.mjs --check`.
 
 ### Entity diagrams
 
@@ -114,17 +125,17 @@ The architecture document is the folder `architecture/` in the `docs/` folder of
 The folder holds these files:
 
 - `README.md`: the architecture document.
-- `<diagram>-light.svg` and `<diagram>-dark.svg`: the two files of each diagram. Use the names `context`, `containers`, `dynamic-<flow>`, `components-<container>`, and `entities-<store>`.
+- `<diagram>-light.svg` and `<diagram>-dark.svg`: the two files of each diagram. Use the names `context`, `containers`, `dynamic-<flow>`, `components-<container>`, `packages`, and `entities-<store>`.
 - `render.mjs`: the script that writes the SVG files.
 
 ### What the document holds
 
-For each diagram, in the order of the C4 levels, then the entity diagrams:
+For each diagram, in the order of the C4 levels, then the package dependency view, then the entity diagrams:
 
 1. A heading with the title of the diagram.
 2. The diagram, in a `picture` element that selects the file for the theme of the reader. The `alt` text says what the diagram shows.
 3. Prose that carries the detail. The diagram tells the story. The prose explains it.
-4. A table of the elements: the name, the type and technology, and the responsibility of each element. For a container, give the package or the folder. For an entity diagram, give each entity, its purpose, and the file of its schema.
+4. A table of the elements: the name, the type and technology, and the responsibility of each element. For a container, give the packages or the folder. For an entity diagram, give each entity, its purpose, and the file of its schema.
 
 At the end, the document links to the specification that names its diagrams and tells how to run `render.mjs`.
 
