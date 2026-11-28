@@ -226,7 +226,7 @@ node nodejs/wishem/docs/architecture/render.mjs --check
 | `renderer-react`    | 3     | The React renderer. It draws React views from a port, and it writes the types of the props of the views.                |
 | `renderer-pixi`     | 3     | The PixiJS renderer. It draws PixiJS views from a port.                                                                 |
 | `renderer-godot`    | 3     | The Godot renderer: the remote port in GDScript, the Godot application, and the Godot runner.                           |
-| `sample-product`    | 3     | The sample product: a model folder with a color and a count, the count behavior, and the React views in `views/react/`. |
+| `sample-product`    | 3     | The sample product: a model folder with a color and a count, the count behavior, the table of color cases (`color-cases`), and the React views in `views/react/`. |
 | `workbench`         | 4     | The base workbench. It holds the first model and a `start` script.                                                      |
 | `workbench-app`     | 4     | The browser application of the workbench: the page, the client of the hub, the views, and the `start` script.           |
 | `pixi-page`         | 4     | The PixiJS page that draws a construct through the link, and a `start` script that serves it.                           |

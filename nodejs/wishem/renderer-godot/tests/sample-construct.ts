@@ -12,6 +12,8 @@ export interface SampleConstructOptions {
   port?: number
   /** Default `false`. */
   paused?: boolean
+  /** Changes the model of the model folder before the start. */
+  edit?: (model: Model) => Model
 }
 
 /** Starts the sample construct with a clock of 500 milliseconds. */
@@ -20,9 +22,10 @@ export const startSampleConstruct = async (options: SampleConstructOptions = {})
   if (data === undefined) {
     throw new Error(`cannot read the model folder of the sample product: ${problems.map((p) => p.message).join('; ')}`)
   }
+  const model = data as Model
   return startProductConstruct({
     id: 'sample',
-    model: data as Model,
+    model: options.edit === undefined ? model : options.edit(model),
     behaviors,
     running: options.paused !== true,
     stepMs: 500,

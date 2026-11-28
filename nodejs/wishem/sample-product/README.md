@@ -38,6 +38,12 @@ The count and the color depend only on the recorded ticks. A replay or a rewind 
 
 Put the `time` subsystem before the update subsystem in the list of subsystems.
 
+## The color cases
+
+A view of the sample product draws the field `color` with this rule. A color is text that matches `#rrggbb`: a hash sign and six hexadecimal digits. The view draws it in lower case. For no value, and for each other value, the view draws the fallback color `#ff00ff`. No view is hidden.
+
+The subpath `@thrashplay/wishem-sample-product/color-cases` exports the table `COLOR_CASES` and the constant `FALLBACK_COLOR`. Each case has a unique `name`, an optional `value`, and the `color` that a view draws. The root entry does not export them. The tests of the three `ClearColor` views check the table.
+
 ## Example
 
 ```ts
