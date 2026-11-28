@@ -94,6 +94,7 @@ describe('createUpdate: the store', () => {
       'product/add-entity',
       'product/remove-entity',
       'product/set-field',
+      'product/clear-field',
       'time/advance',
     ])
     await input.submit(timeInputs.advance(50))
@@ -107,6 +108,26 @@ describe('createUpdate: the store', () => {
     )
     expect(result).toMatchObject({ ok: true })
     expect(counts()).toEqual([9, 0, undefined])
+  })
+
+  it('declares store/clear-field and applies it to its store', async () => {
+    const { input, counts, subsystems } = setup([])
+    expect(subsystems[1]?.inputs).toContain('store/clear-field')
+    const result = await input.submit(storeInputs().clearField({ entity: E1, componentType: COUNTER, field: COUNT }))
+    expect(result).toMatchObject({ ok: true })
+    expect(counts()).toEqual([undefined, 0, undefined])
+  })
+
+  it('keeps a count with no value after a tick, for a behavior that keeps a count that is not a number', async () => {
+    const keep: NativeBehavior = {
+      id: 'test/keep',
+      componentType: COUNTER,
+      update: (fields) => (typeof fields[COUNT] === 'number' ? { ...fields, [COUNT]: fields[COUNT] + 1 } : fields),
+    }
+    const { input, counts } = setup([keep])
+    await input.submit(storeInputs().clearField({ entity: E1, componentType: COUNTER, field: COUNT }))
+    await input.submit(timeInputs.advance(50))
+    expect(counts()).toEqual([undefined, 1, undefined])
   })
 
   it('refuses an input of the store that the store refuses', async () => {

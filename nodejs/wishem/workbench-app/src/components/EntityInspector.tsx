@@ -12,10 +12,11 @@ export interface EntityInspectorProps {
   entity?: { id: Id; name: string; components: readonly InspectedComponent[] }
   options: readonly ReferenceOption[]
   onChange?: (componentType: Id, field: Id, value: FieldValue) => Promise<ChangeOutcome>
+  onClear?: (componentType: Id, field: Id) => Promise<ChangeOutcome>
 }
 
 /** The name and the ID of an entity, and one group of field rows for each of its components. */
-export const EntityInspector = ({ entity, options, onChange }: EntityInspectorProps) => {
+export const EntityInspector = ({ entity, options, onChange, onClear }: EntityInspectorProps) => {
   if (!entity) {
     return (
       <div className='h-32'>
@@ -39,6 +40,7 @@ export const EntityInspector = ({ entity, options, onChange }: EntityInspectorPr
               value={values[field.id]}
               options={options}
               onChange={onChange && ((value) => onChange(definition.id, field.id, value))}
+              onClear={onClear && (() => onClear(definition.id, field.id))}
             />
           ))}
         </fieldset>

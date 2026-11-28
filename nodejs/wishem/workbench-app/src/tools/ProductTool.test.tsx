@@ -6,7 +6,7 @@ import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } fro
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { PRODUCT_SET_FIELD, ProductTool } from './ProductTool.js'
+import { PRODUCT_CLEAR_FIELD, PRODUCT_SET_FIELD, ProductTool } from './ProductTool.js'
 
 const SECOND_ENTITY = 'e_5f0c1d2e-aaaa-4bbb-8ccc-0123456789ab'
 
@@ -108,6 +108,54 @@ describe('ProductTool', () => {
     expect(PRODUCT_SET_FIELD).toBe(
       storeInputs('product').setField({ entity: 'e', componentType: 'c', field: 'f', value: 1 }).type,
     )
+  })
+
+  it('has the clear input type of the store `product`', () => {
+    expect(PRODUCT_CLEAR_FIELD).toBe(
+      storeInputs('product').clearField({ entity: 'e', componentType: 'c', field: 'f' }).type,
+    )
+  })
+
+  const clickClear = async (name: string) => {
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)?.click()
+      await new Promise((done) => setTimeout(done, 0))
+    })
+  }
+
+  it('sends one product/clear-field through the input port and shows no value', async () => {
+    const { hub, output, input } = setup()
+    draw(output, input)
+    select(0)
+    await clickClear('Clear count')
+    const record = hub.record()
+    expect(record).toHaveLength(1)
+    expect(record[0]).toMatchObject({
+      type: PRODUCT_CLEAR_FIELD,
+      source: 'screen-input',
+      payload: { entity: SAMPLE_ENTITY, componentType: COUNTER_TYPE, field: COUNT_FIELD },
+    })
+    expect((output.read().product as Model).entities[0]?.components[COUNTER_TYPE]).toEqual({})
+    expect(textbox('count').value).toBe('')
+    expect(container.querySelector('[role="alert"]')).toBeNull()
+  })
+
+  it('shows the text of outcomeText for the outcome not-running after a clear', async () => {
+    const { output } = setup()
+    const input: InputPort = { submit: () => Promise.resolve({ ok: false, reason: 'not-running', problems: [] }) }
+    draw(output, input)
+    select(0)
+    await clickClear('Clear count')
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      'The value is not cleared. The workbench does not run. Start it, and try again.',
+    )
+  })
+
+  it('disables Clear when there is no input port', () => {
+    const { output } = setup()
+    draw(output, undefined)
+    select(0)
+    expect(container.querySelector('button[aria-label="Clear count"]')?.getAttribute('aria-disabled')).toBe('true')
   })
 
   it('sends one input through the input port and the hub records the source of that port', async () => {

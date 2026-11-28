@@ -10,7 +10,7 @@ import type { RemoteLink } from '@thrashplay/wishem-hub'
 import { runGodot } from '@thrashplay/wishem-renderer-godot'
 import type { GodotRun } from '@thrashplay/wishem-renderer-godot'
 import { storeInputs } from '@thrashplay/wishem-core'
-import type { Entity, Model } from '@thrashplay/wishem-core'
+import type { Model } from '@thrashplay/wishem-core'
 import { COLORS, COLOR_FIELD, COLOR_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
 import { FALLBACK_COLOR } from '@thrashplay/wishem-sample-product/color-cases'
 import {
@@ -207,11 +207,8 @@ await test('the three renderers draw the state of the hub', async () => {
       assert.notEqual(field, undefined, 'the color type has the color field')
       return field ?? { id: COLOR_FIELD, label: '' }
     }
-    await editModel((model) => {
-      const entity = model.entities.find((e) => e.id === SAMPLE_ENTITY)
-      assert.notEqual(entity, undefined, 'the model has the sample entity')
-      ;(entity as Entity).components[COLOR_TYPE] = {}
-    })
+    await submitOk(store.clearField({ entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD }))
+    assert.deepEqual(sampleFields(port.read().store as Model, COLOR_TYPE), {}, 'the Color component has no value')
     await colors(FALLBACK_COLOR, POLL_MS)
 
     // Step 17: a label that gives an empty name gives the fallback color.

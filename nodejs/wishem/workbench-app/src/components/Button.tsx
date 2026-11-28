@@ -1,5 +1,7 @@
 export interface ButtonProps {
   label: string
+  /** The accessible name. It starts with the label. Default: the label. */
+  accessibleName?: string
   variant?: 'plain' | 'maker'
   disabled?: boolean
   busy?: boolean
@@ -16,6 +18,7 @@ const variants = {
 /** A button. A disabled button keeps the focus and the place in the tab order, and a press does nothing. */
 export const Button = ({
   label,
+  accessibleName,
   variant = 'plain',
   disabled = false,
   busy = false,
@@ -25,6 +28,7 @@ export const Button = ({
   <button
     type='button'
     tabIndex={tabIndex}
+    aria-label={accessibleName}
     aria-disabled={disabled ? true : undefined}
     aria-busy={busy ? true : undefined}
     onClick={() => {

@@ -26,6 +26,12 @@ const base = (): Model => ({
 
 const clone = (model: Model): Model => structuredClone(model)
 
+/** Removes one value from a component of a model. */
+const drop = (model: Model, index: number, componentType: string, field: string) => {
+  const { [field]: _removed, ...rest } = model.entities[index].components[componentType]
+  model.entities[index].components[componentType] = rest
+}
+
 const setField = (entityId: string, componentType: string, field: string, value: string): Input => ({
   type: 'store/set-field',
   payload: { entity: entityId, componentType, field, value },
@@ -61,12 +67,6 @@ describe('productChanges', () => {
   })
 
   const replaced: [string, (model: Model) => void][] = [
-    [
-      'a removed field',
-      (model) => {
-        model.entities[0].components[CT_A] = {}
-      },
-    ],
     ['a changed label', (model) => (model.definitions[0].label = 'Renamed')],
     [
       'a new definition',
@@ -107,6 +107,53 @@ describe('productChanges', () => {
     expect(productChanges(base(), after)).toEqual([{ type: 'store/replace-model', payload: { model: after } }])
   })
 
+  const clearField = (entityId: string, componentType: string, field: string): Input => ({
+    type: 'store/clear-field',
+    payload: { entity: entityId, componentType, field },
+  })
+
+  it('gives one clear-field for one removed value', () => {
+    const after = clone(base())
+    drop(after, 1, CT_B, F_B)
+    expect(productChanges(base(), after)).toEqual([clearField(E_2, CT_B, F_B)])
+  })
+
+  it('gives clear-field when the last value of a component is removed and the empty component stays', () => {
+    const after = clone(base())
+    after.entities[0].components[CT_A] = {}
+    expect(productChanges(base(), after)).toEqual([clearField(E_1, CT_A, F_A)])
+  })
+
+  it('gives the set-field first and then the clear-field for a component', () => {
+    const F_C = 'fld_cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+    const before = base()
+    before.definitions[0].fields.push({ id: F_C, label: 'c', type: 'string' })
+    before.entities[0].components[CT_A][F_C] = 'k'
+    const after = clone(before)
+    drop(after, 0, CT_A, F_A)
+    after.entities[0].components[CT_A][F_C] = 'm'
+    expect(productChanges(before, after)).toEqual([setField(E_1, CT_A, F_C, 'm'), clearField(E_1, CT_A, F_A)])
+  })
+
+  it('gives the inputs in the order of the entities and the components', () => {
+    const after = clone(base())
+    drop(after, 0, CT_B, F_B)
+    drop(after, 0, CT_A, F_A)
+    after.entities[1].components[CT_A][F_A] = 'w'
+    expect(productChanges(base(), after)).toEqual([
+      clearField(E_1, CT_A, F_A),
+      clearField(E_1, CT_B, F_B),
+      setField(E_2, CT_A, F_A, 'w'),
+    ])
+  })
+
+  it('gives one replace-model for a removed component', () => {
+    const after = clone(base())
+    const { [CT_B]: _removed, ...rest } = after.entities[0].components
+    after.entities[0].components = rest
+    expect(productChanges(base(), after)).toEqual([{ type: 'store/replace-model', payload: { model: after } }])
+  })
+
   it('gives one replace-model for a component type that an entity did not have', () => {
     const before = base()
     const { [CT_B]: _removed, ...rest } = before.entities[1].components
@@ -126,6 +173,11 @@ describe('productChanges', () => {
     const after = clone(base())
     after.entities[0].components[CT_A][F_A] = 'z'
     expect(productChanges(base(), after, 'product')[0]?.type).toBe('product/set-field')
+    drop(after, 0, CT_B, F_B)
+    expect(productChanges(base(), after, 'product').map((input) => input.type)).toEqual([
+      'product/set-field',
+      'product/clear-field',
+    ])
     after.entities.pop()
     expect(productChanges(base(), after, 'product')[0]?.type).toBe('product/replace-model')
   })
@@ -134,6 +186,7 @@ describe('productChanges', () => {
     const after = clone(base())
     after.entities[0].components[CT_A][F_A] = 'p'
     after.entities[1].components[CT_B][F_B] = 'r'
+    drop(after, 0, CT_B, F_B)
     const hub = createHub({ subsystems: [createStore({ model: base() })] })
     const port = hub.attach({ id: 'tester', kind: 'input' })
     hub.start()

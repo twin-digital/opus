@@ -142,29 +142,51 @@ export const Components = () => (
       </div>
     </Specimen>
     <Specimen label='Field row, string'>
-      <FieldRow field={field('color', 'string')} value='#1d4ed8' onChange={keep} />
+      <FieldRow field={field('color', 'string')} value='#1d4ed8' onChange={keep} onClear={keep} />
     </Specimen>
     <Specimen label='Field row, number'>
-      <FieldRow field={field('count', 'number')} value={0} onChange={keep} />
+      <FieldRow field={field('count', 'number')} value={0} onChange={keep} onClear={keep} />
     </Specimen>
     <Specimen label='Field row, boolean'>
-      <FieldRow field={field('on', 'boolean')} value onChange={keep} />
+      <FieldRow field={field('on', 'boolean')} value onChange={keep} onClear={keep} />
     </Specimen>
     <Specimen label='Field row, reference'>
-      <FieldRow field={field('target', 'reference')} value='e_5f0c1d2e' options={options} onChange={keep} />
+      <FieldRow
+        field={field('target', 'reference')}
+        value='e_5f0c1d2e'
+        options={options}
+        onChange={keep}
+        onClear={keep}
+      />
     </Specimen>
     <Specimen label='Field row, no value'>
-      <FieldRow field={field('label', 'string')} value={undefined} onChange={keep} />
+      <FieldRow field={field('label', 'string')} value={undefined} onChange={keep} onClear={keep} />
     </Specimen>
     <Specimen label='Field row, saving'>
-      <FieldRow field={field('count', 'number')} value={0} onChange={keep} initial={{ state: 'saving', draft: '7' }} />
+      <FieldRow
+        field={field('count', 'number')}
+        value={0}
+        onChange={keep}
+        onClear={keep}
+        initial={{ state: 'saving', draft: '7' }}
+      />
     </Specimen>
     <Specimen label='Field row, not saved'>
       <FieldRow
         field={field('count', 'number')}
         value={0}
         onChange={keep}
+        onClear={keep}
         initial={{ state: 'not-saved', draft: 'ten', reason: 'Type a number.' }}
+      />
+    </Specimen>
+    <Specimen label='Field row, not cleared'>
+      <FieldRow
+        field={field('count', 'number')}
+        value={0}
+        onChange={keep}
+        onClear={keep}
+        initial={{ state: 'not-cleared', reason: 'The workbench does not run. Start it, and try again.' }}
       />
     </Specimen>
     <Specimen label='Field row, disabled'>
@@ -178,11 +200,12 @@ export const Components = () => (
         entity={{ id: SAMPLE_ENTITY, name: 'Color, Counter', components: sampleComponents }}
         options={options}
         onChange={keep}
+        onClear={keep}
       />
     </Specimen>
     <Specimen label='Product panel'>
       <div className='w-[720px]'>
-        <ProductPanel model={model} selected={SAMPLE_ENTITY} onSelect={select} onChange={keep} />
+        <ProductPanel model={model} selected={SAMPLE_ENTITY} onSelect={select} onChange={keep} onClear={keep} />
       </div>
     </Specimen>
     <Specimen label='Button'>

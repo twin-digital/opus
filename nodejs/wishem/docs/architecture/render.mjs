@@ -1106,7 +1106,7 @@ const componentsPage = {
   name: 'components-page',
   title: 'Component diagram: the page of the workbench',
   description:
-    'The page has ten components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The product panel reads the part product and sends product/set-field. The run controls read the part constructs and send the controls through the same ports, and read the part time of the stage. The stage connects to the product construct through the workbench process, with its own link, and mounts the views of the product. The views, the product panel, the run controls, and the stage draw with the catalog.',
+    'The page has ten components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The product panel reads the part product and sends product/set-field and product/clear-field. The run controls read the part constructs and send the controls through the same ports, and read the part time of the stage. The stage connects to the product construct through the workbench process, with its own link, and mounts the views of the product. The views, the product panel, the run controls, and the stage draw with the catalog.',
   width: WIDTH_PX,
   height: P_LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -1151,7 +1151,7 @@ const componentsPage = {
     rel(
       'quiet',
       [left(pPanel), [P_LANE.panel, P_MID(4)], [P_LANE.panel, P_PANEL_Y], [620, P_PANEL_Y], top(pClient, 620)],
-      'Reads part product and sends product/set-field [ports]',
+      'Reads part product and sends set-field and clear-field [ports]',
       [380, P_PANEL_Y],
     ),
     rel('quiet', [right(pPanel), left(pCatalog, P_MID(4))], 'Draws with', [478, P_MID(4)]),

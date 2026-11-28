@@ -3,8 +3,8 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { constructInputs, type ConstructEntry, type ConstructList } from '@thrashplay/wishem-construct-manager'
-import { openLink, webSocketChannel, type Port } from '@thrashplay/wishem-hub'
-import { COUNT_FIELD } from '@thrashplay/wishem-sample-product'
+import { openLink, webSocketChannel, type Port, type RecordedInput } from '@thrashplay/wishem-hub'
+import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE } from '@thrashplay/wishem-sample-product'
 
 const productFolder = join(import.meta.dirname, '..', '.e2e-run-product')
 const statePath = join(productFolder, 'state.json')
@@ -160,6 +160,49 @@ test('steps 6, 7: an edit of the model while paused, and a hand edit while runni
   await writeFile(statePath, text.replace(new RegExp(`("${COUNT_FIELD}": *)100`), '$1500'))
   await expect.poll(async () => count(stage)).toBeGreaterThanOrEqual(500)
   await expect(status).toHaveText('Running')
+})
+
+test('step 6: a clear of the color while play is paused keeps the count and sends clear-field', async ({ page }) => {
+  await page.goto('/')
+  const { status, stage, control, tick } = parts(page)
+  await control('Run').click()
+  await expect(status).toHaveText('Running')
+  await expect.poll(async () => count(stage)).toBeGreaterThan(10)
+  await control('Pause').click()
+  await expect(status).toHaveText('Paused')
+  const pausedTick = await tick()
+  const pausedCount = await count(stage)
+
+  const { link, entry } = await workbenchLink()
+  const play = await openLink(await webSocketChannel(new WebSocket(entry()?.link ?? '')), [
+    { id: 'guide-play', kind: 'input' },
+  ])
+  const applied: RecordedInput[] = []
+  play.ports['guide-play'].subscribe((event) => {
+    if (event.type === 'applied') {
+      applied.push(event.input)
+    }
+  })
+  try {
+    await page.getByRole('button', { name: /Counter, Color/ }).click()
+    await page.getByRole('button', { name: 'Clear color', exact: true }).click()
+    await expect.poll(() => applied.filter((input) => input.type === 'store/clear-field').length).toBe(1)
+    const input = applied.find((recorded) => recorded.type === 'store/clear-field')
+    expect(input?.source).toBe('construct-manager')
+    const model = play.ports['guide-play'].read().store as {
+      entities: { components: Record<string, Record<string, unknown>> }[]
+    }
+    const fields = model.entities[0].components
+    expect(fields[COLOR_TYPE]).toEqual({})
+    expect(fields[COLOR_TYPE]).not.toHaveProperty(COLOR_FIELD)
+    expect(fields[COUNTER_TYPE][COUNT_FIELD]).toBe(pausedCount)
+    expect(applied.filter((recorded) => recorded.type === 'store/replace-model')).toHaveLength(0)
+    expect(await tick()).toBe(pausedTick)
+    expect(await count(stage)).toBe(pausedCount)
+  } finally {
+    play.close()
+    link.close()
+  }
 })
 
 test('step 8: a step back at the start is not enabled', async ({ page }) => {

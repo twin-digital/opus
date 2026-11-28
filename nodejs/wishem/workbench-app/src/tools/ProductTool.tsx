@@ -1,18 +1,23 @@
 import type { Id, Model } from '@thrashplay/wishem-core'
 import { sendInput, type InputPort, type PortReader } from '@thrashplay/wishem-renderer-react'
 import { useLayoutEffect, useRef, useState, type FocusEvent, type ReactNode } from 'react'
+import type { ChangeOutcome } from '../components/FieldRow.js'
 import { ProductPanel } from '../components/ProductPanel.js'
 import { outcomeText } from '../outcome-text.js'
 import { usePart } from './use-part.js'
 
-/** The input type of the store `product`. */
+/** The input types of the store `product`. */
 export const PRODUCT_SET_FIELD = 'product/set-field'
+export const PRODUCT_CLEAR_FIELD = 'product/clear-field'
 
 export interface ProductToolProps {
   port: PortReader
   /** With no value, each control is disabled. */
   input: InputPort | undefined
 }
+
+const toChange = (outcome: Awaited<ReturnType<typeof sendInput>>): ChangeOutcome =>
+  outcome.ok ? { saved: true } : { saved: false, reason: outcomeText(outcome, 'the value') }
 
 /** Draws nothing when the port reads no part `product`. */
 export const ProductTool = ({ port, input }: ProductToolProps): ReactNode => {
@@ -65,7 +70,14 @@ export const ProductTool = ({ port, input }: ProductToolProps): ReactNode => {
           input &&
           (async (change) => {
             const outcome = await sendInput(input, { type: PRODUCT_SET_FIELD, payload: change })
-            return outcome.ok ? { saved: true } : { saved: false, reason: outcomeText(outcome, 'the value') }
+            return toChange(outcome)
+          })
+        }
+        onClear={
+          input &&
+          (async (change) => {
+            const outcome = await sendInput(input, { type: PRODUCT_CLEAR_FIELD, payload: change })
+            return toChange(outcome)
           })
         }
       />
