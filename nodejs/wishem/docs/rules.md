@@ -113,3 +113,8 @@ Rejected: a mesh, in which subsystems communicate with each other and the hub is
 For the first versions of Wishem, the hub of each construct is in a Node.js process. A renderer is in a different process, such as a page in a web browser or an engine, and it reaches the hub through the link. Each renderer must work through the link. A demonstration of a renderer has a construct of its own and does not use the hub of the workbench.
 Reason: the link between a hub and a renderer in different processes is the thing that the renderers must prove. A hub in the page of a renderer proves only that a library can draw from a port.
 Rejected: a hub in the page of a renderer, with no link. The owner rejected it for the PixiJS renderer on 2026-11-27.
+
+**R22. One model subsystem is the update subsystem of a tick. A behavior is data and code that this subsystem runs. A behavior is not a subsystem.** (**Agreed**)
+The update subsystem runs the behaviors in an order that the specification of the update subsystem gives. It gives each behavior the delta of the tick. Rule R4 gives the contract of a behavior.
+Reason: the order of the rules of a tick is in one place, and the workbench can show it. A rule can read what an earlier rule did in the same tick. No rule wraps the store by itself.
+Rejected: each rule is a model subsystem of its own, in the order of a list in code. The order is then the order of the wraps. A rule cannot easily read what a different rule did in the same tick. Each rule that changes entities wraps the store again.

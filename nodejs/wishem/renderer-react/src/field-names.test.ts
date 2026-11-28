@@ -54,6 +54,25 @@ describe('propNames', () => {
     expect(result.problems).toEqual([{ kind: 'name-starts-with-digit', field: 'fld_0', name: '2ndLine' }])
   })
 
+  it('reports a name that starts with the digit 0', () => {
+    const result = propNames(definition('0th line'))
+    expect(result.problems).toEqual([{ kind: 'name-starts-with-digit', field: 'fld_0', name: '0thLine' }])
+  })
+
+  it('does not report a digit after the first character of a name', () => {
+    const result = propNames(definition('Line 2', 'title1'))
+    expect(result.problems).toEqual([])
+    expect(result.props.map((prop) => prop.name)).toEqual(['line2', 'title1'])
+  })
+
+  it('reports each empty name, and no name that two fields share', () => {
+    const result = propNames(definition('???', '---'))
+    expect(result.problems).toEqual([
+      { kind: 'empty-name', field: 'fld_0' },
+      { kind: 'empty-name', field: 'fld_1' },
+    ])
+  })
+
   it('reports two labels with one name, and keeps the first field only', () => {
     const result = propNames(definition('Max health', 'other', 'max-health'))
     expect(result.problems).toEqual([{ kind: 'same-name', name: 'maxHealth', fields: ['fld_0', 'fld_2'] }])
