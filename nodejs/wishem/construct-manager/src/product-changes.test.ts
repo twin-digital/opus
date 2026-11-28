@@ -10,6 +10,10 @@ const F_B = 'fld_bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const E_1 = 'e_11111111-1111-4111-8111-111111111111'
 const E_2 = 'e_22222222-2222-4222-8222-222222222222'
 const E_3 = 'e_33333333-3333-4333-8333-333333333333'
+const E_4 = 'e_44444444-4444-4444-8444-444444444444'
+const CT_L = 'ct_cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+const F_REF = 'fld_dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+const F_LIST = 'fld_eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
 
 const entity = (id: string, a: string, b?: string): Entity => ({
   id,
@@ -105,18 +109,6 @@ describe('productChanges', () => {
       'a new definition',
       (model) => {
         model.definitions.push({ id: 'ct_cccccccc-cccc-4ccc-8ccc-cccccccccccc', label: 'C', fields: [] })
-      },
-    ],
-    [
-      'a new entity',
-      (model) => {
-        model.entities.push(entity(E_3, 'n'))
-      },
-    ],
-    [
-      'a removed entity',
-      (model) => {
-        model.entities.pop()
       },
     ],
     [
@@ -221,8 +213,12 @@ describe('productChanges', () => {
       'product/set-field',
       'product/clear-field',
     ])
-    after.entities.pop()
+    after.definitions[0].label = 'Renamed'
     expect(productChanges(base(), after, 'product')[0]?.type).toBe('product/replace-model')
+    const added = clone(base())
+    added.entities.push(entity(E_3, 'n'))
+    expect(productChanges(base(), added, 'product').map((input) => input.type)).toEqual(['product/add-entity'])
+    expect(productChanges(added, base(), 'product').map((input) => input.type)).toEqual(['product/remove-entity'])
   })
 
   it('gives inputs that change a store from the model before to the model after', async () => {
@@ -237,5 +233,185 @@ describe('productChanges', () => {
       expect((await port.submit(input)).ok).toBe(true)
     }
     expect(isEqual(hub.read().store as Model, after)).toBe(true)
+  })
+
+  describe('added and removed entities', () => {
+    interface Links {
+      a?: string
+      ref?: string
+      list?: string[]
+    }
+
+    const linked = (id: string, { a = '', ref, list }: Links = {}): Entity => ({
+      id,
+      components: {
+        [CT_A]: { [F_A]: a },
+        [CT_L]: { ...(ref === undefined ? {} : { [F_REF]: ref }), ...(list === undefined ? {} : { [F_LIST]: list }) },
+      },
+    })
+
+    const modelOf = (...entities: Entity[]): Model => ({
+      definitions: [
+        { id: CT_A, label: 'A', fields: [{ id: F_A, label: 'a', type: 'string' }] },
+        {
+          id: CT_L,
+          label: 'L',
+          fields: [
+            { id: F_REF, label: 'ref', type: 'reference' },
+            { id: F_LIST, label: 'list', type: 'reference-list' },
+          ],
+        },
+      ],
+      entities,
+    })
+
+    const [e1, e2, e3, e4] = [E_1, E_2, E_3, E_4].map((id) => linked(id))
+
+    const add = (added: Entity, index?: number): Input => ({
+      type: 'store/add-entity',
+      payload: index === undefined ? { entity: added } : { entity: added, index },
+    })
+    const remove = (id: string): Input => ({ type: 'store/remove-entity', payload: { entity: id } })
+    const set = (id: string, componentType: string, field: string, value: unknown): Input => ({
+      type: 'store/set-field',
+      payload: { entity: id, componentType, field, value },
+    })
+    const clear = (id: string, field: string): Input => ({
+      type: 'store/clear-field',
+      payload: { entity: id, componentType: CT_L, field },
+    })
+    const replace = (model: Model): Input => ({ type: 'store/replace-model', payload: { model } })
+
+    const cases: [string, Model, Model, Input[]][] = [
+      ['an entity at the end', modelOf(e1, e2), modelOf(e1, e2, e3), [add(e3)]],
+      ['an entity at the start', modelOf(e1, e2), modelOf(e3, e1, e2), [add(e3, 0)]],
+      ['an entity between two entities', modelOf(e1, e2), modelOf(e1, e3, e2), [add(e3, 1)]],
+      ['two new entities one after the other', modelOf(e1, e2), modelOf(e1, e3, e4, e2), [add(e3, 1), add(e4, 2)]],
+      ['a removed entity at the start', modelOf(e1, e2, e3), modelOf(e2, e3), [remove(E_1)]],
+      ['a removed entity in the middle', modelOf(e1, e2, e3), modelOf(e1, e3), [remove(E_2)]],
+      ['a removed entity at the end', modelOf(e1, e2, e3), modelOf(e1, e2), [remove(E_3)]],
+      [
+        'a removed entity and a new entity at its position',
+        modelOf(e1, e2, e3),
+        modelOf(e1, e4, e3),
+        [add(e4, 1), remove(E_2)],
+      ],
+      [
+        'an added entity, a removed entity, and a changed value',
+        modelOf(linked(E_1, { a: 'x' }), e2),
+        modelOf(linked(E_1, { a: 'y' }), e3),
+        [add(e3, 1), set(E_1, CT_A, F_A, 'y'), remove(E_2)],
+      ],
+      [
+        'a new entity that names an entity of the two models',
+        modelOf(e1, e2),
+        modelOf(e1, e2, linked(E_3, { ref: E_1 })),
+        [add(linked(E_3, { ref: E_1 }))],
+      ],
+      [
+        'an entity of the two models that names a new entity',
+        modelOf(e1, e2),
+        modelOf(linked(E_1, { ref: E_3 }), e2, e3),
+        [add(e3), set(E_1, CT_L, F_REF, E_3)],
+      ],
+      [
+        'two new entities that name each other',
+        modelOf(e1),
+        modelOf(e1, linked(E_2, { ref: E_3 }), linked(E_3, { ref: E_2 })),
+        [add(e2), add(linked(E_3, { ref: E_2 })), set(E_2, CT_L, F_REF, E_3)],
+      ],
+      [
+        'a new entity that names itself',
+        modelOf(e1),
+        modelOf(e1, linked(E_2, { ref: E_2 })),
+        [add(linked(E_2, { ref: E_2 }))],
+      ],
+      [
+        'two removed entities that name each other',
+        modelOf(e1, linked(E_2, { ref: E_3 }), linked(E_3, { ref: E_2 })),
+        modelOf(e1),
+        [clear(E_2, F_REF), clear(E_3, F_REF), remove(E_2), remove(E_3)],
+      ],
+      [
+        'a reference that moves from a removed entity to a new entity',
+        modelOf(linked(E_1, { ref: E_2 }), e2),
+        modelOf(linked(E_1, { ref: E_3 }), e3),
+        [add(e3, 1), set(E_1, CT_L, F_REF, E_3), remove(E_2)],
+      ],
+      [
+        'a removed entity that names an entity of the two models',
+        modelOf(e1, linked(E_2, { ref: E_1 })),
+        modelOf(e1),
+        [remove(E_2)],
+      ],
+      [
+        'a list of an entity of the two models that holds a removed entity',
+        modelOf(linked(E_1, { list: [E_2, E_3] }), e2, e3),
+        modelOf(linked(E_1, { list: [E_2] }), e2),
+        [set(E_1, CT_L, F_LIST, [E_2]), remove(E_3)],
+      ],
+      [
+        'a new entity whose list holds an entity that is added later',
+        modelOf(e1),
+        modelOf(e1, linked(E_2, { list: [E_3] }), e3),
+        [add(e2), add(e3), set(E_2, CT_L, F_LIST, [E_3])],
+      ],
+      [
+        'a new entity whose list holds its own ID',
+        modelOf(e1),
+        modelOf(e1, linked(E_2, { list: [E_2] })),
+        [add(linked(E_2, { list: [E_2] }))],
+      ],
+      [
+        'two removed entities whose lists hold each other',
+        modelOf(e1, linked(E_2, { list: [E_3] }), linked(E_3, { list: [E_2] })),
+        modelOf(e1),
+        [clear(E_2, F_LIST), clear(E_3, F_LIST), remove(E_2), remove(E_3)],
+      ],
+      [
+        'an equal list in a new object, with an addition',
+        modelOf(linked(E_1, { list: [E_2] }), e2),
+        modelOf(linked(E_1, { list: [E_2] }), e2, e3),
+        [add(e3)],
+      ],
+    ]
+
+    const replaced: [string, Model, Model][] = [
+      ['a new order of the entities of the two models, with an addition', modelOf(e1, e2), modelOf(e2, e1, e3)],
+      [
+        'a new definition with an addition',
+        modelOf(e1, e2),
+        { ...modelOf(e1, e2, e3), definitions: [...modelOf().definitions, { id: CT_B, label: 'B', fields: [] }] },
+      ],
+      [
+        'a new component of an entity of the two models, with an addition',
+        modelOf(e1, e2),
+        modelOf({ id: E_1, components: { [CT_A]: { [F_A]: '' } } }, e2, e3),
+      ],
+    ]
+
+    const applied = async (before: Model, inputs: Input[]): Promise<Model> => {
+      const hub = createHub({ subsystems: [createStore({ model: before })] })
+      const port = hub.attach({ id: 'tester', kind: 'input' })
+      hub.start()
+      for (const input of inputs) {
+        const result = await port.submit(input)
+        expect(result, JSON.stringify(input)).toMatchObject({ ok: true })
+      }
+      return hub.read().store as Model
+    }
+
+    it.each([
+      ...cases,
+      ...replaced.map(([name, before, after]): [string, Model, Model, Input[]] => [
+        name,
+        before,
+        after,
+        [replace(after)],
+      ]),
+    ])('gives the exact inputs for %s, and the store holds the model after', async (_name, before, after, inputs) => {
+      expect(productChanges(before, after)).toEqual(inputs)
+      expect(isEqual(await applied(before, productChanges(before, after)), after)).toBe(true)
+    })
   })
 })

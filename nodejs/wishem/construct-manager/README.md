@@ -48,9 +48,13 @@ await client.submit(constructInputs.stop('play'))
 `productChanges(before, after, storeId?)` returns the inputs that change a store from the model `before` to the model `after`. The default `storeId` is `store`.
 
 - Equal models give no input.
-- When only field values differ, the result has, for each component in the order of the entities and the components, one `<storeId>/set-field` for each changed value and then one `<storeId>/clear-field` for each removed value.
-- A running product construct keeps its live values after a `set-field` or a `clear-field`.
-- Each other change, such as a removed component, gives one `<storeId>/replace-model` with `after`.
+- When the definitions are equal, the entities that both models hold are in the same order, and each of them has the same component types, the result has no `replace-model`. It has three phases:
+  1. One `<storeId>/add-entity` for each added entity, in the order of `after`. The payload has an `index` that places the entity after the entity before it in `after`. It has no `index` when the entity goes last.
+  2. For each entity that both models hold, one `<storeId>/set-field` for each changed value and then one `<storeId>/clear-field` for each removed value. Then one `set-field` for each value that phase 1 left out.
+  3. One `<storeId>/clear-field` for each `reference` or `reference-list` value of a removed entity that names a different removed entity. Then one `<storeId>/remove-entity` for each removed entity.
+- A `reference` value or a `reference-list` value that names an entity that a later `add-entity` adds waits for a `set-field` of phase 2. A changed list goes as one `set-field` with the full list. A list of an entity that both models hold, and that names a removed entity, changes in phase 2 before the removal.
+- A running product construct keeps the live values of each other entity after these inputs. An added entity has its authored values.
+- Each other change gives one `<storeId>/replace-model` with `after`: a changed definition, a new order of the entities that both models hold, and an added or removed component.
 
 ```ts
 import { productChanges } from '@thrashplay/wishem-construct-manager'
