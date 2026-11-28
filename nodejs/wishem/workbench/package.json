@@ -31,7 +31,7 @@
     "clean": "clean",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "start": "wishem start ./model",
+    "start": "exec wishem start ./model",
     "test": "opus-test",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"

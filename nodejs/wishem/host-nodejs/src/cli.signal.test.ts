@@ -39,7 +39,7 @@ describe('the stop signal during the start of the wishem command', () => {
     output = []
     exitCodes = []
     close = vi.fn<() => Promise<void>>(() => Promise.resolve())
-    vi.spyOn(process, 'once').mockImplementation(((event: string, handler: Handler) => {
+    vi.spyOn(process, 'on').mockImplementation(((event: string, handler: Handler) => {
       handlers.set(event, handler)
       return process
     }) as never)

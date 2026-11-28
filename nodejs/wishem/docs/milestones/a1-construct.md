@@ -87,7 +87,7 @@ The command stays in the foreground and prints no more lines.
 
 In terminal 1, press Ctrl+C.
 
-Result: the command stops and the terminal shows the prompt again. The command prints no line. The exit code is 0 (the writer checked the code when the writer ran the file `bin/wishem.js` directly with Node.js, not through pnpm).
+Result: the command stops and the terminal shows the prompt again. The command prints no line. The exit code is 0 when Node.js runs the command directly. The command `pnpm exec` ends with the signal SIGINT (shell exit code 130), because pnpm cannot replace itself with the command. The `start` scripts of the packages use `exec`, and `pnpm start` ends with exit code 0.
 
 If a client was connected, its link closes. Section 3 shows that.
 
