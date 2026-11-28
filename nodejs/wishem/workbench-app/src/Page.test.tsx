@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { createStore } from '@thrashplay/wishem-core'
+import { createStore, storeInputs } from '@thrashplay/wishem-core'
 import { createHub, type Hub, type Port } from '@thrashplay/wishem-hub'
 import type { ViewProps, ViewTable, ViewTools } from '@thrashplay/wishem-renderer-react'
+import { COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -101,5 +102,69 @@ describe('Page', () => {
     const result = await captured.tools?.setField('title', 'Renamed')
     expect(result).toMatchObject({ ok: false, reason: 'not-permitted' })
     expect(hub.record()).toHaveLength(0)
+  })
+
+  describe('with the part product', () => {
+    const productModel = {
+      definitions: [
+        { id: COUNTER_TYPE, label: 'Counter', fields: [{ id: COUNT_FIELD, label: 'count', type: 'number' }] },
+      ],
+      entities: [{ id: SAMPLE_ENTITY, components: { [COUNTER_TYPE]: { [COUNT_FIELD]: 0 } } }],
+    }
+    const productHub = (): Hub => {
+      const hub = createHub({
+        subsystems: [
+          createStore({ model: { definitions: [definition], entities: state.entities } }),
+          createStore({ id: 'product', model: productModel }),
+        ],
+      })
+      hub.start()
+      return hub
+    }
+
+    it('shows the product panel in the main element and no zero state', () => {
+      const hub = productHub()
+      draw({ port: hub.attach({ id: 'screen', kind: 'output' }), input: undefined, views })
+      const main = container.querySelector('main')
+      expect(main?.querySelector('nav[aria-label="Entities"]')).not.toBeNull()
+      expect(container.textContent).not.toContain('Nothing to show yet.')
+      expect(container.querySelector('header')?.textContent).toBe('Wishem.')
+    })
+
+    it('shows the zero state and no panel with no part product', () => {
+      draw({ port: basePort(), input: undefined, views })
+      expect(container.querySelector('nav')).toBeNull()
+      expect(container.textContent).toContain('Nothing to show yet.')
+    })
+
+    it('sends a commit as one product/set-field with the source of the input port', async () => {
+      const hub = productHub()
+      const output = hub.attach({ id: 'screen', kind: 'output' })
+      const input = hub.attach({ id: 'screen-input', kind: 'input' })
+      draw({ port: output, input, views })
+      act(() => {
+        container.querySelector<HTMLButtonElement>('nav button')?.click()
+      })
+      const field = container.querySelector<HTMLInputElement>('input[type="text"]')
+      act(() => {
+        Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(field, '4')
+        field?.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      await act(async () => {
+        field?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+        await new Promise((done) => setTimeout(done, 0))
+      })
+      const record = hub.record()
+      expect(record).toHaveLength(1)
+      expect(record[0]?.source).toBe('screen-input')
+      expect(record[0]?.type).toBe(
+        storeInputs('product').setField({
+          entity: SAMPLE_ENTITY,
+          componentType: COUNTER_TYPE,
+          field: COUNT_FIELD,
+          value: 4,
+        }).type,
+      )
+    })
   })
 })
