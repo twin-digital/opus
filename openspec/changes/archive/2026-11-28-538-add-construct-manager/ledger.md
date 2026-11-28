@@ -75,7 +75,34 @@ Task 3: fix round 2 implemented, commit 69156b21 (reportTruth reports `stopped` 
 Task 3: fix round 2/5 (1 addressed, 0 open — R3; commits aca91f0..69156b2). Re-review (sonnet): each case of the spec checked against the new rule of reportTruth (a stop that the person asks for, a stop of the workbench, a rewind to a false status, a start that fails); no new breakage.
 Task 3: minor (deferred, for the final review): when a stop and a start are both applied before the manager handles the stop, reconcile() sees want running with a live construct and keeps it (its record does not start again at 0), which differs from the scenario "A stop and a start" of the spec; the status is not false; no test covers it.
 Task 3: complete (commits 574e647..69156b2, 2 fix rounds, review clean)
+Task 4: dispatched (implementer: sonnet), base 2e453684
+
+Task 4: implementer DONE_WITH_CONCERNS, commit 8a1ceaa7 (start.test.ts 54; 10 of 12 new tests failed first; workbench-app 259 tests, lint, typecheck pass; test:ui 51, no baseline changed; test guide steps 1 to 19 pass, step 20 needs a browser; each package and value import in the diagram and tables). Concerns: the links to the two new specs work after the archive; nodejs/wishem/CLAUDE.md describes construct-manager only as the construct list and productChanges (not in the file list); step 10: the not-permitted result has `problems: []`, design.md shows a message; step 16: state.json equals the copy as JSON, not as bytes; the child-process tests need each wishem package built; a Docker container of another user runs on the host. Review dispatched (sonnet).
+
+Task 4: review (sonnet): needs fixes. The code and the tests agree with the brief (the load order, the close order, the three failure paths, INIT_CWD, SIGINT). Spec ❌ / Important D1: the architecture README still says "the diagram shows no relationship" to sample-product and "Only the test of workbench-app depends on it", against the new arrow and the dependency list. Items it could not verify: the light SVG after the last move of a chip (the implementer did not look). The `problems: []` of a refused rewind comes from hub.ts of Task 1 (reject('not-permitted') with an empty list), not from Task 4; design.md shows a message.
+Ruling: the fix round takes D1, the line of construct-manager in nodejs/wishem/CLAUDE.md (Decision 13 asks for the package list; the file was not in the list of the brief), a try/finally in close() of the start script (a throw of manager.close() keeps the page server and the construct open), and a look at the light SVG — cost if wrong: small.
+Ruling: the example of a refused rewind in design.md changes to the real result (the reason `not-permitted` with an empty list of problems), with openspec-update-change — the code of Task 1 and its tests give it — cost if wrong: one example line.
+Task 4: minor (deferred): the card text of render.mjs and the Mermaid text of design.md differ a little; the child-process tests need the packages built.
+Task 4: fix round 1 dispatched (new implementer, sonnet), base 8a1ceaa7.
 
 ## State at the end of the session of 2026-11-28
 
 - NEXT STEP: Task 4 (the workbench runs the construct manager, and the documents). Then the final review.
+
+Task 4: fix round 1 implemented, commit d8ed006d (workbench-app lint, typecheck, test pass, 261 tests; the new test failed 2, then passed; close() and the failure path close each part also when manager.close() throws, tested with a mock of attachConstructManager; the light image shows no overlap; design.md changed with openspec-update-change). Re-review dispatched (sonnet).
+Task 4: fix round 1/5 (5 addressed, 0 open — D1, the CLAUDE.md line, the try/finally of close(), the light SVG, the example of a refused rewind; commits 8a1ceaa..d8ed006). Re-review (sonnet): all findings addressed, no new breakage. Minor: in close(), a throw of keeper.stop() skips manager.close() (the server and the construct still close).
+Task 4: minor (deferred, for the final review): the line above; the comments "Ignored." in start.ts say little.
+Task 4: complete (commits 8a1ceaa..d8ed006, 1 fix round, review clean)
+
+Main merged (#635; auto-merge of start-construct.test.ts, no conflict). Final review: dispatched (opus), range 343bf6e4..cf6c2e87.
+
+Final review (opus): ready after one text fix. Test guide steps 1 to 16 and 18 to 20 PASS with real processes and the Docker browser; step 17 PARTIAL (the product construct stops and `node scripts/start.ts` exits 0, but `pnpm --filter … start` ends with "Command failed with signal SIGINT", as on main, #624). Checks pass (construct-manager, hub, host-nodejs, sample-product, workbench-app 261). Architecture check: no finding; render.mjs reproduces the SVG files. Important I1: design.md:766 and specs/wishem/workbench/construct-manager/spec.md:159 say the command of step 17 exits 0. Minor: M1 stop and start in one tick keep the old construct (reproduced; fix before #539); M2 `item.given` set before the inputs are sent; M3 a throw of keeper.stop() skips manager.close(), and the comments "Ignored."; M4 the changeset text; M5 the architecture README omits PRODUCT_ID; M6 test gaps of Tasks 1 and 2; M7 the README example of host-nodejs uses an undefined `counter`.
+Ruling: the fix wave takes I1 (the text says that the start script exits 0 and that pnpm reports the signal, #624; with openspec-update-change), M3, M4, M5, M7 — each is small and in the files of this change — cost if wrong: small.
+Ruling: M1 becomes a follow-up issue in A4, blocking #539 (it changes the contract of the construct list); M2 and M6 become one follow-up issue in R1 Tech Debt — cost if wrong: a restart control of #539 that does not restart.
+Final review: fix wave dispatched (one implementer, sonnet), base cf6c2e87.
+Follow-up issues: #642 (M1, Bug, A4, blocks #539), #643 (M2 and M6, R1 Tech Debt).
+
+Final review: fix wave implemented, commit 1797e591 (workbench-app 262, host-nodejs 269; the M3 test failed first; validate --strict valid). Concerns: the empty catch blocks became .catch(() => undefined) for no-empty; no test covers the README example of M7; the test guide says pnpm reports the signal (#624). Re-review dispatched (sonnet), range cf6c2e87..1797e591.
+Final review: re-review (sonnet): all findings addressed, no new breakage. Out of scope: the .catch of the start-error path hides a rejection of server.close() (as before); the README example has no import line (as the other snippets).
+
+Main merged in progress (#605, #636): conflicts in the architecture README, render.mjs, and the two container SVG files. Merge resolution dispatched (one implementer, sonnet).
