@@ -59,7 +59,7 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/wishem-core](./nodejs/wishem/core): The model, the validation, and the store of Wishem. Runs with no Node.js API.
 - [@thrashplay/wishem-host-nodejs](./nodejs/wishem/host-nodejs): Runs a Wishem construct in a Node.js process. Reads and writes a model folder, serves the link of the hub over local WebSocket, and provides the wishem command.
 - [@thrashplay/wishem-hub](./nodejs/wishem/hub): The hub of a Wishem construct. Joins the joined state, orders the inputs, and keeps the record. Runs with no Node.js API.
-- [@thrashplay/wishem-pixi-page](./nodejs/wishem/pixi-page): The PixiJS page of Wishem: a construct in a Node.js process and a page that draws from its hub through the link.
+- [@thrashplay/wishem-pixi-page](./nodejs/wishem/pixi-page): The PixiJS page of Wishem: a page that draws the sample construct through the link, and its page server.
 - [@thrashplay/wishem-renderer-godot](./nodejs/wishem/renderer-godot): The Godot renderer of Wishem: a Godot project that draws a construct through the link, and the runner that runs it in Docker.
 - [@thrashplay/wishem-renderer-pixi](./nodejs/wishem/renderer-pixi): The PixiJS renderer of Wishem. Draws PixiJS views from the joined state that a port gives. Runs with no Node.js API.
 - [@thrashplay/wishem-renderer-react](./nodejs/wishem/renderer-react): The React renderer of Wishem. Draws React views from a port of the hub, and writes the prop types of the views.
