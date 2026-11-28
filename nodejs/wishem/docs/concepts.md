@@ -320,6 +320,51 @@ A bookmark has more uses:
 
 A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the product changes. See [#479](https://github.com/twin-digital/opus/issues/479).
 
+## The game loop
+
+A game loop has these jobs: a fixed step, an accumulator, a catch-up with a limit, a source of real time, an update of the rules, and a render. This section says which part of Wishem has each job. The facts come from `clock/src/clock.ts` and `clock/src/time.ts`.
+
+| Job                   | Part of Wishem                                                                                                                         | State                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Fixed step            | The clock. Each tick is `time/advance { ms: stepMs }`, with the same `ms` each time (50 ms by default). The reason is rule R3.         | Built                        |
+| Accumulator           | The clock. At each call of its timer it sends `floor((real time - last) / stepMs)` ticks and moves `last` by that number of steps.     | Built                        |
+| Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                           | Built                        |
+| Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                  | Built                        |
+| Pause, step, rewind   | The part `time` (`running`) and the inputs `time/set-running` and `hub/rewind`. After each of them the clock measures real time again. | Built                        |
+| Update of the rules   | One model subsystem, the update step. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.      | Not built (#617)             |
+| Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                | Built, with no interpolation |
+
+### Fixed step
+
+A tick has the same length each time, so the same record gives the same state (rule R3). Rewind and replay need this. The delta of a tick is the payload `ms` of `time/advance`. The part `time` holds `now` (the sum of the deltas), `ticks`, and `running`.
+
+### Catch-up and the source of real time
+
+The accumulator keeps the time of the construct near the real time. When the timer is late, the clock sends more than one tick in the call. When more than `maxTicksPerCall` ticks are due, the time of the construct runs slower than the real time for that moment. This stops a loop of more and more work.
+
+`performance.now()` does not jump when the user or the system changes the clock of the computer. A timer such as `setInterval` is not exact, and the accumulator corrects the count of ticks. The hub runs in a Node.js process (rule R21), so the timer is not slowed as it is in a tab of a web browser that is not in front.
+
+### Not built
+
+- **The update step.** A tick changes only the part `time`. A rule that reacts to `time/advance` is a model subsystem that wraps the store. The count rule of the sample product is the first. The color rule of the PixiJS construct ([#540](https://github.com/twin-digital/opus/issues/540)) is the next. These rules are native behaviors in a first form, and each one wraps the store by itself. No part owns the order between them.
+- **Interpolation.** No renderer draws a frame between two ticks.
+- **A step length that changes.** The step length is set when the clock starts. A product cannot ask for a different rate while it runs.
+- **The cost of a tick.** Each tick is an input in the record and goes to each listener and through each link. The cost for each tick of each listener is not measured. The record has a limit ([#533](https://github.com/twin-digital/opus/issues/533)).
+
+### Decision: the update step (**Agreed**)
+
+One model subsystem is the update step. It runs the native behaviors in an order that the specification gives. A behavior is data and code that this subsystem runs. It is not a subsystem. (rule R22)
+
+The count rule and the color rule move into the update step as its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
+
+### Decision: interpolation in a renderer (**Agreed**)
+
+The direction is interpolation in a renderer. A renderer keeps the state of the last two ticks. At each frame of its own, it draws a value between them from its own real time. A user sees smooth motion at each frame rate, one tick late.
+
+The model says which fields a renderer draws between two values (for example a position) and which fields jump (for example a text or a color name). This fact belongs in the design of the field types.
+
+A renderer is not built this way until a product with motion needs it (rule R7). Until then, a renderer draws each state as it comes. The task of interpolation is in the milestone of the first product with motion.
+
 ## Storage
 
 The text that defines Wishem does not say "folder" or "file" for where a model is stored. Storage in files is the method of one storage subsystem. (**Agreed**)

@@ -42,7 +42,7 @@ When the hub starts, the clock measures real time again from the `started` event
 
 The clock stops when you call `stop()` and when the hub sends the `stopping` event. A second `stop()` does nothing.
 
-The options `timer` and `now` replace `setInterval` and `Date.now`. A test gives a timer that it calls itself and a source of real time that it sets.
+The options `timer` and `now` replace `setInterval` and `performance.now()`. A test gives a timer that it calls itself and a source of real time that it sets.
 
 ## Example
 
