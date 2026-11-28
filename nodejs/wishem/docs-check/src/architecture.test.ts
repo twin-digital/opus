@@ -28,7 +28,6 @@ const run = (script: string, args: string[]) => {
   return { status: result.status, output: `${result.stdout}${result.stderr}` }
 }
 
-/** A copy of the manifests and of the architecture folder. `withSvg: false` leaves out the SVG files. */
 /** Returns the text of the card of a package in a package view: the lines below its name, joined with a space. */
 const cardText = (svg: string, name: string) => {
   const texts = [...svg.matchAll(/<text x="([\d.]+)" y="([\d.]+)"[^>]*font-weight="(\d+)"[^>]*>([^<]*)<\/text>/g)].map(
@@ -44,6 +43,7 @@ const cardText = (svg: string, name: string) => {
     .join(' ')
 }
 
+/** A copy of the manifests and of the architecture folder. `withSvg: false` leaves out the SVG files. */
 const makeFixture = ({ withSvg = true } = {}) => {
   const root = mkdtempSync(join(tmpdir(), 'wishem-docs-check-'))
   tmpFolders.push(root)
