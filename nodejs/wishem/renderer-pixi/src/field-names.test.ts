@@ -54,6 +54,11 @@ describe('propNames', () => {
     expect(result.props.map((prop) => prop.name)).toEqual(['2ndLine'])
   })
 
+  it('reports a name that starts with the digit 0', () => {
+    const result = propNames(definition('0 line'))
+    expect(result.problems).toEqual([{ kind: 'name-starts-with-digit', field: 'fld_0', name: '0Line' }])
+  })
+
   it('does not report a digit that is not the first character', () => {
     const result = propNames(definition('line 2'))
     expect(result.problems).toEqual([])

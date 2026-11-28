@@ -160,7 +160,7 @@ With the part `product` in the joined state of the link, the page shows the prod
 - A hand edit of the `state.json` of the product folder shows in the panel with no reload. A rewind of the hub restores the value in the panel and in the file.
 - When a hand edit removes the selected entity, the panel clears the selection. If the focus was in the inspector, the focus moves to the list.
 
-The browser tests of the panel are in the Playwright project `product` (`tests/product.spec.ts`). `scripts/e2e-server.ts --product` starts a second workbench on port 4181. It mounts a copy of the sample product from `.e2e-product/` and uses the model folder copy `.e2e-product-model/`. Both folders are git-ignored. It loads no product code.
+The browser tests of the panel are in the Playwright project `product` (`tests/product.spec.ts`). `scripts/e2e-server.ts --product` starts a second workbench on port 4184. It mounts a copy of the sample product from `.e2e-product/` and uses the model folder copy `.e2e-product-model/`. Both folders are git-ignored. It loads no product code.
 
 ## Start the style guide
 
@@ -203,7 +203,7 @@ When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the scrip
 
 - `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
 - `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
-- `product` runs `tests/product.spec.ts`. The browser opens the page of the workbench with the sample product at `127.0.0.1:4181`.
+- `product` runs `tests/product.spec.ts`. The browser opens the page of the workbench with the sample product at `127.0.0.1:4190`.
 
 The `webServer` option of the config runs `scripts/e2e-server.ts` (and `scripts/e2e-server.ts --product`) on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, hub port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
 
