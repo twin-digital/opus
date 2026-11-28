@@ -2,8 +2,6 @@ import { isEqual, storeInputs } from '@thrashplay/wishem-core'
 import type { Entity, Model } from '@thrashplay/wishem-core'
 import type { Input } from '@thrashplay/wishem-hub'
 
-type Fields = Record<string, unknown>
-
 const sameKeys = (a: object, b: object): boolean => {
   const keys = Object.keys(a)
   return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key))
@@ -21,7 +19,7 @@ const commonEntitiesMatch = (before: Model, after: Model): boolean => {
   })
 }
 
-/** True when the models differ only by the definitions or by changes that the part inputs cannot make. */
+/** True when the part inputs cannot make the change. */
 const needsReplace = (before: Model, after: Model): boolean =>
   !isEqual({ definitions: before.definitions, entities: [] }, { definitions: after.definitions, entities: [] }) ||
   !commonEntitiesMatch(before, after)
@@ -62,27 +60,29 @@ export const productChanges = (before: Model, after: Model, storeId = 'store'): 
   const stored = before.entities.map((entity) => entity.id)
   const later: Input[] = []
 
-  const additions = after.entities.flatMap((entity, at): Input[] => {
+  const additions: Input[] = []
+  for (const [at, entity] of after.entities.entries()) {
     if (beforeById.has(entity.id)) {
-      return []
+      continue
     }
     const previous = after.entities[at - 1] as Entity | undefined
     const position = previous ? stored.indexOf(previous.id) + 1 : 0
     const end = position === stored.length
     stored.splice(position, 0, entity.id)
-    const components: Record<string, Fields> = {}
+    const components: Entity['components'] = {}
     for (const [componentType, fields] of Object.entries(entity.components)) {
-      components[componentType] = {}
+      const kept: Entity['components'][string] = {}
+      components[componentType] = kept
       for (const [field, value] of Object.entries(fields)) {
         if (namedBy(after, componentType, field, value).every((id) => stored.includes(id))) {
-          components[componentType][field] = value
+          kept[field] = value
         } else {
           later.push(inputs.setField({ entity: entity.id, componentType, field, value }))
         }
       }
     }
-    return [inputs.addEntity({ id: entity.id, components } as Entity, end ? undefined : position)]
-  })
+    additions.push(inputs.addEntity({ id: entity.id, components }, end ? undefined : position))
+  }
 
   const values = after.entities.flatMap((entity) => {
     const old = beforeById.get(entity.id)

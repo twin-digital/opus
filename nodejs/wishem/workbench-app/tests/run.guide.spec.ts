@@ -224,6 +224,7 @@ const counterEntity = (id: string, value: number) => ({ id, components: { [COUNT
 test('steps 2, 3, 5, 6, 7: an edit of the entities while paused keeps the count and the tick, and a rewind adds the entity', async ({
   page,
 }) => {
+  test.setTimeout(120_000)
   await page.goto('/')
   const { status, stage, control, tick } = parts(page)
   await control('Run').click()
@@ -302,6 +303,9 @@ test('steps 2, 3, 5, 6, 7: an edit of the entities while paused keeps the count 
     await expect
       .poll(async () => (JSON.parse(await readFile(statePath, 'utf8')) as StateFile).entities.map((e) => e.id), WAIT)
       .toEqual([THIRD, SAMPLE, SECOND])
+    // A late replace-model would show now.
+    await wait(1000)
+    await expectUnchanged()
   } finally {
     play.close()
     link.close()

@@ -357,6 +357,12 @@ describe('productChanges', () => {
         [add(e2), add(e3), set(E_2, CT_L, F_LIST, [E_3])],
       ],
       [
+        'two new entities whose lists hold each other',
+        modelOf(e1),
+        modelOf(e1, linked(E_2, { list: [E_3] }), linked(E_3, { list: [E_2] })),
+        [add(linked(E_2)), add(linked(E_3, { list: [E_2] })), set(E_2, CT_L, F_LIST, [E_3])],
+      ],
+      [
         'a new entity whose list holds its own ID',
         modelOf(e1),
         modelOf(e1, linked(E_2, { list: [E_2] })),
@@ -384,7 +390,7 @@ describe('productChanges', () => {
         { ...modelOf(e1, e2, e3), definitions: [...modelOf().definitions, { id: CT_B, label: 'B', fields: [] }] },
       ],
       [
-        'a new component of an entity of the two models, with an addition',
+        'a removed component of an entity of the two models, with an addition',
         modelOf(e1, e2),
         modelOf({ id: E_1, components: { [CT_A]: { [F_A]: '' } } }, e2, e3),
       ],

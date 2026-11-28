@@ -115,6 +115,9 @@ const check = (next: unknown): Model => {
   return result.model
 }
 
+const isPosition = (value: unknown, count: number): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= count
+
 const addEntity = (part: Model, payload: unknown): Model => {
   const { entity, index } = requirePayload(payload)
   if (!isRecord(entity)) {
@@ -128,25 +131,24 @@ const addEntity = (part: Model, payload: unknown): Model => {
     problems.push({ message: 'The entity has no "components" object', path: ['payload', 'entity', 'components'] })
   }
   const count = part.entities.length
-  const position = index === undefined ? count : index
-  if (typeof position !== 'number' || !Number.isInteger(position) || position < 0 || position > count) {
+  const requested = index === undefined ? count : index
+  const at = isPosition(requested, count) ? requested : undefined
+  if (at === undefined) {
     problems.push({ message: `The index is not an integer from 0 to ${count}`, path: ['payload', 'index'] })
   }
-  if (problems.length > 0) {
+  if (at === undefined || problems.length > 0) {
     throw new InputRefusedError(problems)
   }
   if (part.entities.some((existing) => existing.id === entity.id)) {
     return refuse(`An entity has the ID "${String(entity.id)}"`, ['payload', 'entity', 'id'])
   }
-  const at = position as number
   const checked = check({
     definitions: part.definitions,
     entities: [...part.entities.slice(0, at), entity, ...part.entities.slice(at)],
   })
-  const added = checked.entities.at(at)
   return deepFreeze({
     definitions: part.definitions,
-    entities: added === undefined ? part.entities : [...part.entities.slice(0, at), added, ...part.entities.slice(at)],
+    entities: [...part.entities.slice(0, at), ...checked.entities.slice(at, at + 1), ...part.entities.slice(at)],
   })
 }
 

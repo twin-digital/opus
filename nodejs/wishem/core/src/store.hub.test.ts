@@ -240,11 +240,13 @@ describe('add-entity with an index in a hub', () => {
 
   it('refuses a bad index with the reason invalid and keeps the record', async () => {
     const { hub, form } = start()
+    const before = hub.read().store
     const result = await form.submit({
       type: 'store/add-entity',
       payload: { entity: { id: ENT2, components: {} }, index: 5 },
     })
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
     expect(hub.record()).toEqual([])
     expect(ids(hub)).toEqual([ENT])
   })

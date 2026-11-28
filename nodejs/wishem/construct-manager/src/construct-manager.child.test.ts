@@ -308,7 +308,7 @@ describe('attachConstructManager with product construct processes', () => {
       expect(at).toBeGreaterThanOrEqual(0)
       const rest = types.slice(at)
       expect(rest).not.toContain('time/advance')
-      expect(rest.indexOf('store/add-entity')).toBeGreaterThan(0)
+      expect(rest.slice(0, 2)).toEqual(['hub/rewind', 'store/add-entity'])
     })
 
     it('steps back n - 1 ticks to 1 tick after a run of 1 second', { timeout: 30000 }, async () => {

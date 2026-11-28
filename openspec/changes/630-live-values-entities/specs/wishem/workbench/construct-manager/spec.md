@@ -2,7 +2,7 @@
 
 ### Requirement: The construct manager sends each change of the product model
 
-After each input that makes the part `product` of the workbench a different object, the construct manager SHALL send the change to each running product construct, with the source `construct-manager`. When only values of components that the two models both hold differ, it SHALL send one `store/set-field` for each changed or added value and one `store/clear-field` for each removed value. Each other value SHALL keep its live value. Each other change SHALL go as the requirements of entities give.
+After each input that makes the part `product` a different object, the construct manager SHALL send the change to each running product construct, with the source `construct-manager`. For a changed, added, or removed value, it SHALL send one `store/set-field` or `store/clear-field`, and each other value SHALL keep its live value. Each other change SHALL go as "The construct manager sends an added or removed entity" and "A change that cannot keep the live values replaces the model" give.
 
 #### Scenario: A hand edit of a value
 

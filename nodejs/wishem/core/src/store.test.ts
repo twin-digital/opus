@@ -358,7 +358,7 @@ describe('add-entity', () => {
       expect(frozenDeep(next)).toBe(true)
     })
 
-    it.each([3, -1, 1.5, '1', null])('refuses the index %j', (index) => {
+    it.each([3, -1, 1.5, '1', null, NaN, Infinity])('refuses the index %j', (index) => {
       const store = createStore({ model: twoEntities() })
       const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: third(), index }))
       expect(error.problems).toEqual([
