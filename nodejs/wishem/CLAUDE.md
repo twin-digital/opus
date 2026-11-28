@@ -47,6 +47,8 @@ These rules apply to each agent, and also to a subagent that has only a brief.
 
 When the owner tells you to work with little help, you are the lead agent. Read `docs/autonomous-flow.md` before you do anything else. That file replaces two items of "How to work": you do not confirm a **Proposed** item with the owner, and you can change a rule in `docs/rules.md`. It tells you when to ask the owner.
 
+Work only on a milestone whose issue has the label `autonomous:ready`. Only the owner sets or removes that label. R1 Tech Debt, break-tests, CI faults, and flow changes need no label. See "When a milestone is ready" in `docs/autonomous-flow.md`.
+
 ## How to work
 
 - Plan each change as an OpenSpec change. Start from the GitHub issue of the change. `docs/roadmap.md` gives the milestones and their issues.

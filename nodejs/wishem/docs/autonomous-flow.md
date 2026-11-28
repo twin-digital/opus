@@ -48,15 +48,30 @@ gh project item-list 6 --owner twin-digital --limit 200 --format json \
 
 ### Milestones
 
-| Milestone                                          | What is in it                                                          |
-| -------------------------------------------------- | ---------------------------------------------------------------------- |
-| One milestone for each outcome of the architecture | The implementation tasks of that outcome                               |
-| `[WSH] Discovery`                                  | The questions for the owner                                            |
-| `[WSH] Review`                                     | One issue for each milestone that is complete, for the owner to review |
-| `[WSH] R1 Tech Debt`                               | The tasks of review findings that block no outcome                     |
-| `[WSH] Later`                                      | Work that waits until a product needs it                               |
+| Milestone                                                          | What is in it                                                          |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| One milestone for each outcome of a product or of the architecture | The implementation tasks of that outcome                               |
+| `[WSH] Discovery`                                                  | The questions for the owner                                            |
+| `[WSH] Review`                                                     | One issue for each milestone that is complete, for the owner to review |
+| `[WSH] R1 Tech Debt`                                               | The tasks of review findings that block no outcome                     |
+| `[WSH] Later`                                                      | Work that waits until a product needs it                               |
 
 The owner decided on 2026-11-28 that the lead agent creates and manages the milestones and their issues. The lead agent moves, splits, or creates issues and milestones with no question.
+
+## When a milestone is ready
+
+The owner decided on 2026-11-28 when a milestone is ready for autonomous work.
+
+- **The marker.** The label `autonomous:ready` on the GitHub issue of a milestone. The issue of a product milestone is the issue in its row of `roadmap.md` (#479 to #485). The issue of the architecture milestones (A1 to A6) is the architecture brief [#522](https://github.com/twin-digital/opus/issues/522). A milestone with the label is **released**. A milestone without the label is **held**.
+- **Who sets it.** Only the owner sets or removes the label. The lead agent never does. The owner set the label on #522 on 2026-11-28.
+- **What the owner checks before the label.** The milestone has its issues, each with its scope. Each open question is decided or is in a `Question` issue. During the work, the lead agent can still ask in `Question` issues.
+- **A held milestone.** The lead agent does not plan, propose, or build its features. It can create an issue in the milestone for a thing that it finds.
+- **The owner removes the label.** The lead agent finishes the task in work, stops the work of that milestone, and tells the owner.
+- **What runs with no label.** R1 Tech Debt (fixes of findings in code that exists), break-tests, CI faults, and changes to the flow. This work adds no new product behavior.
+- **The next milestone.** When a released milestone is complete, the lead agent goes on with the next released milestone: the order of `roadmap.md`, else the lowest number. When no milestone is released, the lead agent works on R1 Tech Debt and tells the owner that no released milestone is left. No held milestone starts by itself.
+- **The rules are general.** The steps of this file (planning, apply, review, and completion of a milestone) apply to each released milestone. A rule that names the architecture applies only to the architecture.
+
+To read the label: `GH_ORG=twin-digital gh api repos/twin-digital/opus/issues/<n> --jq '.labels[].name'`. `state.mjs` prints the held milestones.
 
 ## Limits on agents
 
@@ -226,7 +241,7 @@ Keep the lead agent free:
 - The lead agent keeps the steps that wait or that change the board: it gives the rulings to the owner, runs `merge-when-green.mjs`, sets the board, and removes the worktree after the merge.
 - While a long step runs, such as an implementer or a break-test, start the plan of the next change on the board in a new worktree. A plan does not need the merge of the change that it depends on. It needs only the design of that change.
 - While a long step runs and no plan can start, start a follow-up issue that touches a different package.
-- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer subagents than the limit run, look at the tasks of each open milestone and start one that is not blocked.
+- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any released milestone. When fewer subagents than the limit run, look at the tasks of each released milestone and start one that is not blocked. See "When a milestone is ready".
 - When two items can start, start the item of the milestone that has the fewest open items. The owner asked on 2026-11-28 for the selection that closes milestones fastest.
 - A task of review findings that blocks no outcome of its milestone goes to the milestone `[WSH] R1 Tech Debt` when it is created.
 
@@ -275,7 +290,7 @@ The brief of each subagent says: report each thing that is not in the scope of t
    - Each change to blueprint text that had the label **Agreed**.
    - The result of the retrospective. See "Retrospective".
    - If the milestone published a build that a person can install, and where it is.
-7. Continue with the next milestone. Do not wait for the review.
+7. Continue with the next released milestone (see "When a milestone is ready"). Do not wait for the review.
 
 ### Ports and containers of tests
 
