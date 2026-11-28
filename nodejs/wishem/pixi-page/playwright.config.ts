@@ -5,7 +5,7 @@ if (!wsEndpoint) {
   throw new Error('WISHEM_BROWSER_WS_ENDPOINT is not set. Run the tests with the "test:ui" script.')
 }
 
-// The page of the construct. `scripts/start.ts` serves it on the computer of the test runner.
+// The page.`scripts/start.ts` serves it on the computer of the test runner.
 const PAGE_URL = 'http://127.0.0.1:4181/'
 
 export default defineConfig({
@@ -13,16 +13,16 @@ export default defineConfig({
   testDir: './tests',
   // One baseline for each name: the pinned image is the only browser and platform.
   snapshotPathTemplate: '{testDir}/__screenshots__/{arg}{ext}',
-  // One worker and no retry: the construct is shared, and a retry would start from a later tick.
+  // One worker and no retry: the port of the construct is shared, and a retry would start from a later tick.
   workers: 1,
   retries: 0,
   // A test.only that stays in a file fails the job.
   forbidOnly: !!process.env.CI,
   // The job uploads the HTML report when a test fails.
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-  // The construct and the page server run in one process, paused at tick 0.
+  // The page server passes the link to the construct on port 4183. Each spec file starts the construct.
   webServer: {
-    command: 'node scripts/start.ts --port 4181 --hub-port 0 --paused',
+    command: 'node scripts/start.ts --port 4181 --hub-port 4183',
     url: PAGE_URL,
     reuseExistingServer: false,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 10_000 },

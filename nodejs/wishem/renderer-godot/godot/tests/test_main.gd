@@ -2,7 +2,7 @@ extends "res://tests/check.gd"
 
 const Main = preload("res://main.gd")
 const Fake = preload("res://tests/fake_socket.gd")
-const URL := "ws://127.0.0.1:4749/link"
+const URL := "ws://127.0.0.1:4750/link"
 const LOSS := "wishem-godot: the hub is not reachable. Godot tries again."
 
 
