@@ -188,7 +188,7 @@ The limit: one connection at a time. For a short time between two connections, n
 
 ## The screenshot test
 
-`tests/godot.ui.test.ts` runs the sample construct and the Godot application, and checks the pictures of the application.
+`tests/godot.ui.test.ts` runs the sample construct and the Godot application. The first test checks the pictures of the application. The second test checks the view warnings.
 
 ### Run
 
@@ -223,3 +223,17 @@ pnpm --filter @thrashplay/wishem-renderer-godot test:ui
 - The application draws the state of the hub and each change of the state, and it draws no picture when the state is the same.
 - The application connects again after the loss of the link and draws the new state.
 - The runner leaves no container.
+
+### The test of the view warnings
+
+The second test, `the Godot application writes the view warnings`, runs after the first test, so only one container runs at a time. It writes the pictures to `.out/warning-shots/`. It changes the model with the option `edit` of `startSampleConstruct`. It compares the lines that start with `WARNING: wishem:` with the exact text of each warning.
+
+1. Link 1: the model has no definition of the `Color` component type. The only warning line is `component-type-not-defined`. One `time/advance` of 500 writes no new warning line.
+2. Link 2: the construct restarts on the same port, and the `Color` definition has the extra fields `Color` and `???`. The warning lines are `empty-name` and `same-name`, in this order. The shots are `#1d4ed8` and, after one tick, `#b91c1c`. The tick writes no new warning line.
+3. Link 3: the construct restarts with the model of the model folder. The application writes no warning line.
+
+What the test proves:
+
+- The line of `push_warning` reaches the output of the `godot` command.
+- A tick does not repeat a warning.
+- A new link writes the warnings again, because each link has a new renderer.
