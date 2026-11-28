@@ -22,13 +22,13 @@ const root = document.getElementById('root')
 if (root) {
   const views = loadViews()
   const page = createRoot(root)
-  page.render(<Page port={undefined} views={views} />)
+  page.render(<Page port={undefined} input={undefined} views={views} />)
   reloadOnRestore(window, () => {
     location.reload()
   })
   connectHub({
-    onPort: (port) => {
-      page.render(<Page port={port} views={views} />)
+    onPorts: ({ output, input }) => {
+      page.render(<Page port={output} input={input} views={views} />)
     },
   })
 }

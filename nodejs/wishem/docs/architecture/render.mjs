@@ -421,6 +421,7 @@ const entity = (c, item) => {
 /**
  * The cardinality mark at `p`. `(dx, dy)` is the unit vector from the card along the line.
  * `one` is exactly one (two bars). `many` is zero or more (a circle and a crow's foot).
+ * `zero-or-one` is a circle and one bar.
  */
 const cardinality = (c, [px, py], [dx, dy], kind) => {
   const at = (along, across) => [px + dx * along - dy * across, py + dy * along + dx * across]
@@ -429,6 +430,13 @@ const cardinality = (c, [px, py], [dx, dy], kind) => {
   if (kind === 'one') {
     return `<path d="${[10, 16].map((along) => seg(at(along, -MARK_HALF), at(along, MARK_HALF))).join(' ')}" fill="none" ${stroke}/>`
   }
+  if (kind === 'zero-or-one') {
+    const [zx, zy] = at(20, 0)
+    return [
+      `<path d="${seg(at(10, -MARK_HALF), at(10, MARK_HALF))}" fill="none" ${stroke}/>`,
+      `<circle cx="${num(zx)}" cy="${num(zy)}" r="4.5" fill="${c.ground}" ${stroke}/>`,
+    ].join('\n')
+  }
   const [cx, cy] = at(22, 0)
   return [
     `<path d="${[-MARK_HALF, 0, MARK_HALF].map((across) => seg(at(14, 0), at(0, across))).join(' ')}" fill="none" ${stroke}/>`,
@@ -436,18 +444,34 @@ const cardinality = (c, [px, py], [dx, dy], kind) => {
   ].join('\n')
 }
 
-/** A relationship between two entity cards: a straight line with a cardinality mark at each end. */
+/**
+ * A relationship between two entity cards: a straight line with a cardinality mark at each end.
+ * The label (`label.line`) sits on a chip at `label.at`.
+ */
 const relationship = (c, item) => {
-  const { from, to } = item
-  checkLength({ points: [from, to] })
+  const { from, to, label } = item
+  checkLength({ points: [from, to], label })
   const length = Math.hypot(to[0] - from[0], to[1] - from[1])
   const ux = (to[0] - from[0]) / length
   const uy = (to[1] - from[1]) / length
-  return [
+  const out = [
     `<path d="M${num(from[0])} ${num(from[1])} L${num(to[0])} ${num(to[1])}" fill="none" stroke="${c.quiet}" stroke-width="${String(MARK_STROKE)}"/>`,
     cardinality(c, from, [ux, uy], item.fromMark),
     cardinality(c, to, [-ux, -uy], item.toMark),
-  ].join('\n')
+  ]
+  if (label !== undefined) {
+    const chip = chipSize(label.line)
+    const [ax, ay] = label.at
+    out.push(
+      rect(
+        { x: ax - chip.w / 2, y: ay - chip.h / 2, w: chip.w, h: chip.h },
+        12,
+        `fill="${c.surface}" stroke="${c.quiet}"`,
+      ),
+      text(c, { x: ax, y: ay + 4.5, line: label.line, weight: 500, color: c.fgMuted, anchor: 'middle' }),
+    )
+  }
+  return out.join('\n')
 }
 
 // ---------------------------------------------------------------------------
@@ -477,7 +501,7 @@ const sample = (c, kind, x, cy) => {
       `<path d="M${num(x)} ${num(box.y + 4)} a${num(SAMPLE_W / 2)} 4 0 0 0 ${num(SAMPLE_W)} 0" fill="none" stroke="${c.border}"/>`,
     ].join('\n')
   }
-  if (kind === 'one' || kind === 'many') {
+  if (kind === 'one' || kind === 'many' || kind === 'zero-or-one') {
     return [
       `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W)} ${num(cy)}" stroke="${c.quiet}" stroke-width="${String(MARK_STROKE)}"/>`,
       cardinality(c, [x + SAMPLE_W, cy], [-1, 0], kind),
@@ -621,12 +645,12 @@ const cProcess = el(
   564,
   'Workbench process',
   '[Container: Node.js]',
-  'Holds the construct and serves the page.',
+  'Runs the constructs and serves the page.',
 )
 const cHost = el(
   'container',
   gx(LEFT),
-  764,
+  804,
   'host-nodejs',
   '[Container: TypeScript package]',
   'Runs a construct and serves the link.',
@@ -634,15 +658,23 @@ const cHost = el(
 const cCore = el(
   'container',
   gx(RIGHT),
-  764,
+  804,
   'core',
   '[Container: TypeScript package]',
   'Checks a model and holds the store.',
 )
+const cManager = el(
+  'container',
+  gx(MIDDLE),
+  1004,
+  'construct-manager',
+  '[Container: TypeScript package]',
+  'The construct list and the construct manager.',
+)
 const cHub = el(
   'container',
   gx(MIDDLE),
-  964,
+  1204,
   'hub',
   '[Container: TypeScript package]',
   'Joins the subsystems and carries the link.',
@@ -650,7 +682,7 @@ const cHub = el(
 const cRenderer = el(
   'container',
   gx(MIDDLE),
-  1804,
+  2044,
   'renderer-react',
   '[Container: TypeScript package]',
   'Draws React views from a port.',
@@ -659,7 +691,7 @@ const cRenderer = el(
 const cClock = el(
   'container',
   gx(MIDDLE),
-  1184,
+  1424,
   'clock',
   '[Container: TypeScript package]',
   'Holds the time subsystem and the clock.',
@@ -668,7 +700,7 @@ const cClock = el(
 const cPixiPage = el(
   'container',
   gx(LEFT),
-  1584,
+  1824,
   'PixiJS page',
   '[Container: PixiJS, web browser]',
   'Draws the PixiJS construct and sends the keys.',
@@ -676,7 +708,7 @@ const cPixiPage = el(
 const cPixiProcess = el(
   'container',
   gx(RIGHT),
-  1584,
+  1824,
   'PixiJS process',
   '[Container: Node.js]',
   'Runs the construct with a clock and serves the page.',
@@ -684,7 +716,7 @@ const cPixiProcess = el(
 const cRendererPixi = el(
   'container',
   gx(LEFT),
-  1804,
+  2044,
   'renderer-pixi',
   '[Container: TypeScript package]',
   'Draws PixiJS views from a port.',
@@ -692,7 +724,7 @@ const cRendererPixi = el(
 const cSample = el(
   'container',
   gx(RIGHT),
-  1804,
+  2044,
   'sample-product',
   '[Container: TypeScript package]',
   'Holds the example model folder and the count rule.',
@@ -701,7 +733,7 @@ const cSample = el(
 const cGodotRunner = el(
   'container',
   gx(MIDDLE),
-  2050,
+  2290,
   'Godot runner',
   '[Container: Node.js]',
   'Starts Godot in Docker, carries the link.',
@@ -709,7 +741,7 @@ const cGodotRunner = el(
 const cGodotApp = el(
   'container',
   gx(MIDDLE),
-  2330,
+  2610,
   'Godot application',
   '[Container: GDScript, Docker]',
   'Draws the construct and writes screenshots.',
@@ -717,7 +749,7 @@ const cGodotApp = el(
 const cGodotProcess = el(
   'container',
   gx(RIGHT),
-  2330,
+  2610,
   'Godot process',
   '[Container: Node.js]',
   'Runs the construct with a clock.',
@@ -739,12 +771,12 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has sixteen containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The PixiJS process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample-product package has no relationship in the diagram. The designer starts the three processes and the Godot runner, edits the two folders, and looks at the two pages.',
+    'Wishem has seventeen containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The PixiJS process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The designer starts the three processes and the Godot runner, edits the two folders, and looks at the two pages.',
   width: 1140,
-  height: 2810,
+  height: 3090,
   items: shiftY(
     [
-      { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 72, h: 2396, label: SYSTEM },
+      { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 72, h: 2676, label: SYSTEM },
       cDesigner,
       cPage,
       cModel,
@@ -752,6 +784,7 @@ const containers = {
       cProcess,
       cHost,
       cCore,
+      cManager,
       cHub,
       cRenderer,
       cClock,
@@ -805,79 +838,104 @@ const containers = {
         gx(274),
         716,
       ]),
-      rel('quiet', [bottom(cProcess, gx(505)), [gx(505), 716], [gx(707), 716], top(cCore)], 'Uses [import]', [
-        gx(606),
-        716,
-      ]),
-      rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [gx(440), 816]),
-      rel('quiet', [bottom(cCore), [gx(707), 1016], right(cHub, 1016)], 'Builds on [import]', [gx(707), 930]),
-      rel('quiet', [bottom(cHost), [gx(173), 1000], left(cHub, 1000)], 'Builds on [import]', [gx(173), 944]),
-      rel('quiet', [left(cPage, 360), [68, 360], [68, 1040], left(cHub, 1040)], 'Builds on [import]', [223, 1040]),
+      rel('quiet', [bottom(cProcess, 569), [569, 716], [860, 716], top(cCore, 860)], 'Uses [import]', [670, 716]),
       rel(
         'quiet',
-        [left(cPage, 330), [44, 330], [44, 1950], [460, 1950], bottom(cRenderer, 460)],
-        'Builds on [import]',
-        [250, 1950],
+        [bottom(cProcess, 470), top(cManager, 470)],
+        'Runs the product constructs with [import]',
+        [470, 940],
       ),
       rel(
         'quiet',
-        [bottom(cProcess, 614), [614, 692], [950, 692], [950, 1950], [548, 1950], bottom(cRenderer, 548)],
-        'Builds on [import]',
-        [790, 692],
+        [bottom(cProcess, 520), [520, 770], [923, 770], [923, 2096], right(cSample, 2096)],
+        'Loads the product code [dynamic import]',
+        [693, 770],
       ),
-      rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1126]),
+      rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [570, 856]),
+      rel('quiet', [bottom(cCore, 771), [771, 1256], right(cHub, 1256)], 'Builds on [import]', [771, 1130]),
+      rel('quiet', [bottom(cHost, gx(173)), [gx(173), 1220], left(cHub, 1220)], 'Builds on [import]', [gx(173), 1100]),
+      rel('quiet', [left(cPage, 360), [68, 360], [68, 1252], left(cHub, 1252)], 'Builds on [import]', [223, 1252]),
+      rel(
+        'quiet',
+        [left(cPage, 330), [44, 330], [44, 2190], [460, 2190], bottom(cRenderer, 460)],
+        'Builds on [import]',
+        [250, 2190],
+      ),
+      rel(
+        'quiet',
+        [bottom(cProcess, 614), [614, 692], [950, 692], [950, 2190], [548, 2190], bottom(cRenderer, 548)],
+        'Builds on [import]',
+        [840, 692],
+      ),
+      rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1366]),
+      rel(
+        'quiet',
+        [bottom(cRenderer, 420), [420, 2212], [90, 2212], [90, 1294], left(cHub, 1294)],
+        'Builds on [import]',
+        [250, 1294],
+      ),
+
+      // The construct manager
+      rel('quiet', [bottom(cManager), top(cHub)], 'Builds on [import]', [gx(440), 1156]),
+      rel('quiet', [right(cManager, 1050), [690, 1050], bottom(cCore, 690)], 'Builds on [import]', [690, 975]),
+      rel('quiet', [left(cManager, 1050), [310, 1050], bottom(cHost, 310)], 'Builds on [import]', [310, 975]),
+      rel(
+        'quiet',
+        [right(cManager, 1080), [700, 1080], [700, 1450], right(cClock, 1450)],
+        'Builds on [import]',
+        [700, 1330],
+      ),
 
       // The PixiJS construct
       rel(
         'flow',
-        [left(cDesigner, 160), [14, 160], [14, 1636], left(cPixiPage, 1636)],
+        [left(cDesigner, 160), [14, 160], [14, 1876], left(cPixiPage, 1876)],
         'Looks at and presses keys [web browser]',
         [180, 160],
       ),
       rel(
         'quiet',
-        [right(cDesigner, 160), [1016, 160], [1016, 1636], right(cPixiProcess, 1636)],
+        [right(cDesigner, 160), [1016, 160], [1016, 1876], right(cPixiProcess, 1876)],
         'Starts and stops [terminal]',
         [800, 160],
       ),
-      rel('quiet', [right(cPixiPage, 1612), left(cPixiProcess, 1612)], 'Gets page code [HTTP]', [gx(440), 1612]),
-      rel('flow', [right(cPixiPage, 1666), left(cPixiProcess, 1666)], 'Connects to the hub [WebSocket link]', [
+      rel('quiet', [right(cPixiPage, 1852), left(cPixiProcess, 1852)], 'Gets page code [HTTP]', [gx(440), 1852]),
+      rel('flow', [right(cPixiPage, 1906), left(cPixiProcess, 1906)], 'Connects to the hub [WebSocket link]', [
         gx(440),
-        1666,
+        1906,
       ]),
-      rel('quiet', [bottom(cPixiPage), top(cRendererPixi)], 'Builds on [import]', [gx(173), 1746]),
+      rel('quiet', [bottom(cPixiPage), top(cRendererPixi)], 'Builds on [import]', [gx(173), 1986]),
       rel(
         'quiet',
-        [top(cPixiPage, 250), [250, 1140], [410, 1140], bottom(cHub, 410)],
+        [top(cPixiPage, 250), [250, 1380], [410, 1380], bottom(cHub, 410)],
         'Builds on [import]',
-        [250, 1330],
+        [250, 1570],
       ),
-      rel('quiet', [top(cPixiPage, 345), [345, 1236], left(cClock, 1236)], 'Builds on [import]', [345, 1400]),
-      rel('quiet', [top(cPixiProcess, 660), [660, 1236], right(cClock, 1236)], 'Builds on [import]', [660, 1420]),
+      rel('quiet', [top(cPixiPage, 345), [345, 1476], left(cClock, 1476)], 'Builds on [import]', [345, 1640]),
+      rel('quiet', [top(cPixiProcess, 660), [660, 1500], right(cClock, 1500)], 'Builds on [import]', [660, 1660]),
       rel(
         'quiet',
-        [top(cPixiProcess, 760), [760, 1140], [600, 1140], bottom(cHub, 600)],
+        [top(cPixiProcess, 760), [760, 1380], [600, 1380], bottom(cHub, 600)],
         'Builds on [import]',
-        [760, 1330],
+        [760, 1570],
       ),
-      rel('quiet', [top(cPixiProcess, 860), bottom(cCore, 860)], 'Builds on [import]', [860, 1200]),
+      rel('quiet', [top(cPixiProcess, 850), bottom(cCore, 850)], 'Builds on [import]', [850, 1400]),
       rel(
         'quiet',
-        [top(cPixiProcess, 700), [700, 1530], [125, 1530], bottom(cHost, 125)],
+        [top(cPixiProcess, 700), [700, 1770], [125, 1770], bottom(cHost, 125)],
         'Serves the link with [import]',
-        [500, 1530],
+        [500, 1770],
       ),
-
       // The Godot construct
       rel(
         'quiet',
-        [top(cDesigner, 540), [540, -20], [1056, -20], [1056, 2130], right(cGodotRunner, 2130)],
+        [top(cDesigner, 540), [540, -20], [1056, -20], [1056, 2370], right(cGodotRunner, 2370)],
         'Starts and stops [terminal]',
         [800, -20],
       ),
       rel(
         'quiet',
-        [top(cDesigner, 600), [600, 30], [1040, 30], [1040, 2360], right(cGodotProcess, 2360)],
+        [top(cDesigner, 600), [600, 30], [1040, 30], [1040, 2640], right(cGodotProcess, 2640)],
         'Starts and stops [terminal]',
         [900, 30],
       ),
@@ -885,48 +943,48 @@ const containers = {
         'quiet',
         [bottom(cGodotRunner, 440), top(cGodotApp, 440)],
         'Starts and copies the screenshots [Docker]',
-        [440, 2242],
+        [440, 2455],
       ),
       rel(
         'flow',
         [top(cGodotApp, 610), bottom(cGodotRunner, 610)],
         'Connects to the hub [WebSocket link]',
-        [610, 2282],
+        [610, 2540],
       ),
       rel(
         'quiet',
-        [right(cGodotRunner, 2102), [770, 2102], top(cGodotProcess, 770)],
+        [right(cGodotRunner, 2342), [770, 2342], top(cGodotProcess, 770)],
         'Carries the link [TCP]',
-        [770, 2216],
+        [770, 2476],
       ),
       rel(
         'quiet',
-        [bottom(cGodotProcess, 660), [660, 2516], [90, 2516], [90, 830], left(cHost, 830)],
+        [bottom(cGodotProcess, 660), [660, 2796], [102, 2796], [102, 870], left(cHost, 870)],
         'Serves the link with [import]',
-        [300, 2516],
+        [300, 2796],
       ),
       rel(
         'quiet',
-        [bottom(cGodotProcess, 690), [690, 2562], [1105, 2562], [1105, 840], right(cCore, 840)],
+        [bottom(cGodotProcess, 690), [690, 2842], [1105, 2842], [1105, 880], right(cCore, 880)],
         'Builds on [import]',
-        [960, 2562],
+        [960, 2842],
       ),
       rel(
         'quiet',
-        [bottom(cGodotProcess, 740), [740, 2516], [1090, 2516], [1090, 1050], right(cHub, 1050)],
+        [bottom(cGodotProcess, 740), [740, 2796], [1090, 2796], [1090, 1290], right(cHub, 1290)],
         'Builds on [import]',
-        [960, 2516],
+        [960, 2796],
       ),
       rel(
         'quiet',
-        [bottom(cGodotProcess, 790), [790, 2470], [1075, 2470], [1075, 1270], right(cClock, 1270)],
+        [bottom(cGodotProcess, 790), [790, 2750], [1075, 2750], [1075, 1475], right(cClock, 1475)],
         'Builds on [import]',
-        [960, 2470],
+        [960, 2750],
       ),
       {
         kind: 'legend',
         x: 24,
-        y: 2650,
+        y: 2930,
         w: 832 + GUTTER + 72,
         entries: [
           ['person', 'Person'],
@@ -1002,7 +1060,7 @@ const pClient = el(
   316,
   'Client of the hub',
   '[Component: connectHub]',
-  'Gives the port of each link.',
+  'Gives the output port and the input port of each link.',
 )
 const pTable = el(
   'component',
@@ -1027,7 +1085,7 @@ const componentsPage = {
   name: 'components-page',
   title: 'Component diagram: the page of the workbench',
   description:
-    'The page has six components. The client of the hub connects to the workbench process through the link. The renderer reads the part store from the port that the client gives, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.',
+    'The page has six components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The views draw with the catalog.',
   width: WIDTH_PX,
   height: 940,
   items: [
@@ -1042,9 +1100,10 @@ const componentsPage = {
 
     // The path of the model to a view
     rel('flow', [top(pClient), bottom(pProcess)], 'Connects to the hub [WebSocket link]', [707, 216]),
-    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads the part store [port]', [707, 468]),
+    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads and sends [ports]', [707, 468]),
     rel('flow', [bottom(pRenderer, 740), [740, 668], [250, 668], top(pViews, 250)], 'Mounts with props', [495, 668]),
     rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
+    rel('flow', [top(pViews, 200), [200, 638], [620, 638], bottom(pRenderer, 620)], 'Send inputs [wishem]', [410, 638]),
 
     // How the table of views gets its content
     rel('flow', [left(pRenderer), right(pTable)], 'Finds the view', [440, 568]),
@@ -1093,14 +1152,14 @@ const eValue = ent(ENTITY_RIGHT, ROW_2, H_TALL, 'FieldValue', [
 ])
 const eEntity = ent(ENTITY_LEFT, ROW_3, H_SHORT, 'Entity', [pk('id')])
 
-// A relationship from point `from` to point `to`, with a mark at each end: `one` or `many`.
-const link = (from, fromMark, to, toMark) => ({ kind: 'relationship', from, to, fromMark, toMark })
+// A relationship from point `from` to point `to`, with a mark at each end: `one`, `many`, or `zero-or-one`.
+const link = (from, fromMark, to, toMark, label) => ({ kind: 'relationship', from, to, fromMark, toMark, label })
 
 const entitiesModelFolder = {
   name: 'entities-model-folder',
   title: 'Entity diagram: the model folder',
   description:
-    'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field.',
+    'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference has zero or one entity, and an entity has zero or more field values that refer to it.',
   width: WIDTH_PX,
   height: 632,
   items: [
@@ -1114,6 +1173,7 @@ const entitiesModelFolder = {
     link(top(eEntity), 'one', bottom(eComponent), 'many'),
     link(right(eComponent), 'one', left(eValue), 'many'),
     link(bottom(eField), 'one', top(eValue), 'many'),
+    link(bottom(eValue, 698), 'many', right(eEntity), 'zero-or-one', { line: 'Refers to', at: [518, 420] }),
     {
       kind: 'legend',
       x: 24,
@@ -1123,8 +1183,9 @@ const entitiesModelFolder = {
         ['entity', 'Entity'],
         ['pk', 'Primary key'],
         ['fk', 'Foreign key'],
-        ['one', 'Exactly one'],
+        ['one', 'One'],
         ['many', 'Zero or more'],
+        ['zero-or-one', 'Zero or one'],
       ],
     },
   ],

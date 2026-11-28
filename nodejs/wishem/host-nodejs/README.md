@@ -77,6 +77,20 @@ The construct watches the model folder. After a change of a file, it reads the f
 
 When a client changes an entity through the store, the construct writes `state.json`. The write is atomic: the construct writes a temporary file in the model folder and renames it to `state.json`. The file is a JSON object with the key `entities`. The construct ignores the change of the watch that its own write causes.
 
+## More model subsystems
+
+The option `subsystems` of `startConstruct` is a list of more model subsystems. The hub gets them after the stores, so the parts of the joined state are `store`, then `product` (when the construct mounts a product), then the parts of the list, in the order of the list. With no list, the joined state has no more parts. `startConstruct` rejects when a subsystem has the ID of a store, because the hub does not accept two subsystems with the same ID.
+
+```ts
+const counter: ModelSubsystem<number> = {
+  id: 'counter',
+  inputs: ['counter/bump'],
+  initial: 0,
+  apply: (part) => part + 1,
+}
+const construct = await startConstruct({ folder, subsystems: [counter] })
+```
+
 ## The product folder
 
 The product folder has the same form as the model folder. The construct mounts it as a second store with the ID `product`. The joined state has the parts `store` and `product`. The input types of the product start with `product/`, for example `product/set-field`.

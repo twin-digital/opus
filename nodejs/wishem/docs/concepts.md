@@ -76,7 +76,7 @@ Example: before the agent adds a `docile` status, it asks which behaviors read t
 
 Entities relate to each other. A room contains the entities in it. An entity can be attached to another, as a held item is attached to the hero.
 
-A relation is a declared field that refers to another entity. It is part of a snapshot, and the registry reports it, in the same way as any other field.
+A relation is a field of the type `reference`. Its value is the ID of an entity of the same model. The store refuses the removal of an entity that a reference of a different entity names. It is part of a snapshot, and the registry reports it, in the same way as any other field.
 
 Which relations exist in every product, and which a product adds, is an open question.
 
@@ -95,7 +95,7 @@ The ways that exist now:
 The cases to list in the brainstorm:
 
 - a reference to a different component of the same entity
-- a reference to a different entity
+- a reference to a different entity, in one store: a `reference` field (settled)
 - a reference to a component of a different entity
 - each of these when the two components are in the same subsystem, and when they are in different subsystems
 
@@ -404,13 +404,14 @@ The workbench is its own construct. It does not hold the subsystems of the produ
 These items are **Proposed**:
 
 - The workbench construct has the store `store` for the model of the workbench. It has the store `product` for the **mounted** product. The store `product` validates the product model alone, and the product model refers to nothing of the workbench.
-- The workbench construct has a model subsystem that holds the list of the product constructs that must run.
+- The workbench construct has the model subsystem `constructs`, which holds the list of the product constructs that must run.
 - The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
-  - It starts and stops the product constructs.
+  - It starts and stops the product constructs. A product construct is a hub in the process of the workbench, with the parts `time` and `store`, the rules of the product, a clock, and its own link.
   - It gives each product construct the product model.
   - It sends each later change of the product model to the product construct as an input.
   - It reports the status of each product construct to the workbench hub as inputs.
 - To a product construct, the construct manager is also an output subsystem and an input subsystem. A hub does not connect to a hub.
+- Only the construct manager can rewind a product construct. A rewind of the workbench is an undo of the authored state, and the product construct follows it.
 - The agent connects to the workbench construct through a link.
 - The workbench construct has no clock. It has the record, so it has undo and rewind.
 
@@ -450,10 +451,10 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 A **view** is content of the product. A renderer supplies the code that loads, mounts, and runs views.
 
 - Each renderer provides its own kind of view. Wishem does not define one set of visual components for all renderers.
-- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the hub never loads it, and a view changes no state.
+- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the hub never loads it, and a view changes state only through the inputs that it sends with `wishem`. The store changes the state.
 - A sidecar attaches a view to its component type by the ID of the component type. A component type that has no view is not drawn.
 - The fields in the component type definition are the source. The types of the props of a view are generated.
-- A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. References are **Open**.
+- A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. A field of the type `reference` gives the view the picture of the entity that it names. An entity that a component with a view names is held: the renderer draws it only in the picture of its holder, and a reference to an entity on the path draws nothing.
 - A view is a pure function of its props. A view holds no state.
 - A renderer imports the model. The model never imports a renderer (rule R1).
 

@@ -55,6 +55,7 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/music](./nodejs/music/music): MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.
 - [@twin-digital/design-process](./nodejs/plan/design-process): Validator, projection, backlog, and fold tools for the twin-digital incremental design process.
 - [@thrashplay/wishem-clock](./nodejs/wishem/clock): The time subsystem and the clock of a Wishem construct. Runs with no Node.js API.
+- [@thrashplay/wishem-construct-manager](./nodejs/wishem/construct-manager): The construct manager of the Wishem workbench: the construct list, which holds each product construct that must run, and the changes of a product model. The root entry runs with no Node.js API.
 - [@thrashplay/wishem-core](./nodejs/wishem/core): The model, the validation, and the store of Wishem. Runs with no Node.js API.
 - [@thrashplay/wishem-host-nodejs](./nodejs/wishem/host-nodejs): Runs a Wishem construct in a Node.js process. Reads and writes a model folder, serves the link of the hub over local WebSocket, and provides the wishem command.
 - [@thrashplay/wishem-hub](./nodejs/wishem/hub): The hub of a Wishem construct. Joins the joined state, orders the inputs, and keeps the record. Runs with no Node.js API.

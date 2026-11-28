@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import type { ViewProps, ViewTools } from '@thrashplay/wishem-renderer-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 class FakeWebSocket {
@@ -110,6 +111,70 @@ describe('workbench page', () => {
     await vi.waitFor(() => {
       expect(document.querySelector('header h1')?.textContent).toBe('Second.')
     })
+  })
+
+  it('opens the new link with the same two subsystem IDs', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(1)
+    })
+    FakeWebSocket.instances[0]?.welcome(baseModel)
+    await vi.waitFor(() => {
+      expect(document.querySelector('header h1')?.textContent).toBe('Wishem.')
+    })
+    FakeWebSocket.instances[0]?.emit('close')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(2)
+    })
+    const ids = FakeWebSocket.instances.map((socket) =>
+      (JSON.parse(socket.sent[0] ?? '{}') as { subsystems: { id: string }[] }).subsystems.map(({ id }) => id),
+    )
+    expect(ids[1]).toEqual(ids[0])
+    expect(ids[0]).toHaveLength(2)
+  })
+
+  it('gives the input port of the new link to the views', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const captured: { tools?: ViewTools<{ title: string }> } = {}
+    const latest = () => captured.tools
+    vi.doMock('./views.js', async () => {
+      const { collectAppViews } = await vi.importActual<typeof import('./views.js')>('./views.js')
+      const table = collectAppViews()
+      const Capture = (props: ViewProps) => {
+        captured.tools = props.wishem
+        return null
+      }
+      return {
+        collectAppViews: () => new Map([...table].map(([id, entry]) => [id, { ...entry, view: Capture }] as const)),
+      }
+    })
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(1)
+    })
+    FakeWebSocket.instances[0]?.welcome(baseModel)
+    FakeWebSocket.instances[0]?.emit('close')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(2)
+    })
+    const second = FakeWebSocket.instances[1]
+    captured.tools = undefined
+    second.welcome(baseModel)
+    await vi.waitFor(() => {
+      expect(latest()).toBeDefined()
+    })
+    const sentBefore = second.sent.length
+    void latest()?.setField('title', 'Renamed')
+    await vi.waitFor(() => {
+      expect(second.sent.length).toBeGreaterThan(sentBefore)
+    })
+    const hello = JSON.parse(second.sent[0]) as { subsystems: { id: string; kind: string }[] }
+    const inputId = hello.subsystems.find(({ kind }) => kind === 'input')?.id
+    expect(inputId).toMatch(/^page-[0-9a-f]+-input$/)
+    const messages = second.sent.slice(sentBefore).map((text) => JSON.parse(text) as { t?: string; subsystem?: string })
+    expect(messages.filter(({ t }) => t === 'submit').map(({ subsystem }) => subsystem)).toContain(inputId)
+    expect(FakeWebSocket.instances[0]?.sent).toHaveLength(1)
   })
 
   it('opens the link at the address of the page', async () => {

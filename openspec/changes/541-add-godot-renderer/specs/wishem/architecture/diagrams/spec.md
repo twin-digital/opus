@@ -31,10 +31,30 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the page imports the renderer from `@thrashplay/wishem-renderer-react`, and the workbench process imports the generator from `@thrashplay/wishem-renderer-react/view-types`
 - **THEN** the container diagram shows the container `renderer-react` as a TypeScript package, and a relationship from the page and from the workbench process to `renderer-react`, each with the label "Builds on [import]"
 
+#### Scenario: The React renderer package builds on the hub package
+
+- **WHEN** `@thrashplay/wishem-renderer-react` imports the value `LinkClosedError` of `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows a relationship from `renderer-react` to `hub` with the label "Builds on [import]"
+
 #### Scenario: The clock package builds on the hub package
 
 - **WHEN** `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows the container `clock` as a TypeScript package, and a relationship from `clock` to `hub` with the label "Builds on [import]"
+
+#### Scenario: A change alters the protocol between two containers
+
+- **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket
+- **THEN** the container diagram labels that relationship with the link and its technology
+
+#### Scenario: A change makes a process write a store
+
+- **WHEN** a change makes the workbench process write the model folder
+- **THEN** the relationship between the process and the model folder says that the process writes it
+
+#### Scenario: The workbench process mounts a product
+
+- **WHEN** the workbench process keeps the model of a mounted product in a product folder
+- **THEN** the container diagram shows the product model folder as a store of JSON files, a relationship from the workbench process to it with the label "Reads, watches, and writes [file system]", and a relationship from the designer to it with the label "Edits files [text editor]"
 
 #### Scenario: The PixiJS process runs the PixiJS construct and serves the PixiJS page
 
@@ -61,17 +81,17 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the `godot` script of `@thrashplay/wishem-renderer-godot` starts the Godot application in Docker and carries the bytes of its link to the Godot process
 - **THEN** the container diagram shows the Godot runner as a Node.js container and the Godot application as a Godot container, a relationship from the designer to the Godot runner, a relationship from the Godot runner to the Godot application with the label "Starts and copies the screenshots [Docker]", a relationship from the Godot application to the Godot runner with the label "Connects to the hub [WebSocket link]", and a relationship from the Godot runner to the Godot process with the label "Carries the link [TCP]"
 
-#### Scenario: A change alters the protocol between two containers
+#### Scenario: The workbench process runs product constructs with the construct manager
 
-- **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket
-- **THEN** the container diagram labels that relationship with the link and its technology
+- **WHEN** the workbench process imports values of `@thrashplay/wishem-construct-manager`, and that package imports values of `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-clock`, and `serveHub` of `@thrashplay/wishem-host-nodejs`
+- **THEN** the container diagram shows the container `construct-manager` as a TypeScript package, a relationship from the workbench process to it with the label "Runs the product constructs with [import]", and relationships from `construct-manager` to `core`, `hub`, `clock`, and `host-nodejs`, each with the label "Builds on [import]"
 
-#### Scenario: A change makes a process write a store
+#### Scenario: The workbench process loads the code of the product
 
-- **WHEN** a change makes the workbench process write the model folder
-- **THEN** the relationship between the process and the model folder says that the process writes it
+- **WHEN** the workbench process loads the module that `--product-code` names, such as `@thrashplay/wishem-sample-product`
+- **THEN** the container diagram shows a relationship from the workbench process to `sample-product` with the label "Loads the product code [dynamic import]"
 
-#### Scenario: The workbench process mounts a product
+#### Scenario: A product construct serves its link from the workbench process
 
-- **WHEN** the workbench process keeps the model of a mounted product in a product folder
-- **THEN** the container diagram shows the product model folder as a store of JSON files, a relationship from the workbench process to it with the label "Reads, watches, and writes [file system]", and a relationship from the designer to it with the label "Edits files [text editor]"
+- **WHEN** the workbench process runs a product construct whose link a renderer in a different process opens
+- **THEN** the table row of the workbench process says that it runs the product constructs and serves the link of each one, and the diagram shows no new process for a product construct

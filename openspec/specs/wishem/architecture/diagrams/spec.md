@@ -49,10 +49,30 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the page imports the renderer from `@thrashplay/wishem-renderer-react`, and the workbench process imports the generator from `@thrashplay/wishem-renderer-react/view-types`
 - **THEN** the container diagram shows the container `renderer-react` as a TypeScript package, and a relationship from the page and from the workbench process to `renderer-react`, each with the label "Builds on [import]"
 
+#### Scenario: The React renderer package builds on the hub package
+
+- **WHEN** `@thrashplay/wishem-renderer-react` imports the value `LinkClosedError` of `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows a relationship from `renderer-react` to `hub` with the label "Builds on [import]"
+
 #### Scenario: The clock package builds on the hub package
 
 - **WHEN** `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows the container `clock` as a TypeScript package, and a relationship from `clock` to `hub` with the label "Builds on [import]"
+
+#### Scenario: A change alters the protocol between two containers
+
+- **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket
+- **THEN** the container diagram labels that relationship with the link and its technology
+
+#### Scenario: A change makes a process write a store
+
+- **WHEN** a change makes the workbench process write the model folder
+- **THEN** the relationship between the process and the model folder says that the process writes it
+
+#### Scenario: The workbench process mounts a product
+
+- **WHEN** the workbench process keeps the model of a mounted product in a product folder
+- **THEN** the container diagram shows the product model folder as a store of JSON files, a relationship from the workbench process to it with the label "Reads, watches, and writes [file system]", and a relationship from the designer to it with the label "Edits files [text editor]"
 
 #### Scenario: The PixiJS process runs the PixiJS construct and serves the PixiJS page
 
@@ -69,20 +89,20 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the PixiJS page imports values of `@thrashplay/wishem-renderer-pixi`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`
 - **THEN** the container diagram shows the PixiJS page as a container in a web browser, the container `renderer-pixi` as a TypeScript package, and a relationship from the PixiJS page to each of the three packages with the label "Builds on [import]"
 
-#### Scenario: A change alters the protocol between two containers
+#### Scenario: The workbench process runs product constructs with the construct manager
 
-- **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket
-- **THEN** the container diagram labels that relationship with the link and its technology
+- **WHEN** the workbench process imports values of `@thrashplay/wishem-construct-manager`, and that package imports values of `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-clock`, and `serveHub` of `@thrashplay/wishem-host-nodejs`
+- **THEN** the container diagram shows the container `construct-manager` as a TypeScript package, a relationship from the workbench process to it with the label "Runs the product constructs with [import]", and relationships from `construct-manager` to `core`, `hub`, `clock`, and `host-nodejs`, each with the label "Builds on [import]"
 
-#### Scenario: A change makes a process write a store
+#### Scenario: The workbench process loads the code of the product
 
-- **WHEN** a change makes the workbench process write the model folder
-- **THEN** the relationship between the process and the model folder says that the process writes it
+- **WHEN** the workbench process loads the module that `--product-code` names, such as `@thrashplay/wishem-sample-product`
+- **THEN** the container diagram shows a relationship from the workbench process to `sample-product` with the label "Loads the product code [dynamic import]"
 
-#### Scenario: The workbench process mounts a product
+#### Scenario: A product construct serves its link from the workbench process
 
-- **WHEN** the workbench process keeps the model of a mounted product in a product folder
-- **THEN** the container diagram shows the product model folder as a store of JSON files, a relationship from the workbench process to it with the label "Reads, watches, and writes [file system]", and a relationship from the designer to it with the label "Edits files [text editor]"
+- **WHEN** the workbench process runs a product construct whose link a renderer in a different process opens
+- **THEN** the table row of the workbench process says that it runs the product constructs and serves the link of each one, and the diagram shows no new process for a product construct
 
 ### Requirement: The dynamic diagram of the path of a change
 
@@ -117,6 +137,11 @@ The architecture document SHALL hold a C4 component diagram of the page of the w
 - **WHEN** the client of the hub gives the port of each link, and the renderer and the table of views come from `@thrashplay/wishem-renderer-react`
 - **THEN** the component diagram shows that the renderer reads the part `store` through the port, and its technology lines name `renderer-react` for the renderer and the table of views
 
+#### Scenario: A view sends an input
+
+- **WHEN** a view sends an input through the prop `wishem`, and the renderer sends it through the input port that the client of the hub gives
+- **THEN** the component diagram shows a relationship from the views to the renderer with the label "Send inputs [wishem]", and the relationship from the renderer to the client of the hub says that the renderer reads and sends through the ports
+
 ### Requirement: The entity diagram of the model folder
 
 The architecture document SHALL hold an entity diagram of the model folder, in `nodejs/wishem/docs/architecture/entities-model-folder-light.svg` and `entities-model-folder-dark.svg`. The diagram SHALL show each entity of the model folder, its keys, and each relationship with its cardinality. The diagram SHALL apply to each model folder: the model folder of the workbench and the product folder have the same entities.
@@ -130,6 +155,11 @@ The architecture document SHALL hold an entity diagram of the model folder, in `
 
 - **WHEN** a change adds a store of persisted data that has the layout of a model folder, such as the product folder
 - **THEN** the architecture document says that the entity diagram applies to that store, and no second entity diagram exists
+
+#### Scenario: A field value refers to an entity
+
+- **WHEN** a field of the type `reference` holds the ID of an entity
+- **THEN** the entity diagram shows a relationship from `FieldValue` to `Entity` with the label "Refers to", with the mark "zero or one" at `Entity`, and the mark "zero or more" at `FieldValue`, and the legend explains the mark "zero or one"
 
 ### Requirement: Each diagram is written by the render script
 

@@ -320,6 +320,48 @@ describe('add-entity', () => {
   })
 })
 
+const FLD3 = 'fld_22222222-3333-4444-8555-666666666666'
+const FLD4 = 'fld_33333333-4444-4555-8666-777777777777'
+
+/** A model with a field of each type, a `list` entity that holds a reference, and a `task` entity. */
+const typedModel = (list: Record<string, unknown> = { [FLD4]: ENT2 }): Model =>
+  ({
+    definitions: [
+      {
+        id: CT,
+        label: 'Item',
+        fields: [
+          { id: FLD, label: 'text', type: 'string' },
+          { id: FLD2, label: 'count', type: 'number' },
+          { id: FLD3, label: 'done', type: 'boolean' },
+          { id: FLD4, label: 'next', type: 'reference' },
+        ],
+      },
+    ],
+    entities: [
+      { id: ENT, components: { [CT]: list } },
+      { id: ENT2, components: {} },
+    ],
+  }) as Model
+
+describe('remove-entity with references', () => {
+  it('refuses an entity that a different entity refers to, and the part is the same object', () => {
+    const store = createStore({ model: typedModel() })
+    const error = refusal(() => send(store, store.initial, 'store/remove-entity', { entity: ENT2 }))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.message).toContain(ENT)
+    expect(error.problems[0]?.message).toContain('next')
+    expect(error.problems[0]?.message).toContain(ENT2)
+    expect(store.initial.entities).toHaveLength(2)
+  })
+
+  it('removes an entity that refers only to itself', () => {
+    const store = createStore({ model: typedModel({ [FLD4]: ENT }) })
+    const next = send(store, store.initial, 'store/remove-entity', { entity: ENT })
+    expect(next.entities.map((entity) => entity.id)).toEqual([ENT2])
+  })
+})
+
 describe('remove-entity', () => {
   it('removes the entity', () => {
     const store = createStore({ model: twoEntities() })
@@ -422,6 +464,46 @@ describe('set-field', () => {
     const twice = send(store, once, 'store/set-field', set('Changed'))
     expect(once).not.toBe(store.initial)
     expect(twice).toBe(once)
+  })
+
+  describe('with the four field types', () => {
+    const setTyped = (field: string, value: unknown) => ({ entity: ENT, componentType: CT, field, value })
+
+    it('sets a number and a boolean', () => {
+      const store = createStore({ model: typedModel() })
+      const withNumber = send(store, store.initial, 'store/set-field', setTyped(FLD2, 3))
+      const both = send(store, withNumber, 'store/set-field', setTyped(FLD3, true))
+      expect(both.entities[0]?.components[CT]).toEqual({ [FLD4]: ENT2, [FLD2]: 3, [FLD3]: true })
+    })
+
+    it.each([
+      ['string', FLD, 'x'],
+      ['number', FLD2, 3],
+      ['boolean', FLD3, false],
+      ['reference', FLD4, ENT2],
+    ])('returns the same part object for the same value of a %s field', (_type, field, value) => {
+      const store = createStore({ model: typedModel({ [FLD]: 'x', [FLD2]: 3, [FLD3]: false, [FLD4]: ENT2 }) })
+      expect(send(store, store.initial, 'store/set-field', setTyped(field, value))).toBe(store.initial)
+    })
+
+    it('returns the same part object for a reference set two times in a row', () => {
+      const store = createStore({ model: typedModel({}) })
+      const once = send(store, store.initial, 'store/set-field', setTyped(FLD4, ENT2))
+      expect(send(store, once, 'store/set-field', setTyped(FLD4, ENT2))).toBe(once)
+    })
+
+    it('refuses the text "3" for a number field that holds 3', () => {
+      const store = createStore({ model: typedModel({ [FLD2]: 3 }) })
+      const error = refusal(() => send(store, store.initial, 'store/set-field', setTyped(FLD2, '3')))
+      expect(error.problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD2])
+    })
+
+    it('refuses a reference to an entity that does not exist, with a problem that names the ID', () => {
+      const store = createStore({ model: typedModel() })
+      const error = refusal(() => send(store, store.initial, 'store/set-field', setTyped(FLD4, MISSING)))
+      expect(error.problems).toHaveLength(1)
+      expect(error.problems[0]?.message).toContain(MISSING)
+    })
   })
 
   it('refuses an entity that does not exist, with a problem that names the ID', () => {

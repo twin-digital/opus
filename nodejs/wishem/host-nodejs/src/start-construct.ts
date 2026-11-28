@@ -2,7 +2,7 @@ import path from 'node:path'
 import { createStore, ModelError, validateModel } from '@thrashplay/wishem-core'
 import type { Problem } from '@thrashplay/wishem-core'
 import { createHub } from '@thrashplay/wishem-hub'
-import type { Hub } from '@thrashplay/wishem-hub'
+import type { Hub, ModelSubsystem } from '@thrashplay/wishem-hub'
 import { formatProblem } from './format.js'
 import { LINK_PATH } from './link-server.js'
 import { attachModelFolderStorage } from './model-folder-storage.js'
@@ -21,6 +21,8 @@ export interface ConstructOptions {
   folder: string
   /** The folder of the product model to mount as the store `product`. It must be a different folder from `folder`. */
   product?: string
+  /** More model subsystems. The hub gets them after the stores. Default: none. */
+  subsystems?: readonly ModelSubsystem[]
   /** Default 4747. Use 0 to let the system select a port. */
   port?: number
   /** Default: write to the terminal. */
@@ -96,6 +98,7 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
     subsystems: [
       createStore({ model: first }),
       ...(productFirst === undefined ? [] : [createStore({ id: PRODUCT_ID, model: productFirst })]),
+      ...(options.subsystems ?? []),
     ],
     onError: (error) => {
       log(`wishem: a listener failed: ${error instanceof Error ? error.message : String(error)}`)
