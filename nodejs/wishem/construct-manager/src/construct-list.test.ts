@@ -42,6 +42,58 @@ describe('the first part', () => {
   it('holds no construct', () => {
     expect(makeRig().part()).toEqual({ constructs: {} })
   })
+
+  it('is frozen', () => {
+    const { initial } = createConstructList()
+    expect(Object.isFrozen(initial)).toBe(true)
+    expect(Object.isFrozen(initial.constructs)).toBe(true)
+  })
+})
+
+describe('constructInputs', () => {
+  it('makes a start with no running key when the option is absent', () => {
+    expect(constructInputs.start('play')).toStrictEqual({ type: 'constructs/start', payload: { construct: 'play' } })
+    expect(constructInputs.start('play', { running: false })).toStrictEqual({
+      type: 'constructs/start',
+      payload: { construct: 'play', running: false },
+    })
+  })
+})
+
+describe('the input payload', () => {
+  const types = ['constructs/start', 'constructs/stop', 'constructs/send', 'constructs/report'] as const
+
+  it.each(types.flatMap((type) => [null, [], 5].map((payload) => [type, payload] as const)))(
+    'refuses the type %s with the payload %j',
+    async (type, payload) => {
+      const rig = makeRig()
+      const port = type === 'constructs/report' ? rig.manager : rig.client
+      const result = refusal(await port.submit({ type, payload }))
+      expect(result.reason).toBe('invalid')
+      expect(result.problems.map((problem) => problem.path?.join('.'))).toEqual(['payload'])
+    },
+  )
+
+  it.each(types)('refuses the type %s with a construct that is not a string', async (type) => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    const port = type === 'constructs/report' ? rig.manager : rig.client
+    const payload = { construct: ['play'], status: 'running', input: { type: 'time/set-running' } }
+    const result = refusal(await port.submit({ type, payload }))
+    expect(result.problems[0]?.path?.join('.')).toBe('payload.construct')
+  })
+
+  it.each(['constructs/stop', 'constructs/send', 'constructs/report'] as const)(
+    'refuses the type %s with a construct that is a key of Object.prototype',
+    async (type) => {
+      const rig = makeRig()
+      const port = type === 'constructs/report' ? rig.manager : rig.client
+      const payload = { construct: 'constructor', status: 'running', input: { type: 'time/set-running' } }
+      const result = refusal(await port.submit({ type, payload }))
+      expect(result.reason).toBe('invalid')
+      expect(result.problems[0]?.path?.join('.')).toBe('payload.construct')
+    },
+  )
 })
 
 describe('constructs/start', () => {
@@ -75,6 +127,17 @@ describe('constructs/start', () => {
     const result = refusal(await rig.client.submit(constructInputs.start('Play 1')))
     expect(result.reason).toBe('invalid')
     expect(result.problems.some((problem) => problem.path?.join('.') === 'payload.construct')).toBe(true)
+  })
+
+  it.each(['a', 'play', 'a1', 'a-b', 'a-b-c2', 'a1-2b'])('accepts the ID "%s"', async (id) => {
+    const rig = makeRig()
+    expect((await rig.client.submit(constructInputs.start(id))).ok).toBe(true)
+  })
+
+  it.each(['', 'Play', '1a', 'a-', '-a', 'a--b', 'a_b', 'a b', 'play!', '!play'])('refuses the ID "%s"', async (id) => {
+    const rig = makeRig()
+    const result = refusal(await rig.client.submit(constructInputs.start(id)))
+    expect(result.problems[0]?.path?.join('.')).toBe('payload.construct')
   })
 
   it('refuses a running value that is not a boolean', async () => {
@@ -145,8 +208,13 @@ describe('constructs/stop', () => {
     const rig = makeRig()
     await running(rig)
     await rig.client.submit(constructInputs.stop('play'))
-    expect(rig.part().constructs.play.want).toBe('stopped')
-    expect(rig.part().constructs.play.status).toBe('running')
+    expect(rig.part().constructs.play).toEqual({
+      want: 'stopped',
+      startTime: 'running',
+      startSeq: startSeqOf(rig),
+      status: 'running',
+      link: 'ws://127.0.0.1:1/link',
+    })
   })
 
   it('keeps the start number', async () => {
@@ -203,6 +271,21 @@ describe('constructs/send', () => {
     await running(rig)
     await rig.client.submit(constructInputs.stop('play'))
     expect(refusal(await rig.client.submit(constructInputs.send('play', pause))).reason).toBe('invalid')
+  })
+
+  it('refuses a construct that is not in the list', async () => {
+    const rig = makeRig()
+    const result = refusal(await rig.client.submit(constructInputs.send('ghost', pause)))
+    expect(result.reason).toBe('invalid')
+    expect(result.problems[0]?.path?.join('.')).toBe('payload.construct')
+  })
+
+  it.each([null, 'text', 5, []])('refuses the input %j', async (input) => {
+    const rig = makeRig()
+    await running(rig)
+    const result = refusal(await rig.client.submit({ type: 'constructs/send', payload: { construct: 'play', input } }))
+    expect(result.reason).toBe('invalid')
+    expect(result.problems[0]?.path?.join('.')).toBe('payload.input.type')
   })
 
   it('refuses an input with no string type', async () => {
@@ -279,6 +362,63 @@ describe('constructs/report', () => {
       constructInputs.report({ construct: 'play', status: 'running', link: 'ws://x/link', time: 'paused' }),
     )
     expect(rig.part().constructs.play.lastSend).toEqual(lastSend)
+  })
+
+  it.each([
+    ['link', 5, 'payload.link'],
+    ['time', 'later', 'payload.time'],
+    ['message', 5, 'payload.message'],
+    ['lastSend', null, 'payload.lastSend'],
+    ['lastSend', { seq: 'one' }, 'payload.lastSend'],
+  ])('refuses a report with the value %s that is %j', async (key, value, path) => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    const before = rig.part()
+    const result = refusal(
+      await rig.manager.submit({
+        type: 'constructs/report',
+        payload: { construct: 'play', status: 'running', [key]: value },
+      }),
+    )
+    expect(result.reason).toBe('invalid')
+    expect(result.problems[0]?.path?.join('.')).toBe(path)
+    expect(rig.part()).toBe(before)
+  })
+
+  it('keeps the time state of the start when a report comes', async () => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play', { running: false }))
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'running', time: 'running' }))
+    expect(rig.part().constructs.play.startTime).toBe('paused')
+  })
+
+  it('replaces lastSend with the lastSend of a later report', async () => {
+    const rig = makeRig()
+    await running(rig)
+    const link = 'ws://127.0.0.1:1/link'
+    const first = { seq: 3, result: { ok: true as const, seq: 4 } }
+    const second = { seq: 8, result: { ok: true as const, seq: 9 } }
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'running', link, lastSend: first }))
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'running', link, lastSend: second }))
+    expect(rig.part().constructs.play.lastSend).toEqual(second)
+  })
+
+  it('removes the message when a later report has no message', async () => {
+    const rig = makeRig()
+    await running(rig)
+    const link = 'ws://127.0.0.1:1/link'
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'running', link, message: 'refused' }))
+    expect(rig.part().constructs.play.message).toBe('refused')
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'running', link }))
+    expect(rig.part().constructs.play).not.toHaveProperty('message')
+  })
+
+  it('changes the part for a report with a different link of the same length', async () => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'running', link: 'ws://a/link' }))
+    await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'running', link: 'ws://b/link' }))
+    expect(rig.part().constructs.play.link).toBe('ws://b/link')
   })
 
   it('refuses a construct that is not in the list', async () => {

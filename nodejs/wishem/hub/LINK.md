@@ -29,7 +29,7 @@ A request with no `Origin` header is accepted. A client that is not a web browse
 
 ### The kind of message
 
-Send each message as a WebSocket text message. The hub side ignores a binary message and sends no answer. Example: in Godot, use `send_text`. Do not use `send` or `put_packet`.
+Send each message as a WebSocket text message. The hub side answers a binary message with `refused` with the reason `malformed`, and closes the connection. Example: in Godot, use `send_text`. Do not use `send` or `put_packet`.
 
 ### The size of a message
 
@@ -125,7 +125,7 @@ A `welcome` message is malformed when `status` is not `created` or `running`, `s
 
 #### `refused`
 
-The hub side sends `refused` when it cannot serve the `hello`. It then closes the connection. The hub side attaches none of the subsystems.
+The hub side sends `refused` when it cannot serve the `hello`. It also sends `refused` when a message of the client is malformed. It then closes the connection. Before `welcome`, the hub side attaches none of the subsystems. After `welcome`, the hub side detaches each subsystem of the link.
 
 | Key         | JSON type | Meaning                                                |
 | ----------- | --------- | ------------------------------------------------------ |
@@ -134,13 +134,13 @@ The hub side sends `refused` when it cannot serve the `hello`. It then closes th
 | `message`   | text      | A text for a person. It says what is not correct.      |
 | `supported` | list      | The supported protocol versions. Only for `"version"`. |
 
-| Reason        | When it occurs                                                                                                                     |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `malformed`   | The first message is not `hello`. A message is not JSON. The list of subsystems is empty or not correct. A second `hello` arrives. |
-| `version`     | The version of the client is not supported. Use a version of the list `supported`.                                                 |
-| `id-in-use`   | A subsystem ID is in use by an other link or by the hub. The ID `hub` is always in use.                                            |
-| `unsupported` | A subsystem has the kind `"model"`. Version 1 does not support it.                                                                 |
-| `stopped`     | The hub is stopped.                                                                                                                |
+| Reason        | When it occurs                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `malformed`   | The first message is not `hello`. A message is not JSON. The list of subsystems is empty or not correct. A second `hello` arrives. A message is binary. |
+| `version`     | The version of the client is not supported. Use a version of the list `supported`.                                                                      |
+| `id-in-use`   | A subsystem ID is in use by an other link or by the hub. The ID `hub` is always in use.                                                                 |
+| `unsupported` | A subsystem has the kind `"model"`. Version 1 does not support it.                                                                                      |
+| `stopped`     | The hub is stopped.                                                                                                                                     |
 
 ```json
 {

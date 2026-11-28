@@ -193,6 +193,13 @@ export const serveLink = (hub: Hub, channel: Channel): void => {
     }
   }
 
-  channel.onMessage(onMessage)
+  const onBinary = () => {
+    if (closed) {
+      return
+    }
+    refuse('malformed', 'The message is binary. Send each message as a WebSocket text message.')
+  }
+
+  channel.onMessage(onMessage, onBinary)
   channel.onClose(shutdown)
 }
