@@ -26,11 +26,13 @@ beforeAll(async () => {
 /** A timer that the test calls, and a source of real time that the test sets. */
 const makeClock = () => {
   let callback: (() => void) | undefined
+  const intervals: number[] = []
   let active = 0
   let time = 0
   const timer: ClockTimer = {
-    start: (next) => {
+    start: (next, intervalMs) => {
       callback = next
+      intervals.push(intervalMs)
       active += 1
       return () => {
         active -= 1
@@ -45,6 +47,7 @@ const makeClock = () => {
       time += ms
       callback?.()
     },
+    intervals,
     get active() {
       return active
     },
@@ -157,6 +160,32 @@ describe('startProductConstruct', () => {
     }
     expect(countOf(construct.hub)).toBe(0)
     expect(timeOf(construct.hub).ticks).toBe(5)
+  })
+
+  it('gives the ticks the source clock', async () => {
+    const clock = await setup()
+    const construct = await start(clock)
+    clock.fire(50)
+    expect(construct.hub.record().map((input) => input.source)).toEqual(['clock'])
+  })
+
+  it('gives the step of the clock to the timer, default 50 ms', async () => {
+    const clock = await setup()
+    await start(clock)
+    await start(clock, { stepMs: 25 })
+    expect(clock.intervals).toEqual([50, 25])
+  })
+
+  it('gives an error of a listener to onError', async () => {
+    const clock = await setup()
+    const errors: unknown[] = []
+    const construct = await start(clock, { onError: (error) => errors.push(error) })
+    construct.hub.attach({ id: 'probe', kind: 'output' }).subscribe(() => {
+      throw new Error('listener failed')
+    })
+    clock.fire(50)
+    expect(errors).toHaveLength(1)
+    expect((errors[0] as Error).message).toBe('listener failed')
   })
 
   it('starts paused with running false: no tick', async () => {

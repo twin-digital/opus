@@ -53,21 +53,33 @@ gh project item-list 6 --owner twin-digital --limit 200 --format json \
 | One milestone for each outcome of the architecture | The implementation tasks of that outcome                               |
 | `[WSH] Discovery`                                  | The questions for the owner                                            |
 | `[WSH] Review`                                     | One issue for each milestone that is complete, for the owner to review |
+| `[WSH] R1 Tech Debt`                               | The tasks of review findings that block no outcome                     |
+| `[WSH] Later`                                      | Work that waits until a product needs it                               |
+
+The owner decided on 2026-11-28 that the lead agent creates and manages the milestones and their issues. The lead agent moves, splits, or creates issues and milestones with no question.
 
 ## Limits on agents
 
 Lint, type checks, tests, and builds use much memory. They can stop the container.
 
-- At most five subagents run at one time. The owner set this limit on 2026-11-27, after the second retrospective.
-- At most two lint, type check, test, or build commands run at one time. The owner set this limit on 2026-11-28 (#686), after the memory of the container became 26 GiB. Two locks, one for each slot, make this sure. Each agent, and this includes the lead agent, runs each such command from the root of its worktree in this form:
+- The owner raised the target to ten subagents at one time on 2026-11-28. The lead agent raises the limit one step at a time, from six.
+- The limit goes up one step when the current step lasted at least 30 minutes or had at least three task reports of build-and-test work (an implementer, a break-test, or a final review that ran tests), and the resource log shows memory below 70 % and CPU throttling below 10 % in that period. The owner set this minimum on 2026-11-28.
+- The harness of Claude Code also limits the subagents (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`, six by default). Only the owner can change it. A step above that limit waits for the owner.
+- The limit goes back one step when memory is above 80 % or throttling is above 20 % for ten minutes.
+- The lead agent adds a note to **Process notes** at each step.
+- The lead agent starts the resource logger at the start of a session if it does not run: `node nodejs/wishem/docs/flow-scripts/resource-log.mjs`, in the background. The log `~/.local/state/wishem/resources.csv` gives the memory, the CPU, the throttling, and the slots in use of the container, once a minute.
+- Lint, type check, test, and build commands run in slots. One lock for each slot makes sure that each slot runs one command at a time. The file `~/.local/state/wishem/heavy-slots` holds the number of slots (default 2, at most 4). The owner set two slots on 2026-11-28 (#686), and asked for a target of four, reached one step at a time. Each agent, and this includes the lead agent, runs each such command from the root of its worktree in this form:
 
   ```bash
   node nodejs/wishem/docs/flow-scripts/heavy.mjs <command>
   ```
 
-  The script takes the lock of a free slot (`/tmp/wishem-heavy.lock` or `/tmp/wishem-heavy-2.lock`) and runs `timeout 140 <command>`. It holds one lock only, so two commands cannot block each other. The locks are the same files for each worktree. The system releases a lock when the command ends or its agent stops.
+  The script takes the lock of a free slot (`/tmp/wishem-heavy.lock`, then `/tmp/wishem-heavy-2.lock` to `-4.lock`) and runs `timeout 140 <command>`. It holds one lock only, so two commands cannot block each other. The locks are the same files for each worktree. The system releases a lock when the command ends or its agent stops.
 
-- If the resource log (`~/.local/state/wishem/resources.csv`) shows memory above 80 % or CPU throttling above 20 % for ten minutes, the lead agent goes back to one slot and adds a note to **Process notes**.
+- Each call of `heavy.mjs` adds one line to `~/.local/state/wishem/heavy-log.csv`: the slot (or `busy`), the wait before the run, the time of the run, and the exit code. `node nodejs/wishem/docs/flow-scripts/heavy-stats.mjs [<since>]` gives the share of busy calls, the median and the 90th percentile of the wait, and the use of each slot.
+- The lead agent adds one slot when the current number of slots lasted at least 30 minutes or had at least three task reports of build-and-test work, and, over at least 20 calls at the current number, the 90th percentile of the wait is more than 30 seconds or more than 20 % of the calls are busy, and the resource log shows memory below 70 % and CPU throttling below 10 %.
+- If the resource log (`~/.local/state/wishem/resources.csv`) shows memory above 80 % or CPU throttling above 20 % for ten minutes, the lead agent removes one slot.
+- The lead agent changes the number of slots or the limit of subagents, not both in one step, and adds a note to **Process notes** at each step. It also counts the task reports in each hour, to see if a step gives more work done or only more waits.
 
 - The system moves a foreground command of a subagent to the background after approximately 180 seconds, and the subagent then loses the result. Thus each command, with its wait for the lock, ends in less than 150 seconds. Divide a longer job into parts, for example one package for each command.
 - The script stops the wait for a slot after 15 seconds, with exit code 75 and no run of the command. The agent then tries the same command again, at most 40 times. Each other exit code is the exit code of the command: do not run the command again for it.
@@ -80,7 +92,7 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 - More than one subagent can implement at the same time, each one in the worktree of its change. Each other work of an agent, such as to read, to write, and to design, needs no lock.
 - `pnpm install`, `pnpm sync`, Prettier, and `git` need no lock.
 - Before you start a subagent, examine the free memory of the container. Start fewer subagents when the memory is low.
-- Enter the worktree of a change before you start a subagent for it. A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
+- Enter the worktree of a change before you start a subagent for it. Enter it with the tool EnterWorktree, never with `cd`. A subagent that the lead agent starts after a `cd` is not bound to that worktree, and it cannot write or run commands when the lead agent enters a different worktree (the first planner of #611). A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
 - Do not send a message to a subagent that stopped. Such a subagent gets the worktree in which the lead agent is at that time, and the lead agent then cannot leave that worktree until the subagent reports. Start a new subagent, and give it the report file of the first one.
 - A subagent does no background work: no command in the background, no monitor, and no wait for a later event. A subagent that wakes from a wait gets the worktree in which the lead agent is at that time, and then it cannot use git in its own worktree. A long job runs in the foreground, in parts that each end in less than 150 seconds.
 - A subagent writes no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. It writes its scripts and its results in `.superpowers/` of its own worktree, which git ignores. The lock file is the one exception. A subagent cannot write a `.md` file there, so each report file of a subagent has the extension `.txt`.
@@ -150,9 +162,10 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Do not run the pre-commit hook or the pre-push hook. Commit and push with `--no-verify`. The hooks check each package of the repository.
 - Open one pull request for each change. The checks of the pull request are the check of the other packages.
 - The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
-- Before the push, run `pnpm exec prettier --check` on the folder of the change, on the archive of the change, and on each file that the branch changed. A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
+- Before each push, run `node nodejs/wishem/docs/flow-scripts/finish-check.mjs` from the root of the worktree. Push only when it prints no FAIL line.
+- A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
-- The folder [`flow-scripts`](flow-scripts/) holds three scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs` creates the issue of a break-test. `heavy.mjs <command>` runs a heavy command in a slot (see "Limits on agents"). Run each one with `node`, as one command.
+- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> <range> <file>...` creates the one break-test issue of a change. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
 
 ### The steps that a person does
 
@@ -160,6 +173,7 @@ A test of one requirement does not find a fault that needs two features in a seq
 
 - The design of a change that adds or changes a thing that a person can use or see has a section "The test guide". It gives the steps that a person does to see the change work, with real processes and real files, as exact commands and their results. The steps join the change with the features that it meets: a write and then a hand edit, a stop and then a start, an input through the link and then the file on the disk.
 - The final reviewer does these steps on the branch before it gives its verdict, and reports the real result of each step. A step that does not give its result is a finding of the grade Important or higher.
+- Each step of the test guide that a program can do is also an automated test of the change, in the package of the change (a test with real processes, or a Playwright test, or a script such as `docs/milestones/a4-workbench/page-driver.mjs`). Reason: four bug fixes of the A3 period (#624, #642, #652, #657) were faults of two features in a sequence that only a test guide or a break-test found, after the merge. A test in CI finds such a fault in the next change.
 - The test guide of the milestone uses these sections.
 
 ### Reviews
@@ -172,12 +186,14 @@ A test of one requirement does not find a fault that needs two features in a seq
 
 The owner decided on 2026-11-27 that a break-test is not a step of a change. A change is merged after its final review. These rules replace the break-test step of the apply workflow:
 
-- After a change is merged, create one issue for each library package that the change changed. A library package is a package that a different package depends on: `core`, `hub`, `clock`, and `host-nodejs` at this time.
-- The issue has the type `Review`, the title "Break-test: `<package>` after #`<issue of the change>`", the label `app:wishem`, and the milestone of the change. Add it to the project. Do not assign it to the owner.
-- The scope of the break-test is the source files of the package that the change added or changed, and the tests that the change added or changed. The issue lists these files and gives the range of commits.
+- After a change is merged, create one issue for the change when it changed the source of one or more library packages. A library package is a package of `nodejs/wishem/` that a different package of `nodejs/wishem/` has in `dependencies`. A package in `devDependencies` only does not count. Reason: the package `docs-check` has each other package in `devDependencies`, and the owner decided on 2026-11-28 that this does not make each package a library package.
+- The owner decided on 2026-11-28 to take one break-test issue for each change, not one for each package, because it closes milestones faster: one run, one pull request, one changeset, and one wait for the checks.
+- The issue has the type `Review`, the title "Break-test: after #`<issue of the change>`", the label `app:wishem`, and the milestone of the change. Add it to the project. Do not assign it to the owner.
+- The scope of the break-test is the source files of each library package that the change added or changed, and the tests that the change added or changed. The issue lists these files by package and gives the range of commits. The break-test runs the mutants of one package at a time.
 - When one or more of these issues are open, one break-test is always in work. Do them in the order in which they were created, the oldest one first.
-- A break-test does not take a slot that other work can use. When no other item can start and fewer than five subagents run, start more break-tests, the oldest first, to fill the slots. Do not run two break-tests of the same package at the same time. The owner decided this on 2026-11-28: the limit of one break-test keeps the break-tests from stopping other issues, and it is not a limit on the number of subagents.
+- A break-test does not take a slot that other work can use. When no other item can start and fewer subagents than the limit run, start more break-tests, the oldest first, to fill the slots. Do not run two break-tests of the same package at the same time. The owner decided this on 2026-11-28: the limit of one break-test keeps the break-tests from stopping other issues, and it is not a limit on the number of subagents.
 - A break-test runs in a worktree of its own, from `main`. Its result is a pull request that changes tests only, and that closes the issue. The description of the pull request gives the totals of the two passes.
+- When a break-test finds no gap and changes no test, close its issue with a comment that gives the totals of the two passes. No pull request is necessary.
 - When a break-test finds a fault of the source, create an issue of the type `Bug` for the fault. Do not correct the source in the pull request of the break-test.
 
 ### Skills and briefs
@@ -187,14 +203,29 @@ The owner decided on 2026-11-27 that a break-test is not a step of a change. A c
 - A brief does not replace a skill. A brief for work that a skill covers names the skill and tells the subagent to invoke it. The brief does not give the steps of the skill again, does not limit them, and does not remove one.
 - When the lead agent does a step in a lighter form than the workflow gives, it tells the owner in the same message, with the reason.
 
+#### What each brief of a planner and of a reviewer holds
+
+A brief of a planner holds each item. A brief of a task reviewer and of a final reviewer holds the items that apply to the task.
+
+- The architecture document (`docs/architecture/README.md` and `render.mjs`) and each README show each package, process, relationship, and import that the change adds, changes, or removes.
+- A delta spec that modifies a requirement copies the current text of `main` for that requirement, with each scenario that `main` has, also the scenarios that other changes added. Read the main spec on `main` at the time of the plan, and again before the archive.
+- The expected results of "The test guide" come from a real run on `main` where the behavior exists, or say clearly that they are the result after the change.
+- Each open issue of the type `Bug` that touches the same files or behavior is named, with what the change does about it.
+- One changeset for each distinct change, as `~/.claude/rules/changesets.md` says.
+- A planner does not drop or reduce a feature that the owner named in the issue or in a decision. When the full feature costs much work, the planner plans it in more tasks, or asks the owner. Reason: the owner overruled #650, which left out the arrows of the package view.
+
 ### Work at the same time
 
-The lead agent is the one agent that can do the steps that are bound to a worktree, such as the finish of a change. Keep the lead agent free:
+Keep the lead agent free:
 
-- When a change is complete and reviewed, do its finish steps before you start a subagent for a different change.
+- When the final review of a change is clean, the lead agent starts a finisher subagent (sonnet) in the worktree of the change. The owner decided this on 2026-11-28. The finisher merges `main`, archives the change with the sync of its specs, writes the changesets, runs `finish-check.mjs`, pushes, writes the description of the pull request with the `writing-pull-requests` skill, creates the follow-up issues of "Follow-up" of `design.md`, and marks the pull request ready. Its report lists each "Ruling:" line of the ledger.
+- The lead agent keeps the steps that wait or that change the board: it gives the rulings to the owner, runs `merge-when-green.mjs`, sets the board, creates the break-test issue, and removes the worktree after the merge.
 - While a long step runs, such as an implementer or a break-test, start the plan of the next change on the board in a new worktree. A plan does not need the merge of the change that it depends on. It needs only the design of that change.
 - While a long step runs and no plan can start, start a follow-up issue that touches a different package.
-- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer than five subagents run, look at the tasks of each open milestone and start one that is not blocked.
+- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer subagents than the limit run, look at the tasks of each open milestone and start one that is not blocked.
+- When two items can start, start the item of the milestone that has the fewest open items. The owner asked on 2026-11-28 for the selection that closes milestones fastest.
+- A task of review findings that blocks no outcome of its milestone goes to the milestone `[WSH] R1 Tech Debt` when it is created.
+- Do not start a break-test of a package while a change that changes that package is in apply. Reason: the break-test #647 ran on a base from before #617, and its tests needed rework after the merge.
 
 ## The scope of a task
 

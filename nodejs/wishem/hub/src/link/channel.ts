@@ -1,8 +1,11 @@
 /** A connection that carries text messages in order. Each channel has one message listener and one close listener. */
 export interface Channel {
   send(text: string): void
-  /** A message that arrives before the listener is registered waits for it. */
-  onMessage(listener: (text: string) => void): void
+  /**
+   * A message that arrives before the listeners are registered waits for them.
+   * `onBinary` runs for each binary message, in order with the text messages. Without it, a binary message is dropped.
+   */
+  onMessage(listener: (text: string) => void, onBinary?: () => void): void
   /** Runs one time when the connection ends, for each cause. */
   onClose(listener: () => void): void
   /** Does nothing when the channel is closed. */
@@ -20,26 +23,34 @@ export interface WebSocketLike {
 
 interface Endpoint {
   channel: Channel
-  /** Gives a message to the listener, or holds it. */
+  /** Gives a text message to the listener, or holds it. */
   deliver(text: string): void
+  /** Gives a binary message to the binary listener, or holds it. */
+  deliverBinary(): void
   /** Runs the close listener one time. */
   notifyClose(): void
 }
 
 const createEndpoint = (send: (text: string) => void, close: () => void): Endpoint => {
   let messageListener: ((text: string) => void) | undefined
+  let binaryListener: (() => void) | undefined
   let closeListener: (() => void) | undefined
   let closeNotified = false
-  const waiting: string[] = []
+  const waiting: (string | undefined)[] = []
 
   return {
     channel: {
       send,
       close,
-      onMessage: (listener) => {
+      onMessage: (listener, onBinary) => {
         messageListener = listener
-        for (const text of waiting.splice(0)) {
-          listener(text)
+        binaryListener = onBinary
+        for (const entry of waiting.splice(0)) {
+          if (entry === undefined) {
+            onBinary?.()
+          } else {
+            listener(entry)
+          }
         }
       },
       onClose: (listener) => {
@@ -57,6 +68,16 @@ const createEndpoint = (send: (text: string) => void, close: () => void): Endpoi
         waiting.push(text)
       } else {
         messageListener(text)
+      }
+    },
+    deliverBinary: () => {
+      if (closeNotified) {
+        return
+      }
+      if (messageListener === undefined) {
+        waiting.push(undefined)
+      } else {
+        binaryListener?.()
       }
     },
     notifyClose: () => {
@@ -134,6 +155,8 @@ export const webSocketChannel = (socket: WebSocketLike): Promise<Channel> =>
     socket.addEventListener('message', (event) => {
       if (typeof event.data === 'string') {
         endpoint.deliver(event.data)
+      } else {
+        endpoint.deliverBinary()
       }
     })
     socket.addEventListener('open', () => {

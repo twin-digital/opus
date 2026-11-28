@@ -196,7 +196,7 @@ The package SHALL hold a document of the protocol. The document SHALL give each 
 #### Scenario: A binary message
 
 - **WHEN** a client sends a message as a binary WebSocket message
-- **THEN** the document says that the hub side ignores it and sends no answer, and that each message is a text message
+- **THEN** the document says that each message is a text message, and that the hub side answers a binary message with `refused` with the reason `malformed` and closes the connection
 
 #### Scenario: A JSON parser that gives only floating-point numbers
 
@@ -275,3 +275,22 @@ A remote port SHALL close the connection and treat the link as ended when a mess
 
 - **WHEN** a remote port gets a `welcome` message with the `seq` `3.0`
 - **THEN** the link starts, and the next `applied` message has the sequence number 4
+
+### Requirement: The hub side refuses a binary message
+
+The hub side SHALL answer a binary WebSocket message from a client with a `refused` message with the reason `malformed` and a text that says that the message is binary. Then the hub side SHALL close the connection. This SHALL apply before and after `welcome`. After `welcome`, the hub side SHALL detach each subsystem of the link, and the hub SHALL continue.
+
+#### Scenario: A binary message before the hello
+
+- **WHEN** the first message of a client is a binary WebSocket message
+- **THEN** the hub side sends `refused` with the reason `malformed`, attaches no subsystem, and closes the connection
+
+#### Scenario: A binary message after the welcome
+
+- **WHEN** a client got `welcome` for the subsystem `page`, and then sends a binary WebSocket message
+- **THEN** the hub side sends `refused` with the reason `malformed` and closes the connection, and a new link can attach the ID `page` again
+
+#### Scenario: A text message after a binary message
+
+- **WHEN** a client sends a binary WebSocket message and then a `hello` text message on the same connection
+- **THEN** the client gets only the `refused` message, and the hub side attaches no subsystem
