@@ -1,6 +1,10 @@
 import { REWIND_INPUT_TYPE, type Port } from '@thrashplay/wishem-hub'
 import { TIME_ID, timeInputs } from './time.js'
 
+// Timer functions that Node.js and a web browser both give, declared so that no Node.js types are needed.
+declare function setInterval(callback: () => void, intervalMs: number): unknown
+declare function clearInterval(handle: unknown): void
+
 export interface ClockTimer {
   /** Calls `callback` at the interval. Returns a function that stops the calls. */
   start(callback: () => void, intervalMs: number): () => void
@@ -91,8 +95,9 @@ export const startClock = (port: Port, options: ClockOptions = {}): Clock => {
     if (event.type === 'stopping') {
       stop()
     } else if (
-      event.type === 'applied' &&
-      (event.input.type === 'time/set-running' || event.input.type === REWIND_INPUT_TYPE)
+      event.type === 'started' ||
+      event.input.type === 'time/set-running' ||
+      event.input.type === REWIND_INPUT_TYPE
     ) {
       last = now()
     }

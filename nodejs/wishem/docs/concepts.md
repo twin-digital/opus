@@ -327,7 +327,7 @@ The text that defines Wishem does not say "folder" or "file" for where a model i
 These items are **Proposed**:
 
 - The **store** is the built-in model subsystem that holds the definitions and the entities. A write is an input to the store. The package `core` holds the code of the store. `core` is a current name in the code.
-- The authored state is the state of the store in the workbench construct.
+- The authored state is the state of the stores of the workbench construct. A storage subsystem keeps each store.
 - A **storage subsystem** keeps the authored state. It has one job, and it attaches two subsystems. Its output subsystem writes each change to files. Its input subsystem sends an input when a file changes on the disk. Only the storage subsystem knows that the authored state is in files.
 - The live state is the joined state of a product construct. The store of that construct starts from the authored model that the workbench gives to the construct.
 - The live state is in memory. Its durable form is a checkpoint and the record.
@@ -358,7 +358,7 @@ The workbench is its own construct. It does not hold the subsystems of the produ
 
 These items are **Proposed**:
 
-- The store of the workbench construct holds the authored model of the workbench. It holds the authored model of the product as a separate, **mounted** model. The product model refers to nothing of the workbench.
+- The workbench construct has the store `store` for the model of the workbench. It has the store `product` for the **mounted** product. The store `product` validates the product model alone, and the product model refers to nothing of the workbench.
 - The workbench construct has a model subsystem that holds the list of the product constructs that must run.
 - The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
   - It starts and stops the product constructs.
@@ -487,6 +487,8 @@ Two kinds of problem have two different fixes (rule R9):
 A person can view and edit the code behind a behavior. The edit makes a new version in the history, written by hand. A behavior whose current version was written by hand is a **native behavior**. (**Agreed**)
 
 A native behavior is not locked. The designer can give it a new prompt. The agent then writes a new version, and the behavior is not native. (**Agreed**)
+
+The count rule of the sample product is a native behavior in a first form. It stands in for the behavior feature (issue #481).
 
 The agent starts the new version from the current code, as for each other prompt change (rule R11). A hand edit to code has the same problems as a hand edit to a generated room: the prompt does not describe it, and a later change can remove it. (**Proposed**)
 

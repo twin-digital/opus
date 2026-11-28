@@ -23,6 +23,7 @@ vi.mock('@thrashplay/wishem-host-nodejs', async (importActual) => {
 
 const script = join(import.meta.dirname, '..', 'scripts', 'start.ts')
 const baseModel = join(import.meta.dirname, '..', '..', 'workbench', 'model')
+const sampleProduct = join(import.meta.dirname, '..', '..', 'sample-product', 'model')
 const appBarSidecar = join(import.meta.dirname, 'views', 'AppBar.view.json')
 const APP_BAR = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
 const TITLE = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
@@ -424,6 +425,13 @@ describe('the start script of the workbench', () => {
     expect(run.output()).toBe(`wishem: ${name} must be a number from 0 to 65535\n`)
   })
 
+  it('prints that --product must be a folder and stops with exit code 1 for an empty value', async () => {
+    const run = start(['--product', '', '--port', '0', '--hub-port', '0'])
+
+    expect(await run.exit).toBe(1)
+    expect(run.output()).toBe('wishem: --product must be a folder\n')
+  }, 30000)
+
   it('prints the reason only one time when the model is not correct', { timeout: 30000 }, async () => {
     writeFileSync(join(model, 'state.json'), '{ not json')
     const run = start(['--port', '0', '--hub-port', '0'])
@@ -431,6 +439,110 @@ describe('the start script of the workbench', () => {
     await run.exit
 
     expect(run.output().match(/wishem: the model is not correct/g)).toHaveLength(1)
+  })
+
+  describe('a mounted product', () => {
+    let product = ''
+    const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+    beforeEach(() => {
+      product = join(folder, 'product')
+      cpSync(sampleProduct, product, { recursive: true })
+    })
+
+    it(
+      'prints the product folder after the model folder and gives the link the parts store and product',
+      { timeout: 30000 },
+      async () => {
+        const run = start(['--port', '0', '--hub-port', '0', '--product', product])
+        await until(
+          () => run.output().includes('wishem: workbench at') || run.child.exitCode !== null,
+          () => run.output(),
+        )
+        const page = /wishem: workbench at (http:\/\/127\.0\.0\.1:\d+\/)/.exec(run.output())?.[1] ?? ''
+        const { link, reader } = await openTestLink(new URL('link', page.replace('http:', 'ws:')).href)
+
+        try {
+          expect(run.output()).toMatch(
+            new RegExp(`^wishem: model ${escaped(model)}\\nwishem: product ${escaped(product)}\\n`),
+          )
+          expect(Object.keys(reader.read()).sort()).toEqual(['product', 'store'])
+          expect(JSON.stringify(reader.read().product)).toContain('#1d4ed8')
+        } finally {
+          link.close()
+        }
+      },
+    )
+
+    it('gives the link no part product when no product is mounted', { timeout: 30000 }, async () => {
+      const { page, run } = await startReady()
+      const { link, reader } = await openTestLink(new URL('link', page.replace('http:', 'ws:')).href)
+
+      try {
+        expect('product' in reader.read()).toBe(false)
+        expect(run.output()).not.toContain('wishem: product')
+      } finally {
+        link.close()
+      }
+    })
+
+    it(
+      'names the absolute path and serves no page when the product is not valid JSON',
+      { timeout: 30000 },
+      async () => {
+        writeFileSync(join(product, 'state.json'), '{ not json')
+        const run = start(['--port', '0', '--hub-port', '0', '--product', product])
+
+        expect(await run.exit).toBe(1)
+        expect(run.output()).toContain(`wishem: problem in ${join(product, 'state.json')}: the text is not valid JSON`)
+        expect(run.output()).toContain('wishem: the model is not correct, so the workbench did not start')
+        expect(run.output()).not.toContain('workbench at')
+      },
+    )
+
+    it('frees the hub port when the product is not valid JSON', { timeout: 30000 }, async () => {
+      writeFileSync(join(product, 'state.json'), '{ not json')
+      const hubPort = await freePort()
+
+      await expect(
+        startWorkbench({ model, product, views, viewTypes: false, port: 0, hubPort, log: () => undefined }),
+      ).rejects.toThrow(StartError)
+
+      expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    })
+
+    it('starts the sample product alone with 2 component types and 1 entity', async () => {
+      const actual = await vi.importActual<typeof import('@thrashplay/wishem-host-nodejs')>(
+        '@thrashplay/wishem-host-nodejs',
+      )
+      const construct = await actual.startConstruct({ folder: sampleProduct, port: 0, log: () => undefined })
+
+      try {
+        const { definitions, entities } = construct.hub.read().store as { definitions: unknown[]; entities: unknown[] }
+        expect([definitions.length, entities.length]).toEqual([2, 1])
+      } finally {
+        await construct.close()
+      }
+    })
+
+    it('resolves a relative --product against INIT_CWD', { timeout: 30000 }, async () => {
+      const child = spawn(
+        'node',
+        [script, '--model', model, '--product', './product', '--views', views, '--port', '0', '--hub-port', '0'],
+        { env: { ...process.env, INIT_CWD: folder }, stdio: ['ignore', 'pipe', 'pipe'] },
+      )
+      children.push(child)
+      let text = ''
+      child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()))
+      child.stderr.on('data', (chunk: Buffer) => (text += chunk.toString()))
+
+      await until(
+        () => text.includes('wishem: workbench at') || child.exitCode !== null,
+        () => text,
+      )
+
+      expect(text).toContain(`wishem: product ${product}\n`)
+    })
   })
 
   describe('the generated files of the views', () => {

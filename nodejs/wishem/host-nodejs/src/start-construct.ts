@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { createStore, ModelError, validateModel } from '@thrashplay/wishem-core'
 import type { Problem } from '@thrashplay/wishem-core'
 import { createHub } from '@thrashplay/wishem-hub'
@@ -5,14 +6,21 @@ import type { Hub } from '@thrashplay/wishem-hub'
 import { formatProblem } from './format.js'
 import { LINK_PATH } from './link-server.js'
 import { attachModelFolderStorage } from './model-folder-storage.js'
-import { readModelFolder, withSource } from './read-model-folder.js'
+import type { ModelFolderStorage } from './model-folder-storage.js'
+import { readModelFolder, toAbsoluteSources, withSource } from './read-model-folder.js'
 import { serveHub } from './serve-hub.js'
 import type { HubServer } from './serve-hub.js'
 
 export { LINK_PATH }
 
+export const PRODUCT_ID = 'product'
+export const PRODUCT_FILES_ID = 'product-files'
+export const PRODUCT_FILES_WRITER_ID = 'product-files-writer'
+
 export interface ConstructOptions {
   folder: string
+  /** The folder of the product model to mount as the store `product`. It must be a different folder from `folder`. */
+  product?: string
   /** Default 4747. Use 0 to let the system select a port. */
   port?: number
   /** Default: write to the terminal. */
@@ -26,7 +34,7 @@ export interface Construct {
   url: string
   /** For example `ws://127.0.0.1:4747/link`. */
   linkUrl: string
-  /** The hub of the construct. Its model subsystem `store` holds the model. */
+  /** The hub of the construct. Its store `store` holds the model. With `product`, its store `product` holds the product model. */
   hub: Hub
   /** Stops the hub, waits for a running read or write, and closes the servers and the watch. Gives the same promise on each call. */
   close(): Promise<void>
@@ -34,7 +42,10 @@ export interface Construct {
 
 export const DEFAULT_PORT = 4747
 
-/** Rejects with a `ModelError` when the model is not correct at the start. */
+/**
+ * Rejects with a `ModelError` when a model is not correct at the start. A problem of the product names the
+ * absolute path of its file. Rejects with an `Error` when `product` is the same folder as `folder`.
+ */
 export const startConstruct = async (options: ConstructOptions): Promise<Construct> => {
   const { folder, port = DEFAULT_PORT } = options
   const log =
@@ -43,39 +54,95 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
       console.log(line)
     })
 
-  const initial = await readModelFolder(folder)
-  const validation = initial.data === undefined ? undefined : validateModel(initial.data)
-  if (validation?.ok !== true) {
-    const problems: Problem[] = validation === undefined ? initial.problems : withSource(validation.problems, initial)
+  if (options.product !== undefined && path.resolve(options.product) === path.resolve(folder)) {
+    throw new Error('the product folder and the model folder are the same folder')
+  }
+
+  /** A line that names a file keeps its text. Each other line names the product. */
+  const nameProduct = (line: string) =>
+    /^wishem: (problem|warning) in /.test(line) ? line : line.replace(/^wishem: /, 'wishem: product: ')
+
+  const readValid = async (target: string, absolute: boolean) => {
+    const read = await readModelFolder(target)
+    const checked = read.data === undefined ? undefined : validateModel(read.data)
+    const named = (problems: Problem[]) => (absolute ? toAbsoluteSources(problems, target) : problems)
+    if (checked?.ok !== true) {
+      return {
+        problems: named(checked === undefined ? read.problems : withSource(checked.problems, read)),
+        warnings: [],
+      }
+    }
+    return { model: checked.model, problems: [], warnings: named(withSource(checked.warnings, read)) }
+  }
+
+  const [initial, productInitial] = await Promise.all([
+    readValid(folder, false),
+    options.product === undefined ? undefined : readValid(options.product, true),
+  ])
+  const problems = [...initial.problems, ...(productInitial?.problems ?? [])]
+  if (problems.length > 0 || initial.model === undefined) {
     throw new ModelError(problems)
   }
-  withSource(validation.warnings, initial).forEach((warning) => {
+  initial.warnings.forEach((warning) => {
     log(formatProblem(warning))
   })
-  const first = validation.model
+  const first = initial.model
+  const productFirst = productInitial?.model
+  productInitial?.warnings.forEach((warning) => {
+    log(nameProduct(formatProblem(warning)))
+  })
 
   const hub = createHub({
-    subsystems: [createStore({ model: first })],
+    subsystems: [
+      createStore({ model: first }),
+      ...(productFirst === undefined ? [] : [createStore({ id: PRODUCT_ID, model: productFirst })]),
+    ],
     onError: (error) => {
       log(`wishem: a listener failed: ${error instanceof Error ? error.message : String(error)}`)
     },
   })
-  const storage = attachModelFolderStorage({ folder, hub, first, log, onWatchError: options.onWatchError })
+  const storages: ModelFolderStorage[] = [
+    attachModelFolderStorage({ folder, hub, first, log, onWatchError: options.onWatchError }),
+  ]
+  const closeStorages = () => Promise.all(storages.map((storage) => storage.close()))
+  if (options.product !== undefined && productFirst !== undefined) {
+    try {
+      storages.push(
+        attachModelFolderStorage({
+          folder: options.product,
+          hub,
+          first: productFirst,
+          log: (line) => {
+            log(nameProduct(line))
+          },
+          onWatchError: options.onWatchError,
+          storeId: PRODUCT_ID,
+          subsystemIds: { input: PRODUCT_FILES_ID, output: PRODUCT_FILES_WRITER_ID },
+          absoluteSources: true,
+        }),
+      )
+    } catch (error) {
+      await closeStorages()
+      throw error
+    }
+  }
 
   let server: HubServer
   try {
     server = await serveHub(hub, { port })
   } catch (error) {
-    await storage.close()
+    await closeStorages()
     throw error
   }
 
   hub.start()
   try {
-    storage.watch()
+    storages.forEach((storage) => {
+      storage.watch()
+    })
   } catch (error) {
     hub.stop()
-    await storage.close()
+    await closeStorages()
     await server.close()
     throw error
   }
@@ -88,11 +155,11 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
     hub,
     close: () => {
       closing ??= (async () => {
-        const storageClosed = storage.close()
+        const storagesClosed = closeStorages()
         if (hub.status === 'running') {
           hub.stop()
         }
-        await storageClosed
+        await storagesClosed
         await server.close()
       })()
       return closing
