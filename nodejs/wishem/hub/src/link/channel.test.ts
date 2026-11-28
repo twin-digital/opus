@@ -201,7 +201,7 @@ describe('webSocketChannel', () => {
     await expect(promise).rejects.toBeInstanceOf(Error)
   })
 
-  it('gives a text message to the listener and ignores other data', async () => {
+  it('drops a binary message for a listener with no onBinary', async () => {
     const { socket, fire } = fakeSocket(1)
     const channel = await webSocketChannel(socket)
     const got: string[] = []
@@ -223,6 +223,52 @@ describe('webSocketChannel', () => {
     const got: string[] = []
     channel.onMessage((text) => got.push(text))
     expect(got).toEqual(['early'])
+  })
+
+  it('gives a binary message to onBinary in order with the text messages', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    const log: string[] = []
+    const got: string[] = []
+    channel.onMessage(
+      (text) => {
+        got.push(text)
+        log.push(`text ${text}`)
+      },
+      () => log.push('binary'),
+    )
+    fire('message', { data: 'a' })
+    fire('message', { data: new Uint8Array([1]) })
+    fire('message', {})
+    fire('message', { data: 5 })
+    fire('message', { data: 'b' })
+    expect(got).toEqual(['a', 'b'])
+    expect(log).toEqual(['text a', 'binary', 'binary', 'binary', 'text b'])
+  })
+
+  it('holds a binary message that arrives before the listeners', async () => {
+    const { socket, fire } = fakeSocket(0)
+    const promise = webSocketChannel(socket)
+    fire('open')
+    const channel = await promise
+    fire('message', { data: new Uint8Array([1]) })
+    fire('message', { data: 'late' })
+    const log: string[] = []
+    channel.onMessage(
+      (text) => log.push(`text ${text}`),
+      () => log.push('binary'),
+    )
+    expect(log).toEqual(['binary', 'text late'])
+  })
+
+  it('gives no binary message after the close', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    const onBinary = vi.fn()
+    channel.onMessage(() => undefined, onBinary)
+    fire('close')
+    fire('message', { data: new Uint8Array([1]) })
+    expect(onBinary).not.toHaveBeenCalled()
   })
 
   it('runs the close listener one time for an error and a close after open', async () => {
