@@ -1,6 +1,6 @@
 # three-renderers
 
-`@thrashplay/wishem-three-renderers` holds the sample construct of Wishem and its command. It is private.
+`@thrashplay/wishem-three-renderers` holds the sample construct of Wishem and its command, and the React page that draws it. It is private.
 
 The sample construct (**Proposed** term) is the product construct of the sample product. It runs in a Node.js process of its own. It has the `time` subsystem, the update subsystem with the count behavior and the color behavior, and a clock with a step of 500 milliseconds. It reads the model folder of `sample-product` and writes no file. The renderers draw it through its link.
 
@@ -36,3 +36,39 @@ await construct.close()
 ```
 
 `startSampleConstruct` rejects with `EADDRINUSE` when the port is in use. `close()` gives the same promise on each call.
+
+## Start the React page
+
+```
+pnpm --filter @thrashplay/wishem-three-renderers react-page [--port <number>] [--hub-port <number>]
+```
+
+| Option             | Meaning                                                                           |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `--port <num>`     | The port of the page server. Default 5175. Use 0 to let the system select a port. |
+| `--hub-port <num>` | The port of the sample construct. Default 4750.                                   |
+
+The command prints the address of the page and the address that the page connects to:
+
+```
+wishem: React page at http://127.0.0.1:5175/
+wishem: the page connects to ws://127.0.0.1:4750/link
+```
+
+The page server starts also when no construct runs. The page then shows "The construct is not reachable. The page tries again." and connects when the construct starts.
+
+If the page port is in use, the command prints `wishem: port <n> is in use` and ends with exit code 1. A value of `--port` or `--hub-port` that is not a number from 0 to 65535 also gives exit code 1. `SIGINT` and `SIGTERM` stop the page server and end the command with exit code 0. The command does not stop the sample construct.
+
+## The React page
+
+The page shows a box of 640 by 360 pixels and one status line. The view `ClearColor` fills the box with the color of the `Color` component of the sample construct. The color changes two times each second.
+
+| Status line                                           | When                           |
+| ----------------------------------------------------- | ------------------------------ |
+| Connecting to the construct.                          | Before the first link.         |
+| Connected (link N).                                   | A link is open. N starts at 1. |
+| The construct is not reachable. The page tries again. | The link is down.              |
+
+While the link is down, the box keeps the last picture. The page opens a new link after 500 milliseconds, then after a delay that doubles each time, at most 5 seconds. A new link draws its state with no reload.
+
+The page opens one link at `/link` of its own address, with one output subsystem and no input subsystem. It sends no input. The view declares its props by hand in `src/views/ClearColor.tsx`.

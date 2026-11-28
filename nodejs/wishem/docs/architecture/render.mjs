@@ -751,6 +751,25 @@ const cSampleProcess = el(
   'Runs the sample construct and serves its link.',
 )
 
+// The React page and its page server sit in a column of their own on the right.
+const REACT_X = 1950
+const cReactServer = el(
+  'container',
+  REACT_X,
+  560,
+  'React page server',
+  '[Container: Node.js]',
+  'Serves the React page and passes its link.',
+)
+const cReactPage = el(
+  'container',
+  REACT_X,
+  860,
+  'React page',
+  '[Container: React, web browser]',
+  'Draws the sample construct.',
+)
+
 const cGodotRunner = el(
   'container',
   gx(MIDDLE),
@@ -789,14 +808,14 @@ const shiftY = (items, dy) =>
   )
 
 // The system boundary reaches the update column.
-const GROUP_W = UPDATE_X + CARD_W + 20 - 24
+const GROUP_W = REACT_X + CARD_W + 20 - 24
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has nineteen containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process runs the behaviors with the update package, serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample construct process starts the product construct with the construct-manager package, runs the behaviors of the sample-product package, builds on the host-nodejs package, and reads the product model folder. The designer starts the four processes and the Godot runner, edits the two folders, and looks at the two pages.',
-  width: 1914,
+    'Wishem has twenty-one containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process runs the behaviors with the update package, serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample construct process starts the product construct with the construct-manager package, runs the behaviors of the sample-product package, builds on the host-nodejs package, and reads the product model folder. The React page server serves the React page and passes its link to the sample construct process. The React page gets page code over HTTP and connects to the hub over a WebSocket link through the React page server, and builds on the renderer-react and hub packages. The designer starts the five processes and the Godot runner, edits the two folders, and looks at the three pages.',
+  width: 2340,
   height: 3090,
   items: shiftY(
     [
@@ -814,6 +833,8 @@ const containers = {
       cClock,
       cUpdate,
       cSampleProcess,
+      cReactServer,
+      cReactPage,
       cPixiPage,
       cPixiProcess,
       cRendererPixi,
@@ -982,6 +1003,45 @@ const containers = {
         [left(cSampleProcess, 382), [1450, 382], [1450, 2125], right(cSample, 2125)],
         'Runs [import]',
         [1450, 1500],
+      ),
+
+      // The React page
+      rel(
+        'quiet',
+        [top(cDesigner, 570), [570, -40], [2040, -40], top(cReactServer, 2040)],
+        'Starts and stops [terminal]',
+        [1400, -40],
+      ),
+      rel(
+        'flow',
+        [right(cDesigner, 128), [2300, 128], [2300, 912], right(cReactPage, 912)],
+        'Looks at [web browser]',
+        [1650, 128],
+      ),
+      rel('quiet', [top(cReactPage, 1985), bottom(cReactServer, 1985)], 'Gets page code [HTTP]', [1985, 740]),
+      rel(
+        'flow',
+        [top(cReactPage, 2160), bottom(cReactServer, 2160)],
+        'Connects to the hub [WebSocket link]',
+        [2160, 790],
+      ),
+      rel(
+        'quiet',
+        [left(cReactServer, 600), [1760, 600], bottom(cSampleProcess, 1760)],
+        'Passes the link [WebSocket]',
+        [1760, 502],
+      ),
+      rel(
+        'quiet',
+        [left(cReactPage, 930), [1520, 930], [1520, 2250], [600, 2250], bottom(cRenderer, 600)],
+        'Builds on [import]',
+        [1520, 1700],
+      ),
+      rel(
+        'quiet',
+        [left(cReactPage, 890), [1185, 890], [1185, 1273], right(cHub, 1273)],
+        'Builds on [import]',
+        [1700, 890],
       ),
 
       // The update subsystem
