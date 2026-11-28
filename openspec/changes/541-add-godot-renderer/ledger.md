@@ -80,7 +80,20 @@ Task 4: review (sonnet): spec compliant, quality Approved, no Critical. Items it
 Ruling: the plan-mandated duplication of the construct of pixi-page (color-rule, create-hub, process, and their tests) is accepted — design.md mandates it, and #542 joins the two constructs into one — cost if wrong: two copies until #542.
 Task 4: minor (deferred): the signal handlers are registered after startGodotConstruct resolves (a signal during the start uses the default action); a message for an invalid --port that the spec does not name; `.ts` imports in create-hub.ts and process.ts (needed for type stripping) next to `.js` in the tests; COLOR_FIELD and SCREEN_ENTITY have no doc comments.
 Task 4: complete (commits 6f6536e..94a237e, review clean)
+Task 5: dispatched (implementer: sonnet), base 4876f3a1
+
+Task 5: implementer DONE_WITH_CONCERNS, commits 6753803e, 38661342 (72 tests; lint, typecheck pass; test:godot 116 passed, 0 failed). Real run of 5.4 two times: the lines of steps 3, 4, 11, 12, 14; shots/0001.png 640x360, each pixel #1d4ed8; `connected (link 2)` after the restart; SIGINT exit 0; no container stays. 5.5 passes. Concerns: test:godot prints leak warnings at exit; a public `seq()` in link_client.gd (the shot line needs the seq of `welcome`; a gap of LINK.md); the container command has no `exec` (xvfb-run as PID 1 does not start Godot); the import is in the container command; `flush_stdout_on_print=true` in project.godot (maybe not needed); a synchronous `docker cp` blocks the runner and the relay during a copy; the shot line has the absolute local path, not the path of "Examples"; GodotConstruct has `url` and `linkUrl`, not `port`. Review dispatched (sonnet).
+
+Task 5: review (sonnet): needs fixes. Important F1: run-godot.ts ignores the result of `docker cp`, so a failed copy still logs `shot ... file <local>` for a file that does not exist. Spec gap F2: the shot line has the absolute local path; "Examples" of design.md give a path relative to the repository. Items it could not verify: the text of "Examples" and "Interfaces" (the lead checks with the fix); test_main.gd does not cover _ready or _shoot (the real run is the evidence); the changeset (at the finish); the public seq() of link_client.gd for LINK.md (Task 7).
+Ruling: F2 — the absolute path stays (exact from any working folder); the example of design.md changes to it, with openspec-update-change — cost if wrong: the text of one line.
+Ruling: the minor M-relay (relay.mjs reads stdin only after a connection, so an idle inner relay does not end on stdin.end(), waits for kill(), and can stay in the container) goes into the fix round, because it affects Ctrl+C in the test guide — cost if wrong: one line and one test.
+Task 5: minor (deferred): the synchronous `docker cp` blocks the runner and the relay during a copy (use docker.spawn); no handling of backpressure in the relay; the output of `--import` goes to /dev/null and its status is ignored; the signal handlers of scripts/godot.ts are installed after runGodot returns; time-client.mjs ends with 0 when the result is not ok; `new Promise` around a synchronous startRun; emptyFolder removes each entry of a caller-supplied shotsDir; leak warnings at the exit of test:godot.
+Task 5: fix round 1 dispatched (new implementer, sonnet), base 38661342.
+
+Task 5: fix round 1/5 (3 addressed, 0 open — F1, F2, M-relay; commits 3866134..9e10af8; 74 tests; test:godot 116 passed). Re-review (sonnet): no new breakage; no data of stdin is lost (the runner writes only after a socket connects).
+Task 5: minor (deferred): the test of an idle relay has a limit of 700 ms against the kill time of 1000 ms (can be fragile on a loaded computer).
+Task 5: complete (commits 4876f3a..9e10af8, review clean)
 
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 5 (the Godot application and the runner). Carry to it: no timeout of welcome and no keepalive (gap 6). Then Tasks 6 and 7. Tasks 4 to 7 wait for the merge of #540.
+- NEXT STEP: Task 6 (the screenshot test). Then Task 7 (LINK.md and the documents; carry the gaps of Decision 14, of the report of Task 2 (8 to 14), and `seq()` of link_client.gd from Task 5). Tasks 4 to 7 wait for the merge of #540.
