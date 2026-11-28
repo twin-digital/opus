@@ -30,7 +30,7 @@ Terms in each group are in alphabetical order.
 
 **Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the list `behaviors`, which holds the native behaviors of the product. The update subsystem of each product construct runs them. The designer names it with the option `--product-code` of the `start` script.
 
-**Product panel** (**Proposed**): The tool of the workbench page that lists the entities of the mounted product and changes their field values. It is derived from the definitions of the product. It reads the part `product` and sends `product/set-field`.
+**Product panel** (**Proposed**): The tool of the workbench page that lists the entities of the mounted product and changes and clears their field values. It is derived from the definitions of the product. It reads the part `product` and sends `product/set-field` and `product/clear-field`.
 
 **Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. The workbench holds one authored model, and that model contains the model of the product. The product knows nothing about the workbench.
 

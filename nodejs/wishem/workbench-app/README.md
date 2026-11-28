@@ -184,6 +184,9 @@ With the part `product` in the joined state of the link, the page shows the prod
 - The inspector shows one group for each component of the entity, and one row for each field. A text field changes a `string` or a `number`. A check box changes a `boolean`. A select changes a `reference`.
 - Enter or a move of the focus commits a text field. Escape restores the value of the part. A text that is not a number gives the alert `Type a number.` and sends no input.
 - A commit sends one `product/set-field` input through the input port of the page. The record of the hub holds the source `page-<hex>-input`. The storage subsystem of the product writes the `state.json` of the product folder.
+- Each row has the button `Clear`. Its accessible name is `Clear <field>`. A press sends one `product/clear-field` input through the input port, and the field has no value. The row then shows `no value` (a reference shows the option `No value`).
+- The button `Clear` is disabled (`aria-disabled`, and it keeps the focus) when the field has no value, while the row saves, and when the page has no input port. A text draft commits on the blur before a press, and the button is disabled while that commit saves. A refused draft does not block `Clear`: the clear removes the draft and its alert.
+- A reason why the workbench does not accept a clear shows below the row as `The value is not cleared. <reason>`. An accepted change or clear removes the line.
 - A reason why the workbench does not accept the change shows below the row, with the text of `src/outcome-text.ts`.
 - A hand edit of the `state.json` of the product folder shows in the panel with no reload. A rewind of the hub restores the value in the panel and in the file.
 - When a hand edit removes the selected entity, the panel clears the selection. If the focus was in the inspector, the focus moves to the list.

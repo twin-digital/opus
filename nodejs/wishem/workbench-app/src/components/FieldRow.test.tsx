@@ -416,6 +416,218 @@ describe('FieldRow', () => {
     })
   })
 
+  describe('the button Clear', () => {
+    const clearButton = () =>
+      Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Clear')
+    const clickClear = () => {
+      act(() => {
+        clearButton()?.click()
+      })
+    }
+
+    it.each([
+      ['number', count, 0, 'Clear count'],
+      ['string', color, '#1d4ed8', 'Clear color'],
+      ['boolean', on, true, 'Clear on'],
+      ['reference', target, 'e_a', 'Clear target'],
+    ] as const)('shows the button for a %s with the name Clear <label>', (_type, field, value, name) => {
+      draw({ field, value, options, onChange: accept, onClear: accept })
+      expect(clearButton()?.getAttribute('aria-label')).toBe(name)
+      expect(clearButton()?.getAttribute('aria-disabled')).toBeNull()
+    })
+
+    it('disables the button with no value, and keeps the focus on it', () => {
+      draw({ field: color, value: undefined, onChange: accept, onClear: accept })
+      expect(clearButton()?.getAttribute('aria-disabled')).toBe('true')
+      act(() => {
+        clearButton()?.focus()
+      })
+      expect(document.activeElement).toBe(clearButton())
+    })
+
+    it('disables the button with no onClear', () => {
+      draw({ field: color, value: 'x', onChange: accept })
+      expect(clearButton()?.getAttribute('aria-disabled')).toBe('true')
+    })
+
+    it('calls onClear once for a click', () => {
+      const onClear = vi.fn(() => defer().promise)
+      draw({ field: color, value: 'x', onChange: accept, onClear })
+      clickClear()
+      expect(onClear).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onClear once for Enter and for Space (a button turns each key into a click)', () => {
+      for (const key of ['Enter', ' ']) {
+        const onClear = vi.fn(() => defer().promise)
+        draw({ field: color, value: 'x', onChange: accept, onClear })
+        act(() => {
+          const button = clearButton()
+          button?.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+          button?.click()
+        })
+        expect(onClear).toHaveBeenCalledTimes(1)
+        act(() => {
+          root.render(<div />)
+        })
+      }
+    })
+
+    it('shows Saving and aria-busy while it waits, and disables the button', async () => {
+      const pending = defer()
+      draw({ field: color, value: 'x', onChange: accept, onClear: () => pending.promise })
+      clickClear()
+      expect(container.textContent).toContain('Saving')
+      expect(text()?.getAttribute('aria-busy')).toBe('true')
+      expect(clearButton()?.getAttribute('aria-disabled')).toBe('true')
+      pending.resolve(saved)
+      await flush()
+      expect(container.textContent).not.toContain('Saving')
+    })
+
+    it('disables a check box and a select while a clear waits', () => {
+      draw({ field: on, value: true, onChange: accept, onClear: () => defer().promise })
+      clickClear()
+      expect(box()?.disabled).toBe(true)
+      draw({ field: target, value: 'e_a', options, onChange: accept, onClear: () => defer().promise })
+      clickClear()
+      expect(select()?.disabled).toBe(true)
+    })
+
+    it('ends with no draft and no alert after an accepted clear, and keeps the focus on the button', async () => {
+      draw({ field: color, value: 'x', onChange: accept, onClear: accept })
+      act(() => {
+        clearButton()?.focus()
+      })
+      clickClear()
+      await flush()
+      draw({ field: color, value: undefined, onChange: accept, onClear: accept })
+      expect(alert()).toBeNull()
+      expect(text()?.value).toBe('')
+      expect(clearButton()?.getAttribute('aria-disabled')).toBe('true')
+      expect(document.activeElement).toBe(clearButton())
+    })
+
+    it('shows The value is not cleared. and the reason with the role alert after a rejection', async () => {
+      draw({
+        field: color,
+        value: 'x',
+        onChange: accept,
+        onClear: () => Promise.resolve(rejected('The workbench does not run.')),
+      })
+      clickClear()
+      await flush()
+      expect(alert()?.textContent).toBe('The value is not cleared. The workbench does not run.')
+      expect(text()?.value).toBe('x')
+      expect(clearButton()?.getAttribute('aria-disabled')).toBeNull()
+    })
+
+    it('removes the alert after an accepted change', async () => {
+      draw({ field: color, value: 'x', onChange: accept, onClear: () => Promise.resolve(rejected('No.')) })
+      clickClear()
+      await flush()
+      type('y')
+      press('Enter')
+      await flush()
+      expect(alert()).toBeNull()
+    })
+
+    it('removes the alert after an accepted clear', async () => {
+      const onClear = vi
+        .fn<() => Promise<ChangeOutcome>>()
+        .mockResolvedValueOnce(rejected('No.'))
+        .mockResolvedValueOnce(saved)
+      draw({ field: color, value: 'x', onChange: accept, onClear })
+      clickClear()
+      await flush()
+      clickClear()
+      await flush()
+      expect(alert()).toBeNull()
+    })
+
+    it('names the save, not the clear, for a rejected change after a rejected clear', async () => {
+      draw({
+        field: color,
+        value: 'x',
+        onChange: () => Promise.resolve(rejected('Bad.')),
+        onClear: () => Promise.resolve(rejected('No.')),
+      })
+      clickClear()
+      await flush()
+      type('y')
+      press('Enter')
+      await flush()
+      expect(alert()?.textContent).toBe('The value is not saved. Bad.')
+    })
+
+    it('clears a refused draft and removes its alert', async () => {
+      const onClear = vi.fn(accept)
+      draw({ field: count, value: 3, onChange: accept, onClear })
+      type('ten')
+      press('Enter')
+      expect(alert()?.textContent).toBe('The value is not saved. Type a number.')
+      clickClear()
+      await flush()
+      expect(onClear).toHaveBeenCalledTimes(1)
+      expect(alert()).toBeNull()
+      draw({ field: count, value: undefined, onChange: accept, onClear })
+      expect(text()?.value).toBe('')
+    })
+
+    it('shows a general line when onClear rejects', async () => {
+      draw({ field: color, value: 'x', onChange: accept, onClear: () => Promise.reject(new Error('boom')) })
+      clickClear()
+      await flush()
+      expect(alert()?.textContent).toBe('The value is not cleared. The workbench failed to apply the change.')
+      expect(errors).toHaveBeenCalledTimes(1)
+      errors.mockClear()
+    })
+
+    it('gives no error when the row is removed while a clear waits', async () => {
+      const pending = defer()
+      draw({ field: color, value: 'x', onChange: accept, onClear: () => pending.promise })
+      clickClear()
+      act(() => {
+        root.render(<div />)
+      })
+      pending.resolve(rejected('late'))
+      await flush()
+      expect(container.textContent).toBe('')
+    })
+
+    it('keeps the button disabled while a text draft commits on the blur', async () => {
+      const pending = defer()
+      const onClear = vi.fn(accept)
+      draw({ field: color, value: 'a', onChange: () => pending.promise, onClear })
+      act(() => {
+        text()?.focus()
+      })
+      type('b')
+      act(() => {
+        text()?.blur()
+      })
+      expect(clearButton()?.getAttribute('aria-disabled')).toBe('true')
+      clickClear()
+      expect(onClear).not.toHaveBeenCalled()
+      pending.resolve(saved)
+      await flush()
+    })
+
+    it('starts not cleared with the reason', () => {
+      draw({
+        field: count,
+        value: 0,
+        onChange: accept,
+        onClear: accept,
+        initial: { state: 'not-cleared', reason: 'The workbench does not run. Start it, and try again.' },
+      })
+      expect(alert()?.textContent).toBe(
+        'The value is not cleared. The workbench does not run. Start it, and try again.',
+      )
+      expect(text()?.value).toBe('0')
+    })
+  })
+
   describe('the first state', () => {
     it('starts saving with the draft', () => {
       draw({ field: count, value: 0, onChange: () => defer().promise, initial: { state: 'saving', draft: '7' } })

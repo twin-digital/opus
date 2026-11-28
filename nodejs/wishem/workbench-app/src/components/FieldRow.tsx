@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { Button } from './Button.js'
 import type { FieldDefinition, FieldValue, Id } from '@thrashplay/wishem-core'
 
 export type ChangeOutcome = { saved: true } | { saved: false; reason: string }
@@ -16,11 +17,14 @@ export interface FieldRowProps {
   options?: readonly ReferenceOption[]
   /** With no value, the control is disabled. */
   onChange?: (value: FieldValue) => Promise<ChangeOutcome>
+  /** With no value, the button Clear is disabled. */
+  onClear?: () => Promise<ChangeOutcome>
   /** The first state, for the style guide and the tests. */
-  initial?: { state: 'saving' | 'not-saved'; draft: string | boolean; reason?: string }
+  initial?: { state: 'saving' | 'not-saved' | 'not-cleared'; draft?: string | boolean; reason?: string }
 }
 
 type Phase = 'idle' | 'saving' | 'not-saved'
+type Act = 'save' | 'clear'
 
 const FAILED = 'The workbench failed to apply the change.'
 const NOT_A_NUMBER = 'Type a number.'
@@ -29,11 +33,16 @@ const controlClass =
   'min-w-0 rounded-sm border border-control-border bg-surface px-2 py-1 text-control text-fg focus-visible:outline-2 focus-visible:outline-accent disabled:text-fg-muted'
 
 /** One field of a component: its label, its type, and the control that changes its value. */
-export const FieldRow = ({ field, value, options = [], onChange, initial }: FieldRowProps) => {
+export const FieldRow = ({ field, value, options = [], onChange, onClear, initial }: FieldRowProps) => {
   const id = useId()
-  const [phase, setPhase] = useState<Phase>(initial?.state ?? 'idle')
+  const [phase, setPhase] = useState<Phase>(
+    initial?.state === 'not-cleared' ? 'not-saved'
+    : initial?.state === 'not-saved' || initial?.state === 'saving' ? initial.state
+    : 'idle',
+  )
   const [draft, setDraft] = useState<string | boolean | undefined>(initial?.draft)
   const [reason, setReason] = useState(initial?.reason ?? '')
+  const [failed, setFailed] = useState<Act>(initial?.state === 'not-cleared' ? 'clear' : 'save')
   // The phase as a ref, so that a handler sees a change before the next render.
   const phaseRef = useRef<Phase>(phase)
   const mounted = useRef(true)
@@ -56,27 +65,25 @@ export const FieldRow = ({ field, value, options = [], onChange, initial }: Fiel
     go('idle')
   }
 
-  const reject = (message: string) => {
+  const reject = (message: string, act: Act) => {
     setReason(message)
+    setFailed(act)
     go('not-saved')
   }
 
-  /** Sends the value, and shows the outcome. */
-  const send = (next: FieldValue) => {
-    if (!onChange) {
-      return
-    }
+  /** Calls the change or the clear, and shows the outcome. */
+  const run = (act: Act, call: () => Promise<ChangeOutcome>) => {
     setReason('')
     go('saving')
     const fail = (error: unknown) => {
       console.error(error)
       if (mounted.current) {
-        reject(FAILED)
+        reject(FAILED, act)
       }
     }
     let sent: Promise<ChangeOutcome>
     try {
-      sent = onChange(next)
+      sent = call()
     } catch (error) {
       fail(error)
       return
@@ -88,9 +95,21 @@ export const FieldRow = ({ field, value, options = [], onChange, initial }: Fiel
       if (outcome.saved) {
         end()
       } else {
-        reject(outcome.reason)
+        reject(outcome.reason, act)
       }
     }, fail)
+  }
+
+  const send = (next: FieldValue) => {
+    if (onChange) {
+      run('save', () => onChange(next))
+    }
+  }
+
+  const clear = () => {
+    if (onClear && canCommit()) {
+      run('clear', onClear)
+    }
   }
 
   const canCommit = () => phaseRef.current !== 'saving'
@@ -106,7 +125,7 @@ export const FieldRow = ({ field, value, options = [], onChange, initial }: Fiel
       }
       const number = Number(text)
       if (text.trim() === '' || !Number.isFinite(number)) {
-        reject(NOT_A_NUMBER)
+        reject(NOT_A_NUMBER, 'save')
         return
       }
       if (number === value) {
@@ -227,23 +246,33 @@ export const FieldRow = ({ field, value, options = [], onChange, initial }: Fiel
   }
 
   return (
-    <div className='grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 px-4 py-2 md:grid-cols-[8rem_5rem_minmax(0,1fr)]'>
-      <label htmlFor={id} className='min-w-0 text-ui break-words text-fg'>
-        {field.label}
-      </label>
-      <span className='font-mono text-label font-medium text-fg-muted uppercase'>{field.type}</span>
-      <div className='col-span-2 flex min-w-0 items-center gap-3 md:col-span-1'>
-        {control}
-        {saving && <span className='font-mono text-label font-medium text-fg-muted uppercase'>Saving</span>}
-        {value === undefined && !saving && field.type !== 'reference' && (
-          <span className='font-mono text-label font-medium whitespace-nowrap text-fg-muted uppercase'>no value</span>
+    <div className='@container'>
+      <div className='grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 px-4 py-2 @lg:grid-cols-[8rem_5rem_minmax(0,1fr)]'>
+        <label htmlFor={id} className='min-w-0 text-ui break-words text-fg'>
+          {field.label}
+        </label>
+        <span className='font-mono text-label font-medium text-fg-muted uppercase'>{field.type}</span>
+        <div className='col-span-2 flex min-w-0 items-center gap-3 @lg:col-span-1'>
+          {control}
+          <span className='shrink-0'>
+            <Button
+              label='Clear'
+              accessibleName={`Clear ${field.label}`}
+              disabled={!onClear || saving || value === undefined}
+              onPress={clear}
+            />
+          </span>
+          {saving && <span className='font-mono text-label font-medium text-fg-muted uppercase'>Saving</span>}
+          {value === undefined && !saving && field.type !== 'reference' && (
+            <span className='font-mono text-label font-medium whitespace-nowrap text-fg-muted uppercase'>no value</span>
+          )}
+        </div>
+        {phase === 'not-saved' && (
+          <p role='alert' className='col-span-2 text-ui text-danger-text @lg:col-span-1 @lg:col-start-3'>
+            The value is not {failed === 'clear' ? 'cleared' : 'saved'}. {reason}
+          </p>
         )}
       </div>
-      {phase === 'not-saved' && (
-        <p role='alert' className='col-span-2 text-ui text-danger-text md:col-span-1 md:col-start-3'>
-          The value is not saved. {reason}
-        </p>
-      )}
     </div>
   )
 }
