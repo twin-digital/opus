@@ -1,8 +1,8 @@
 import type { Model } from '@thrashplay/wishem-core'
 import { createStore, storeInputs } from '@thrashplay/wishem-core'
 import { TIME_ID, createTime, timeInputs, type TimePart } from '@thrashplay/wishem-clock'
-import { createHub, hubInputs, type HubRecord, type ModelSubsystem } from '@thrashplay/wishem-hub'
-import { describe, expect, it } from 'vitest'
+import { InputRefusedError, createHub, hubInputs, type HubRecord, type ModelSubsystem } from '@thrashplay/wishem-hub'
+import { describe, expect, it, vi } from 'vitest'
 import { createUpdate, type Fields, type NativeBehavior } from './update.js'
 
 const COUNTER = 'ct_11111111-1111-4111-8111-111111111111'
@@ -36,6 +36,15 @@ const model = (count = 0): Model => ({
   ],
 })
 
+const tickInput = { seq: 7, source: 'src', type: 'time/advance', payload: { ms: 50 } }
+const timeContext = { read: () => ({ [TIME_ID]: { ticks: 1, now: 50 } }) }
+
+const spyStore = () => {
+  const store = createStore({ model: model() })
+  const apply = vi.fn(store.apply)
+  return { store: { ...store, apply }, apply }
+}
+
 const addOne: NativeBehavior = {
   id: 'test/add-one',
   componentType: COUNTER,
@@ -47,8 +56,15 @@ const double: NativeBehavior = {
   update: (fields) => ({ ...fields, [COUNT]: (fields[COUNT] as number) * 2 }),
 }
 
-const setup = (behaviors: NativeBehavior[], options: { count?: number; id?: string; time?: boolean } = {}) => {
-  const store = createStore({ model: model(options.count), ...(options.id === undefined ? {} : { id: options.id }) })
+const setup = (
+  behaviors: NativeBehavior[],
+  options: { count?: number; id?: string; time?: boolean; reverse?: boolean } = {},
+) => {
+  const start = model(options.count)
+  const store = createStore({
+    model: options.reverse === true ? { ...start, entities: [...start.entities].reverse() } : start,
+    ...(options.id === undefined ? {} : { id: options.id }),
+  })
   const subsystems: ModelSubsystem[] = [
     ...(options.time === false ? [] : [createTime()]),
     createUpdate({ store, behaviors }),
@@ -171,12 +187,55 @@ describe('createUpdate: behaviors', () => {
     expect((hub.read()[TIME_ID] as TimePart).ticks).toBe(1)
   })
 
-  it('keeps the part when a behavior returns its fields', async () => {
+  it('keeps the part and writes nothing when a behavior returns its fields', () => {
     const same: NativeBehavior = { id: 'test/same', componentType: COUNTER, update: (fields) => fields }
-    const { input, part } = setup([same])
-    const before = part()
+    const { store, apply } = spyStore()
+    const update = createUpdate({ store, behaviors: [same] })
+    expect(update.apply(update.initial, tickInput, timeContext)).toBe(update.initial)
+    expect(apply).not.toHaveBeenCalled()
+  })
+
+  it('writes each changed field with the seq and the source of the tick', () => {
+    const { store, apply } = spyStore()
+    const update = createUpdate({ store, behaviors: [addOne] })
+    update.apply(update.initial, tickInput, timeContext)
+    expect(apply).toHaveBeenCalledTimes(2)
+    for (const call of apply.mock.calls) {
+      expect(call[1]).toMatchObject({ seq: 7, source: 'src', type: 'store/set-field' })
+    }
+  })
+
+  it('runs a behavior for an entity that follows an entity with no such component', async () => {
+    const { input, counts } = setup([addOne], { reverse: true })
     await input.submit(timeInputs.advance(50))
-    expect(part()).toBe(before)
+    expect(counts()).toEqual([undefined, 1, 1])
+  })
+
+  it('skips a component type that the entity does not own', () => {
+    const update = vi.fn((fields: Fields) => fields)
+    const inherited: NativeBehavior = { id: 'test/inherited', componentType: 'constructor', update }
+    const { store } = spyStore()
+    const part = createUpdate({ store, behaviors: [inherited] })
+    expect(part.apply(part.initial, tickInput, timeContext)).toBe(part.initial)
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('gives ms 0 when the payload has no number ms', () => {
+    const seen: number[] = []
+    const spy: NativeBehavior = {
+      id: 'test/ms',
+      componentType: COUNTER,
+      update: (fields, tick) => {
+        seen.push(tick.ms)
+        return fields
+      },
+    }
+    const { store } = spyStore()
+    const update = createUpdate({ store, behaviors: [spy] })
+    for (const payload of [{}, undefined, null, { ms: 'x' }]) {
+      update.apply(update.initial, { ...tickInput, payload }, timeContext)
+    }
+    expect(seen).toEqual([0, 0, 0, 0, 0, 0, 0, 0])
   })
 })
 
@@ -229,6 +288,45 @@ describe('createUpdate: faults', () => {
     }
     const { input } = setup([extra])
     expect(await input.submit(timeInputs.advance(50))).toMatchObject({ ok: false, reason: 'invalid' })
+  })
+
+  it('refuses the tick with each problem of a behavior and keeps its path', () => {
+    const many: NativeBehavior = {
+      id: 'many',
+      componentType: COUNTER,
+      update: () => {
+        throw new InputRefusedError([{ message: 'one', path: ['x'] }, { message: 'two' }])
+      },
+    }
+    const { store } = spyStore()
+    const update = createUpdate({ store, behaviors: [many] })
+    let error: unknown
+    try {
+      update.apply(update.initial, tickInput, timeContext)
+    } catch (caught) {
+      error = caught
+    }
+    expect(error).toBeInstanceOf(InputRefusedError)
+    expect((error as InputRefusedError).problems).toEqual([
+      { message: `The behavior "many" for the entity "${E1}": one`, path: ['behaviors', 'many', E1, 'x'] },
+      { message: `The behavior "many" for the entity "${E1}": two`, path: ['behaviors', 'many', E1] },
+    ])
+  })
+
+  it('refuses the tick with the text of a thrown value that is not an error', () => {
+    const text: NativeBehavior = {
+      id: 'text',
+      componentType: COUNTER,
+      update: () => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'oops'
+      },
+    }
+    const { store } = spyStore()
+    const update = createUpdate({ store, behaviors: [text] })
+    expect(() => update.apply(update.initial, tickInput, timeContext)).toThrow(
+      `The behavior "text" for the entity "${E1}": oops`,
+    )
   })
 
   it('refuses the tick when there is no part time', async () => {
