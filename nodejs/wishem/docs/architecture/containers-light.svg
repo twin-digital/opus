@@ -163,12 +163,12 @@
 <text x="100" y="714" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">reaches the hub</text>
 <text x="100" y="729" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">[child process,</text>
 <text x="100" y="744" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">link over IPC]</text>
-<path d="M225 642 L225 782" fill="none" stroke="#9e5b0c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="225,792 219.5,781 230.5,781" fill="#9e5b0c" stroke="#9e5b0c" stroke-width="1" stroke-linejoin="round"/>
-<rect x="167.2" y="689.5" width="115.6" height="55" rx="12" fill="#ffffff" stroke="#9e5b0c"/>
-<text x="225" y="706.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#9e5b0c" text-anchor="middle">Passes the</text>
-<text x="225" y="721.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">product links</text>
-<text x="225" y="736.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">[WebSocket]</text>
+<path d="M240 642 L240 782" fill="none" stroke="#9e5b0c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="240,792 234.5,781 245.5,781" fill="#9e5b0c" stroke="#9e5b0c" stroke-width="1" stroke-linejoin="round"/>
+<rect x="182.2" y="689.5" width="115.6" height="55" rx="12" fill="#ffffff" stroke="#9e5b0c"/>
+<text x="240" y="706.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#9e5b0c" text-anchor="middle">Passes the</text>
+<text x="240" y="721.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">product links</text>
+<text x="240" y="736.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">[WebSocket]</text>
 <path d="M290 626 L297 626 Q304 626 304 633 L304 1288 Q304 1290 302 1290 L300 1290" fill="none" stroke="#9e5b0c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="290,1290 301,1284.5 301,1295.5" fill="#9e5b0c" stroke="#9e5b0c" stroke-width="1" stroke-linejoin="round"/>
 <rect x="246.2" y="1170" width="115.6" height="70" rx="12" fill="#ffffff" stroke="#9e5b0c"/>
@@ -191,7 +191,7 @@
 <path d="M150 1150 L150 1250" fill="none" stroke="#85859a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="150,1260 144.5,1249 155.5,1249" fill="#85859a" stroke="#85859a" stroke-width="1" stroke-linejoin="round"/>
 <rect x="67" y="1185" width="166" height="40" rx="12" fill="#ffffff" stroke="#85859a"/>
-<text x="150" y="1202" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#5b5b70" text-anchor="middle">Reads, watches,</text>
+<text x="150" y="1202" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#5b5b70" text-anchor="middle">Reads, watches, and</text>
 <text x="150" y="1217" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#5b5b70" text-anchor="middle">writes [file system]</text>
 <path d="M290 1066 L540 1066 Q550 1066 550 1076 L550 1538 Q550 1548 540 1548 L300 1548" fill="none" stroke="#85859a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="290,1548 301,1542.5 301,1553.5" fill="#85859a" stroke="#85859a" stroke-width="1" stroke-linejoin="round"/>

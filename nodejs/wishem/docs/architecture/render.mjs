@@ -907,7 +907,7 @@ const containers = {
     stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
     stacked('flow', cPage, cProcess, 265, 'Connects to the hub\nand to each product\nconstruct [WebSocket]'),
     stacked('flow', cProcess, cPcp, 100, 'Starts, stops, and\nreaches the hub\n[child process,\nlink over IPC]'),
-    stacked('flow', cProcess, cPcp, 225, 'Passes the\nproduct links\n[WebSocket]'),
+    stacked('flow', cProcess, cPcp, 240, 'Passes the\nproduct links\n[WebSocket]'),
     rel(
       'flow',
       [right(cProcess, 626), [MODEL_X, 626], [MODEL_X, cModel.y + 30], right(cModel, cModel.y + 30)],
@@ -923,7 +923,7 @@ const containers = {
 
     // The Wishem command process
     stacked('flow', cCommand, cPcp, 165, 'Starts, stops, and\nreaches the hub\n[child process,\nlink over IPC]'),
-    stacked('quiet', cCommand, cModel, 150, 'Reads, watches,\nwrites [file system]'),
+    stacked('quiet', cCommand, cModel, 150, 'Reads, watches, and\nwrites [file system]'),
     rel(
       'quiet',
       [
