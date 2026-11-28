@@ -27,7 +27,7 @@ The product panel SHALL show one item for each entity of the part `product`, in 
 #### Scenario: The sample entity
 
 - **WHEN** the product panel shows the sample product
-- **THEN** the list has one item with the name `Color, Counter` and the short ID `e_99969ed3`
+- **THEN** the list has one item with the name `Counter, Color` and the short ID `e_99969ed3`
 
 #### Scenario: A product with no entity
 
@@ -54,7 +54,7 @@ When no entity is selected, the inspector SHALL show the zero state with the tex
 
 #### Scenario: The sample entity is selected
 
-- **WHEN** the designer selects the item `Color, Counter`
+- **WHEN** the designer selects the item `Counter, Color`
 - **THEN** the inspector shows the group `Color` with the row `color` and the value `#1d4ed8`, and the group `Counter` with the row `count` and the value `0`
 
 #### Scenario: A field with no value
