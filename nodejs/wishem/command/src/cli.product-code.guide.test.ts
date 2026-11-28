@@ -1,5 +1,5 @@
 // Runs the steps 1, 6, 7, 10, and 11 of the test guide of the change 629 with the command as a child process.
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -53,13 +53,18 @@ const alive = (pid: number) => {
   }
 }
 
-/** True when a process has the text in its command line. */
-const processWith = (text: string) => {
+/** Waits for the end of the command; fails with the output after the limit. */
+const ended = async (run: Run, ms = 30000) => {
+  let timer: NodeJS.Timeout | undefined
+  const limit = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`the command did not end in ${String(ms)} ms: ${run.output()}`))
+    }, ms)
+  })
   try {
-    execFileSync('pgrep', ['-f', text], { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
+    return await Promise.race([run.exit, limit])
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -126,7 +131,7 @@ describe('the test guide: the command loads the product code', () => {
   /** Runs the command with the arguments until it ends. */
   const failed = async (args: string[]) => {
     const run = start(args)
-    const exit = await run.exit
+    const exit = await ended(run)
     return { exit, output: run.output() }
   }
 
@@ -191,12 +196,27 @@ describe('the test guide: the command loads the product code', () => {
     })
     const pids = new Set<number>()
     for (const run of runs.splice(0)) {
-      if (run.child.exitCode === null && run.child.signalCode === null) {
-        run.child.kill('SIGKILL')
-        await run.exit
+      const group = run.child.pid ?? 0
+      if (Number.isInteger(group) && group > 1) {
+        try {
+          process.kill(-group, 'SIGKILL')
+        } catch {
+          // the group ended
+        }
       }
+      await ended(run, 10000)
       for (const match of run.output().matchAll(/runs in the process (\d+)/g)) {
         pids.add(Number(match[1]))
+      }
+    }
+    for (const file of ['loaded.txt', 'loop-pid.txt']) {
+      try {
+        readFileSync(path.join(folder, file), 'utf8')
+          .split('\n')
+          .filter((line) => line !== '')
+          .forEach((line) => pids.add(Number(line)))
+      } catch {
+        // the file does not exist
       }
     }
     for (const pid of pids) {
@@ -208,6 +228,13 @@ describe('the test guide: the command loads the product code', () => {
       } catch {
         // the process ended
       }
+    }
+    for (const pid of pids) {
+      await until(
+        () => !alive(pid),
+        () => `the process ${String(pid)} is alive`,
+        5000,
+      )
     }
     rmSync(folder, { recursive: true, force: true })
   })
@@ -317,7 +344,10 @@ describe('the test guide: the command loads the product code', () => {
 
     // (5) A module that does not end.
     const loop = path.join(folder, 'loop.mjs')
-    writeFileSync(loop, 'for (;;) {}\n')
+    writeFileSync(
+      loop,
+      "import { appendFileSync } from 'node:fs'\nappendFileSync(new URL('./loop-pid.txt', import.meta.url), process.pid + '\\n')\nfor (;;) {}\n",
+    )
     const began = Date.now()
     const loopRun = await failed(['--product', product, '--product-code', loop])
     const seconds = (Date.now() - began) / 1000
@@ -328,6 +358,11 @@ describe('the test guide: the command loads the product code', () => {
     expect(loopRun.output).not.toContain('link at')
     expect(seconds).toBeGreaterThanOrEqual(5)
     expect(seconds).toBeLessThanOrEqual(7)
-    expect(processWith(loop)).toBe(false)
+    const checkPids = readFileSync(path.join(folder, 'loop-pid.txt'), 'utf8')
+      .split('\n')
+      .filter((line) => line !== '')
+      .map(Number)
+    expect(checkPids).toHaveLength(1)
+    expect(alive(checkPids[0])).toBe(false)
   })
 })
