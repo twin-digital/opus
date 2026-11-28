@@ -2,4 +2,4 @@
 '@thrashplay/wishem-renderer-pixi': patch
 ---
 
-Two labels that give the same name give one warning.
+The renderer gives one warning for each field whose label gives the same name as an earlier field.
