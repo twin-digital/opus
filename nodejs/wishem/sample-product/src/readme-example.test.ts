@@ -18,5 +18,5 @@ it('runs the example of the README', async () => {
   await controls.submit(timeInputs.advance(100))
 
   const entity = (hub.read().store as Model).entities.find((e) => e.id === SAMPLE_ENTITY)
-  expect(entity?.components[COUNTER_TYPE]?.[COUNT_FIELD]).toBe('1')
+  expect(entity?.components[COUNTER_TYPE]?.[COUNT_FIELD]).toBe(1)
 })

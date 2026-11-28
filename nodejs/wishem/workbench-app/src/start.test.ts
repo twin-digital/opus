@@ -665,7 +665,7 @@ describe('the start script of the workbench', () => {
         httpServer: { address: () => ({ port: 5555 }) },
         close: () => Promise.resolve(),
       })
-    const countOf = (store: unknown) => Number(new RegExp(`"${COUNT_FIELD}":"(\\d+)"`).exec(JSON.stringify(store))?.[1])
+    const countOf = (store: unknown) => Number(new RegExp(`"${COUNT_FIELD}":(\\d+)`).exec(JSON.stringify(store))?.[1])
     const codeFile = (name: string, text: string) => {
       const path = join(folder, name)
       writeFileSync(path, text)
