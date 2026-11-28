@@ -62,7 +62,7 @@ The owner decided on 2026-11-28 that the lead agent creates and manages the mile
 
 The owner decided on 2026-11-28 when a milestone is ready for autonomous work.
 
-- **The marker.** The label `autonomous:ready` on the GitHub issue of a milestone. The issue of a product milestone is the issue in its row of `roadmap.md` (#479 to #485). The issue of the architecture milestones (A1 to A6) is the architecture brief [#522](https://github.com/twin-digital/opus/issues/522). A milestone with the label is **released**. A milestone without the label is **held**.
+- **The marker.** The label `autonomous:ready` on the GitHub issue of a milestone. The issue of a milestone is the issue that the description of the milestone names in the form `Marker issue: #<number>`. Two groups of milestones have no such line. The issue of a product milestone is the issue in its row of `roadmap.md` (#479 to #485), and the issue of the architecture milestones (A1 to A6) is the architecture brief [#522](https://github.com/twin-digital/opus/issues/522). A milestone with the label is **released**. A milestone without the label is **held**.
 - **Who sets it.** Only the owner sets or removes the label. The lead agent never does. The owner set the label on #522 on 2026-11-28.
 - **What the owner checks before the label.** The milestone has its issues, each with its scope. Each open question is decided or is in a `Question` issue. During the work, the lead agent can still ask in `Question` issues.
 - **A held milestone.** The lead agent does not plan, propose, or build its features. It can create an issue in the milestone for a thing that it finds.

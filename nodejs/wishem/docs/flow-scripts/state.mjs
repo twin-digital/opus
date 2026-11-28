@@ -105,6 +105,11 @@ const MILESTONE_ISSUES = {
   'M7 Other engines': 485,
   'A1-A6 Architecture': 522,
 }
+const milestones = json('gh', ['api', `repos/${REPO}/milestones?state=open&per_page=100`]) ?? []
+for (const milestone of milestones) {
+  const marker = /Marker issue: #(\d+)/.exec(milestone.description ?? '')
+  if (marker) MILESTONE_ISSUES[milestone.title] = Number(marker[1])
+}
 for (const [name, number] of Object.entries(MILESTONE_ISSUES)) {
   const labels = json('gh', ['api', `repos/${REPO}/issues/${number}`, '--jq', '[.labels[].name]'])
   const state =
