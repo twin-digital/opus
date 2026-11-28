@@ -31,7 +31,7 @@ const countInFile = async (): Promise<unknown> => {
 
 /** Opens a link whose input port records each input that the hub applies. */
 const watchLink = async () => {
-  const link = await openLink(await webSocketChannel(new WebSocket('ws://127.0.0.1:4182/link')), [
+  const link = await openLink(await webSocketChannel(new WebSocket('ws://127.0.0.1:4184/link')), [
     { id: 'e2e-watch', kind: 'input' },
   ])
   const port = link.ports['e2e-watch']
