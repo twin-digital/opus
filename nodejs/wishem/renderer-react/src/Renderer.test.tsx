@@ -1,4 +1,4 @@
-import { createStore, storeInputs, type Model } from '@thrashplay/wishem-core'
+import { createStore, storeInputs, type Entity, type Model } from '@thrashplay/wishem-core'
 import {
   createChannelPair,
   createHub,
@@ -81,7 +81,14 @@ const counting = (port: PortReader) => {
   }
 }
 
-const viewA = ({ title }: ViewProps) => <span className='a'>{title === undefined ? 'none' : `title:${title}`}</span>
+const text = (value: unknown): string =>
+  value === undefined || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ?
+    String(value)
+  : ''
+
+const viewA = ({ title }: ViewProps) => (
+  <span className='a'>{title === undefined ? 'none' : `title:${text(title)}`}</span>
+)
 
 interface ViewSource {
   name: string
@@ -359,7 +366,7 @@ describe('Renderer', () => {
           ...sourceA,
           view: (props) => {
             keys.push(Object.keys(props))
-            return <span>{`heading:${String(props.heading)}`}</span>
+            return <span>{`heading:${text(props.heading)}`}</span>
           },
         }),
       )
@@ -443,7 +450,7 @@ describe('Renderer', () => {
     it('mounts the function of the view as a React component', () => {
       const Counter = ({ title }: ViewProps) => {
         const [count] = useState(7)
-        return <span>{`${String(title)}:${count}`}</span>
+        return <span>{`${text(title)}:${count}`}</span>
       }
       draw(startWorld(baseModel()).output, tableOf({ ...sourceA, view: Counter }))
       expect(wrappers()[0]?.textContent).toBe('One:7')
@@ -468,7 +475,7 @@ describe('Renderer', () => {
       const sourceB: ViewSource = {
         name: 'B',
         componentType: CT_B,
-        view: ({ other }) => <span className='b'>{`other:${other ?? 'none'}`}</span>,
+        view: ({ other }) => <span className='b'>{`other:${text(other ?? 'none')}`}</span>,
       }
       const model: Model = {
         ...baseModel(),
@@ -515,7 +522,7 @@ describe('Renderer', () => {
 
       draw(
         startWorld(model).output,
-        tableOf({ ...sourceA, view: ({ maxHealth }) => <span>{`max:${String(maxHealth)}`}</span> }),
+        tableOf({ ...sourceA, view: ({ maxHealth }) => <span>{`max:${text(maxHealth)}`}</span> }),
       )
 
       expect(wrappers()[0]?.textContent).toBe('max:first')
@@ -709,7 +716,7 @@ describe('Renderer', () => {
         componentType: CT_A,
         view: (props: ViewProps) => {
           seen.push(props)
-          return <span className='a'>{String(props.title)}</span>
+          return <span className='a'>{text(props.title)}</span>
         },
       })
       render(output, views, input)
@@ -825,6 +832,225 @@ describe('Renderer', () => {
       expect(typeof seen[0]?.wishem.setField).toBe('function')
       expect(warn).toHaveBeenCalledTimes(1)
       expect(String(warn.mock.calls[0]?.[0])).toContain('reserved name "wishem"')
+    })
+  })
+
+  describe('nested views', () => {
+    const CT_LIST = 'ct_dddddddd-0000-4000-8000-000000000004'
+    const FLD_FIRST = 'fld_dddddddd-0000-4000-8000-000000000015'
+    const E3 = 'e_aaaaaaaa-0000-4000-8000-000000000023'
+    const E4 = 'e_aaaaaaaa-0000-4000-8000-000000000024'
+
+    const listView = ({ first }: ViewProps) => <section className='list'>{first}</section>
+    const listSource: ViewSource = { name: 'List', componentType: CT_LIST, view: listView }
+
+    const nested = (entities: Model['entities']): Model => ({
+      definitions: [
+        { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: 'title', type: 'string' }] },
+        { id: CT_LIST, label: 'List', fields: [{ id: FLD_FIRST, label: 'first', type: 'reference' }] },
+      ],
+      entities,
+    })
+    const task = (id: string, title: string): Entity => ({ id, components: { [CT_A]: { [FLD_TITLE]: title } } })
+    const list = (id: string, first?: string): Entity => ({
+      id,
+      components: { [CT_LIST]: first === undefined ? {} : { [FLD_FIRST]: first } },
+    })
+    const topLevel = () => Array.from(container.children).map((child) => child.getAttribute('data-wishem-entity'))
+    const entityTexts = (parent: ParentNode) =>
+      Array.from(parent.querySelectorAll('[data-wishem-entity]')).map(
+        (wrapper) => `${wrapper.getAttribute('data-wishem-entity') ?? ''}:${wrapper.textContent}`,
+      )
+
+    it('draws a held entity in the picture of its holder, and not at the top level', () => {
+      draw(startWorld(nested([task(E1, 'Task'), list(E2, E1)])).output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2])
+      const held = container.querySelector(`[data-wishem-entity="${E2}"] [data-wishem-entity="${E1}"]`)
+      expect(held?.getAttribute('data-wishem-component-type')).toBe(CT_A)
+      expect(held?.textContent).toBe('title:Task')
+    })
+
+    it('draws a held entity in the place of each of two holders', () => {
+      draw(startWorld(nested([task(E1, 'Task'), list(E2, E1), list(E3, E1)])).output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2, E3])
+      expect(entityTexts(container.children[0])).toEqual([`${E1}:title:Task`])
+      expect(entityTexts(container.children[1])).toEqual([`${E1}:title:Task`])
+    })
+
+    it('draws a held entity at the top level when its holder has no view', () => {
+      draw(startWorld(nested([task(E1, 'Task'), list(E2, E1)])).output, tableOf(sourceA))
+      expect(topLevel()).toEqual([E1])
+    })
+
+    it('draws one picture for each component of the held entity that has a view, in the order of the definitions', () => {
+      const model: Model = {
+        definitions: [
+          { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: 'title', type: 'string' }] },
+          { id: CT_B, label: 'B', fields: [{ id: FLD_OTHER, label: 'other', type: 'string' }] },
+          { id: CT_LIST, label: 'List', fields: [{ id: FLD_FIRST, label: 'first', type: 'reference' }] },
+        ],
+        entities: [
+          { id: E1, components: { [CT_B]: { [FLD_OTHER]: 'b' }, [CT_A]: { [FLD_TITLE]: 'a' } } },
+          list(E2, E1),
+        ],
+      }
+      const viewB = ({ other }: ViewProps) => <span>{`other:${text(other)}`}</span>
+      draw(startWorld(model).output, tableOf(sourceA, { name: 'B', componentType: CT_B, view: viewB }, listSource))
+      expect(entityTexts(container.children[0])).toEqual([`${E1}:title:a`, `${E1}:other:b`])
+    })
+
+    it('gives the prop of a reference field no value when the component omits the field', () => {
+      const seen: unknown[] = []
+      draw(
+        startWorld(nested([list(E2)])).output,
+        tableOf({
+          ...listSource,
+          view: (props: ViewProps) => {
+            seen.push(props.first)
+            return null
+          },
+        }),
+      )
+      expect(seen).toEqual([undefined])
+    })
+
+    it('gives a picture that draws nothing for a held entity with no view', () => {
+      const model = nested([{ id: E1, components: {} }, list(E2, E1)])
+      draw(startWorld(model).output, tableOf(listSource))
+      expect(container.querySelector('.list')?.innerHTML).toBe('')
+      expect(topLevel()).toEqual([E2])
+    })
+
+    it('moves the held entity when an input changes the reference of the holder', async () => {
+      const { input, output } = startWorld(nested([task(E1, 'Task'), task(E3, 'Other'), list(E2, E1)]))
+      draw(output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E3, E2])
+
+      await act(async () => {
+        const result = await input.submit(
+          inputs.setField({ entity: E2, componentType: CT_LIST, field: FLD_FIRST, value: E3 }),
+        )
+        expect(result.ok).toBe(true)
+      })
+
+      expect(topLevel()).toEqual([E1, E2])
+      expect(entityTexts(container.children[1])).toEqual([`${E3}:title:Other`])
+    })
+
+    it('draws the held entity at the top level when an input removes the holder', async () => {
+      const { input, output } = startWorld(nested([task(E1, 'Task'), list(E2, E1)]))
+      draw(output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2])
+
+      await act(async () => {
+        expect((await input.submit(inputs.removeEntity(E2))).ok).toBe(true)
+      })
+
+      expect(topLevel()).toEqual([E1])
+    })
+
+    it('sends the input of a held view for the held entity, not the holder', async () => {
+      const submit = vi.fn(() => Promise.resolve({ ok: true as const, seq: 1 }))
+      const taskView = ({ wishem }: ViewProps) => (
+        <button
+          onClick={() => {
+            void wishem.setField('title', 'Renamed')
+          }}
+        />
+      )
+      act(() => {
+        root.render(
+          <Renderer
+            port={startWorld(nested([task(E1, 'Task'), list(E2, E1)])).output}
+            views={tableOf({ ...sourceA, view: taskView }, listSource)}
+            input={{ submit }}
+          />,
+        )
+      })
+
+      await act(async () => {
+        container.querySelector('button')?.click()
+        await Promise.resolve()
+      })
+
+      expect(submit).toHaveBeenCalledWith(
+        inputs.setField({ entity: E1, componentType: CT_A, field: FLD_TITLE, value: 'Renamed' }),
+      )
+    })
+
+    it('calls no view again after an input that leaves the part store the same object, also a held view', async () => {
+      const { input, output } = startWorld(nested([task(E1, 'Task'), list(E2, E1)]))
+      const calls = vi.fn()
+      draw(
+        output,
+        tableOf(
+          {
+            ...sourceA,
+            view: (props) => {
+              calls()
+              return viewA(props)
+            },
+          },
+          listSource,
+        ),
+      )
+      const before = calls.mock.calls.length
+      expect(before).toBeGreaterThan(0)
+      const store = output.read().store
+
+      await act(async () => {
+        await input.submit({ type: 'counter/add' })
+      })
+
+      expect(output.read().store).toBe(store)
+      expect(calls.mock.calls.length).toBe(before)
+    })
+
+    describe('a cycle', () => {
+      it('draws each entity one time on its path, and warns one time', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        draw(startWorld(nested([list(E1, E2), list(E2, E3), list(E3, E2)])).output, tableOf(listSource))
+
+        expect(topLevel()).toEqual([E1])
+        expect(entityTexts(container)).toEqual([E1, E2, E3].map((id) => `${id}:`))
+        expect(warn).toHaveBeenCalledTimes(1)
+        const text = String(warn.mock.calls[0]?.[0])
+        expect(text).toContain(E3)
+        expect(text).toContain(E2)
+        expect(text).toContain(FLD_FIRST)
+      })
+
+      it('draws nothing for the reference of an entity that holds itself, and warns', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        draw(startWorld(nested([list(E1, E1)])).output, tableOf(listSource))
+        expect(entityTexts(container)).toEqual([`${E1}:`])
+        expect(warn).toHaveBeenCalledTimes(1)
+      })
+
+      it('draws neither entity of a cycle with no root, and warns one time', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        draw(startWorld(nested([list(E1, E2), list(E2, E1)])).output, tableOf(listSource))
+        expect(container.innerHTML).toBe('')
+        expect(warn).toHaveBeenCalledTimes(1)
+      })
+
+      it('gives no new warning for a second input with the same cycle, and none after the cycle is corrected', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        const { input, output } = startWorld(nested([list(E1, E2), list(E2, E3), list(E3, E2), task(E4, 'x')]))
+        draw(output, tableOf(sourceA, listSource))
+        expect(warn).toHaveBeenCalledTimes(1)
+
+        await act(async () => {
+          await setTitle(input, E4, 'y')
+        })
+        expect(warn).toHaveBeenCalledTimes(1)
+
+        await act(async () => {
+          await input.submit(inputs.setField({ entity: E3, componentType: CT_LIST, field: FLD_FIRST, value: E4 }))
+        })
+        expect(warn).toHaveBeenCalledTimes(1)
+        expect(entityTexts(container)).toContain(`${E4}:title:y`)
+      })
     })
   })
 })

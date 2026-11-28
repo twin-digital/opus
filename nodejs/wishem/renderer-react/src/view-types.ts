@@ -35,6 +35,9 @@ const GENERATED_SUFFIX = '.view.gen.ts'
 /** The TypeScript type of the value of a field. */
 const valueType = (type: FieldType): string => (type === 'reference' ? 'string' : type)
 
+/** The TypeScript type of a prop. A reference gives the picture of its entity. */
+const propType = (type: FieldType): string => (type === 'reference' ? 'ReactNode' : `${type} | undefined`)
+
 /** The text of a generated file. No definition gives `Props` with only `wishem`, and `Values` with no member. */
 export const renderViewTypes = (
   sidecarFile: string,
@@ -42,10 +45,13 @@ export const renderViewTypes = (
   command: string,
   definition?: ComponentTypeDefinition,
 ): string => {
+  const hasReference = definition?.fields.some(({ type }) => type === 'reference') === true
   const header =
     `// Generated from ${sidecarFile} and the definition of its component type. Do not edit.\n` +
     `// To write this file again: ${command}\n\n` +
-    "import type { ViewTools } from '@thrashplay/wishem-renderer-react'\n\n"
+    "import type { ViewTools } from '@thrashplay/wishem-renderer-react'\n" +
+    (hasReference ? "import type { ReactNode } from 'react'\n" : '') +
+    '\n'
   const wishem = '  /** Sends inputs for this component. */\n  readonly wishem: ViewTools<Values>\n'
   if (!definition) {
     return `${header}export type Values = object\n\nexport interface Props {\n${wishem}}\n`
@@ -56,9 +62,13 @@ export const renderViewTypes = (
   const values = props.map(
     ({ name, field }) => `${doc(field.label, field.id)}  readonly ${name}: ${valueType(field.type)}\n`,
   )
-  const members = props.map(
-    ({ name, field }) => `${doc(field.label, field.id)}  readonly ${name}: ${valueType(field.type)} | undefined\n`,
-  )
+  const members = props.map(({ name, field }) => {
+    const comment =
+      field.type === 'reference' ?
+        `  /** The picture of the entity that the field ${quote(field.label)} (${field.id}) names. */\n`
+      : doc(field.label, field.id)
+    return `${comment}  readonly ${name}: ${propType(field.type)}\n`
+  })
   const component = `${quote(definition.label)} (${componentType})`
   return (
     `${header}/** The values that \`wishem.setField\` takes for the component type ${component}. */\n` +

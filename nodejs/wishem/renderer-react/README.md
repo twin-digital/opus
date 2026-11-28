@@ -13,6 +13,7 @@ The package is private. React is a peer dependency. The package uses `@thrashpla
 - `Renderer` draws again only when the part `store` is a different object.
 - `Renderer` wraps each picture in an element with the attributes `data-wishem-entity` and `data-wishem-component-type`. A view does not add them.
 - `Renderer` gives each view the prop `wishem` (see "The prop wishem").
+- `Renderer` draws a held entity in the picture of its holder (see "Nested views").
 - `collectViews` builds the table of views from the sidecars and the view modules that the page loads.
 
 ## What the page does
@@ -40,6 +41,18 @@ This renderer uses the sidecars of the kind `react`. It ignores a sidecar of a d
 A view gets one prop for each field of the component type. `fieldName` makes the name of the prop from the label of the field. `propNames` gives the props of a definition.
 
 These cases are a problem: a label that gives an empty name, a name that starts with a digit, a reserved name, or the same name as another field. The names `wishem` and `key` are reserved (`RESERVED_PROP_NAMES`). A field with a reserved name gives no prop. `viewWarnings` reports the same name of two fields and a reserved name. The generator reports each of the four problems as an error.
+
+## Nested views
+
+The prop of a `reference` field is the picture of the entity that the field names: one wrapper for each component of that entity that has a view, in the order of the definitions. The view decides where it puts the picture. The prop has no value when the component omits the field. The picture draws nothing when the entity has no component with a view.
+
+```tsx
+const ListView = ({ first }: Props) => <section>{first}</section>
+```
+
+An entity is held when a reference field of a component of a different entity names it, and the component type of that component has a view. The renderer draws a held entity only in the picture of its holder, and not at the top level. An entity with two holders is drawn in the place of each holder. A reference in a component type that has no view holds nothing. The `wishem` of a held view sends its inputs for the held entity.
+
+A cycle of references draws each entity one time on its path. When a reference names an entity that is already on the path from the top level, the renderer draws nothing for it. An entity that names itself is a cycle. `holdWarnings` gives one `reference-cycle` warning for each such reference, and `Renderer` writes it to the console with the other warnings. The renderer writes the warnings again only when the set of warnings changes.
 
 ## The prop wishem
 
@@ -78,7 +91,7 @@ The argument of `stubViewTools` is an outcome, or a function that gives an outco
 
 ## The generator
 
-`generateViewTypes` writes `<name>.view.gen.ts` next to each sidecar of the kind `react`. The file exports the type `Values`, with the type that `setField` takes for each field, and the type `Props`, with the type of each prop and the member `wishem: ViewTools<Values>`. A field of the type `string`, `number`, or `boolean` has that type. A `reference` field has the type `string` in this version. A sidecar whose component type has no definition gets `Props` with only `wishem`, and `Values` with no member.
+`generateViewTypes` writes `<name>.view.gen.ts` next to each sidecar of the kind `react`. The file exports the type `Values`, with the type that `setField` takes for each field, and the type `Props`, with the type of each prop and the member `wishem: ViewTools<Values>`. A field of the type `string`, `number`, or `boolean` has that type. A `reference` field has the type `string` in `Values` (the ID of an entity) and the type `ReactNode` in `Props` (the picture of the entity, see "Nested views"). A sidecar whose component type has no definition gets `Props` with only `wishem`, and `Values` with no member.
 
 ```ts
 import { generateViewTypes, viewTypesLines } from '@thrashplay/wishem-renderer-react/view-types'

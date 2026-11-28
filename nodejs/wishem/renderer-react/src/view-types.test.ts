@@ -86,6 +86,50 @@ describe('renderViewTypes', () => {
     expect(props).toContain('readonly done: boolean | undefined\n')
     expect(props).toContain('readonly wishem: ViewTools<Values>\n')
   })
+
+  describe('a reference field', () => {
+    const NEXT = 'fld_6f7a8b9c-0d1e-4f2a-9b3c-5d6e7f809102'
+    const list = (): ComponentTypeDefinition => ({
+      id: APP_BAR,
+      label: 'List',
+      fields: [
+        { id: FIELD_A, label: 'Title', type: 'string' },
+        { id: NEXT, label: 'First', type: 'reference' },
+      ],
+    })
+
+    it('gives a ReactNode in Props and a string in Values, with the comment of the field', () => {
+      const text = renderViewTypes('List.view.json', APP_BAR, COMMAND, list())
+      const [values, props] = text.split('export interface Props')
+      expect(values).toContain(`/** The field "First" (${NEXT}). */\n  readonly first: string\n`)
+      expect(props).toContain(
+        `/** The picture of the entity that the field "First" (${NEXT}) names. */\n  readonly first: ReactNode\n`,
+      )
+      expect(props).toContain('readonly title: string | undefined\n')
+    })
+
+    it('imports ReactNode from react', () => {
+      const text = renderViewTypes('List.view.json', APP_BAR, COMMAND, list())
+      expect(text).toContain("import type { ReactNode } from 'react'\n")
+      expect(text).toContain("import type { ViewTools } from '@thrashplay/wishem-renderer-react'\n")
+    })
+
+    it('gives no import of react for a definition with no reference field', () => {
+      expect(renderViewTypes('AppBar.view.json', APP_BAR, COMMAND, appBar('title'))).not.toContain("from 'react'")
+      expect(renderViewTypes('Header.view.json', APP_BAR, COMMAND)).not.toContain("from 'react'")
+    })
+
+    it('names the field in the added props', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'wishem-ref-'))
+      try {
+        writeFileSync(join(dir, 'List.view.json'), JSON.stringify({ kind: 'react', componentType: APP_BAR }))
+        const result = await generateViewTypes({ definitions: [list()], views: dir, command: COMMAND })
+        expect(result.files[0]?.addedProps).toEqual(['title', 'first'])
+      } finally {
+        rmSync(dir, { recursive: true })
+      }
+    })
+  })
 })
 
 describe('generateViewTypes', () => {

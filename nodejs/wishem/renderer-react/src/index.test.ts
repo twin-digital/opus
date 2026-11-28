@@ -11,6 +11,7 @@ describe('the root entry', () => {
       'collectViews',
       'describeWarning',
       'fieldName',
+      'holdWarnings',
       'parseSidecar',
       'propNames',
       'stubViewTools',
