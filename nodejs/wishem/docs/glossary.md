@@ -28,7 +28,7 @@ Terms in each group are in alphabetical order.
 
 **Product**: The part of a project that the designer ships. A product is a model. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the list `behaviors`, which holds the native behaviors of the product. Each product construct process loads the product code, and the update subsystem of the product construct runs the behaviors. The designer names it with the option `--product-code` of the `start` script.
+**Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the list `behaviors`, which holds the native behaviors of the product. Each product construct process loads the product code, and the update subsystem of the product construct runs the behaviors. The designer names it with the option `--product-code` of the `wishem` command and of the `start` script. Before the start, the command checks the code in a child process.
 
 **Product panel** (**Proposed**): The tool of the workbench page that lists the entities of the mounted product and changes and clears their field values. It is derived from the definitions of the product. It reads the part `product` and sends `product/set-field` and `product/clear-field`.
 

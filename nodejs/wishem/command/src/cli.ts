@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { createConstructList } from '@thrashplay/wishem-construct-manager'
-import { attachConstructManager, childProcessLauncher } from '@thrashplay/wishem-construct-manager/node'
+import {
+  attachConstructManager,
+  checkProductCode,
+  childProcessLauncher,
+} from '@thrashplay/wishem-construct-manager/node'
 import type { ConstructManager } from '@thrashplay/wishem-construct-manager/node'
 import { ModelError } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
@@ -10,7 +15,11 @@ import { DEFAULT_PORT, PRODUCT_ID, startConstruct } from '@thrashplay/wishem-hos
 import type { Construct } from '@thrashplay/wishem-host-nodejs'
 import { describeCounts, formatProblem } from '@thrashplay/wishem-host-nodejs/format'
 
-const USAGE = 'usage: wishem start <folder> [--product <folder>] [--port <number>]'
+const USAGE = 'usage: wishem start <folder> [--product <folder>] [--product-code <module>] [--port <number>]'
+
+const isPathValue = (value: string) => value.startsWith('.') || value.startsWith('/')
+
+const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 const say = (line: string) => {
   console.log(line)
@@ -27,7 +36,10 @@ const usageError = (message?: string): never => {
 const main = async () => {
   let parsed
   try {
-    parsed = parseArgs({ allowPositionals: true, options: { port: { type: 'string' }, product: { type: 'string' } } })
+    parsed = parseArgs({
+      allowPositionals: true,
+      options: { port: { type: 'string' }, product: { type: 'string' }, 'product-code': { type: 'string' } },
+    })
   } catch (error) {
     return usageError(error instanceof Error ? error.message : String(error))
   }
@@ -42,6 +54,14 @@ const main = async () => {
     return usageError()
   }
 
+  const productCode = parsed.values['product-code']
+  if (productCode === '') {
+    return usageError()
+  }
+  if (productCode !== undefined && product === undefined) {
+    return usageError('--product-code needs --product')
+  }
+
   const portText = parsed.values.port
   const port =
     portText === undefined ? DEFAULT_PORT
@@ -54,6 +74,27 @@ const main = async () => {
   say(`wishem: model ${path.resolve(folder)}`)
   if (product !== undefined) {
     say(`wishem: product ${path.resolve(product)}`)
+  }
+
+  let productCodeUrl: string | undefined
+  if (productCode !== undefined) {
+    say(`wishem: product code ${productCode}`)
+    try {
+      productCodeUrl =
+        isPathValue(productCode) ? pathToFileURL(path.resolve(productCode)).href : import.meta.resolve(productCode)
+    } catch (error) {
+      console.error(`wishem: the product code ${productCode} cannot be loaded: ${errorText(error)}`)
+      process.exit(1)
+    }
+    const check = await checkProductCode(productCodeUrl)
+    if (!check.ok) {
+      console.error(
+        check.reason === 'behaviors' ?
+          `wishem: the product code has no correct list behaviors: ${check.message}`
+        : `wishem: the product code ${productCode} cannot be loaded: ${check.message}`,
+      )
+      process.exit(1)
+    }
   }
 
   let construct: Construct | undefined
@@ -113,7 +154,11 @@ const main = async () => {
     }
     if (product !== undefined) {
       try {
-        manager = attachConstructManager({ hub: started.hub, launch: childProcessLauncher(), log: say })
+        manager = attachConstructManager({
+          hub: started.hub,
+          launch: childProcessLauncher({ productCode: productCodeUrl }),
+          log: say,
+        })
       } catch (error) {
         await started.close()
         throw error
