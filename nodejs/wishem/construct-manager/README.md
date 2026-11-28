@@ -2,7 +2,7 @@
 
 The construct manager of the Wishem workbench. This package holds the construct list and the function that turns a change of a product model into inputs.
 
-The package is private. The root entry uses no Node.js API. The entry `node` holds the construct manager, which starts and feeds the product constructs (added by a later task of the change).
+The package is private. The root entry uses no Node.js API. The entry `node` (`@thrashplay/wishem-construct-manager/node`) holds the construct manager, which starts and feeds the product constructs.
 
 ## The construct list
 
