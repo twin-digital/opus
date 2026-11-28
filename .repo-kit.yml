@@ -30,6 +30,11 @@ packages:
     # generated exports would offer its internals to a consumer that does not exist.
     rules:
       package-manifest: false
+  '@thrashplay/wishem-pixi-page':
+    # Nothing imports a browser application: what it publishes is a built asset tree, so the
+    # generated exports would offer its internals to a consumer that does not exist.
+    rules:
+      package-manifest: false
   '@thrashplay/wishem-workbench-app':
     # Nothing imports a browser application: what it publishes is a built asset tree, so the
     # generated exports would offer its internals to a consumer that does not exist.

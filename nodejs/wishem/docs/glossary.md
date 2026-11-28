@@ -60,7 +60,7 @@ Terms in each group are in alphabetical order.
 
 **Model**: The definitions, the behaviors, and the authored state of a product or of a workbench. The model subsystems of a construct hold the model. The hub does not hold it.
 
-**Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt. The count rule of the sample product is a native behavior in a first form. It stands in for the behavior feature (issue #481).
+**Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt. The count rule of the sample product and the color rule of the PixiJS construct (#540) are native behaviors in a first form. It stands in for the behavior feature (issue #481).
 
 **Registry**: The part that reports the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state. The registry is not a job of the hub. The store holds it (**Proposed**).
 
@@ -158,6 +158,8 @@ Terms in each group are in alphabetical order.
 
 **Output subsystem**: A subsystem that only reads. It shows or plays a construct. Examples: renderer, sound.
 
+**PixiJS view** (**Proposed**): The kind of view that the PixiJS renderer runs: a file with a default export of `create` and `update`, and a sidecar of the kind `pixi`. A PixiJS view makes one display object for each component of its component type.
+
 **Port** (**Proposed**): The interface that an I/O subsystem uses to communicate with the hub. A port has three operations: `submit(input)` sends an input, `read()` gets the joined state, and `subscribe(listener)` gets the hub events. Only an input subsystem can use `submit`. A model subsystem gets no port. In the process of the hub, a port is direct calls.
 
 **Process**: A running thing that holds subsystems. Inside one process, a subsystem and a hub use direct calls. Between two processes, they use a link. A process has one language. A process holds zero or more hubs (**Proposed**).
@@ -177,6 +179,8 @@ Terms in each group are in alphabetical order.
 **Store** (**Proposed**): The built-in model subsystem that holds the definitions and the entities. A write is an input to the store. The store holds the list of entities.
 
 **Subsystem**: A part of a construct that has one job. Wishem provides it, or a library provides it through an adapter. A subsystem has one kind, and the hub knows the kind (**Proposed**).
+
+**Update subsystem** (**Agreed**): The model subsystem that runs the behaviors at each tick. A construct has one update subsystem. The first form runs native behaviors ([#617](https://github.com/twin-digital/opus/issues/617)).
 
 **View** (**Agreed**): Code that a renderer runs to draw a component type. A view is content of the product, and it is not part of the renderer. Each renderer has its own kind of view. A view is a pure function of its props. A sidecar attaches a view to its component type.
 

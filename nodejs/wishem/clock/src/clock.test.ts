@@ -357,9 +357,24 @@ describe('startClock', () => {
   describe('with the default timer', () => {
     afterEach(() => {
       vi.useRealTimers()
+      vi.restoreAllMocks()
     })
 
-    it('uses setInterval and Date.now', () => {
+    it('follows performance.now, not Date.now', () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+      let real = 5_000
+      vi.spyOn(performance, 'now').mockImplementation(() => real)
+      const hub = createHub({ subsystems: [createTime()] })
+      const clockPort = hub.attach({ id: 'clock', kind: 'input' })
+      hub.start()
+      startClock(clockPort)
+      real += 100
+      vi.advanceTimersByTime(50)
+      expect(hub.read()[TIME_ID]).toMatchObject({ ticks: 2 })
+      hub.stop()
+    })
+
+    it('uses setInterval and the fake real time', () => {
       vi.useFakeTimers()
       const hub = createHub({ subsystems: [createTime()] })
       const clockPort = hub.attach({ id: 'clock', kind: 'input' })

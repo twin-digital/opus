@@ -131,6 +131,7 @@ A link connects a hub to the subsystems of a process that has no hub. The proces
 - When the link ends, each `submit` that waits fails with a `LinkClosedError`. Each later `submit` gives `not-running`. `read()` keeps the last joined state.
 - The option `onError` gets each error that a listener throws.
 - A channel is the connection. `createChannelPair()` makes two connected channels in memory. `webSocketChannel(socket)` makes a channel from a WebSocket.
+- `connectLink(options)` opens a link and opens a new link after each end, until `close()`. Each link uses new IDs of the form `<prefix>-<16 hex>`. The waits are 500 ms, 1 s, 2 s, 4 s, and then 5 s. `onDown` is called one time for each loss.
 
 ```ts
 import { createChannelPair, createHub, openLink, serveLink, type ModelSubsystem } from '@thrashplay/wishem-hub'
@@ -163,4 +164,26 @@ const accepted = await link.ports.buttons.submit({ type: 'counter/add', payload:
 // shown: [{ count: 2 }]
 ```
 
-The test `src/readme-example.test.ts` runs both examples.
+`connectLink` opens a link and opens it again after each end:
+
+```ts
+import { connectLink } from '@thrashplay/wishem-hub'
+
+const client = connectLink({
+  url: 'ws://127.0.0.1:5174/link',
+  createSocket: (url) => new WebSocket(url),
+  subsystems: [{ prefix: 'screen', kind: 'output' }],
+  onLink: ([screen]) => {
+    screen.subscribe(() => {
+      console.log(screen.read())
+    })
+  },
+  onDown: () => {
+    console.warn('The hub is not reachable.')
+  },
+})
+
+client.close()
+```
+
+The test `src/readme-example.test.ts` runs the examples of the hub and of `openLink`.
