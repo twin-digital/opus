@@ -1,6 +1,6 @@
 // Usage: node heavy.mjs <command> [<argument>...]
 // Runs a heavy command (lint, type check, test, build) in one of two slots, with `timeout 140`.
-// Waits at most 15 seconds for a free slot. Exits 1 with no run when both slots stay busy; then try again.
+// Waits at most 15 seconds for a free slot. Exits 75 with no run when both slots stay busy; then try again.
 import { spawnSync } from 'node:child_process'
 
 export const SLOTS = ['/tmp/wishem-heavy.lock', '/tmp/wishem-heavy-2.lock']
@@ -29,4 +29,4 @@ for (;;) {
   sleep(POLL_MS)
 }
 console.error('heavy: both slots are busy. Run the same command again.')
-process.exit(1)
+process.exit(75)
