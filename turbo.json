@@ -109,6 +109,18 @@
       ],
       "outputs": ["coverage.json"]
     },
+    "@thrashplay/wishem-construct-manager#test": {
+      "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build", "^build", "build"],
+      "inputs": [
+        "src/**",
+        "package.json",
+        "vitest.config.ts",
+        "vitest.config.d/**",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ],
+      "outputs": ["coverage.json"]
+    },
     "@thrashplay/wishem-docs-check#test": {
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],
       "inputs": [

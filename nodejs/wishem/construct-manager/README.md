@@ -129,3 +129,23 @@ The construct manager writes these log lines:
 - `wishem: construct <id> stopped`
 - `wishem: construct <id> failed: <message>`
 - `wishem: construct <id>: the change of the product was refused: <message>`
+
+## The product construct process
+
+`childProcessLauncher(options)` starts one product construct in a product construct process. This is a child process that runs `dist/product-construct-process.js`. The launcher gives a `LaunchedConstruct`: the link address (`linkUrl`), the process ID (`pid`), the ports `input` and `reader`, the promise `ended`, and `close()`.
+
+The order of the start:
+
+1. The launcher forks the process and sends `start`. The child loads the product code (`productCode`, a file URL), checks it, makes the hub, and starts the hub.
+2. The child answers `ready`. The launcher opens a link on the IPC channel with the IDs `construct-manager` (input) and `construct-manager-reader` (output).
+3. The launcher sends `serve`. The child serves the WebSocket link on a port that the system selects, starts the clock, and answers `serving` with the address.
+
+The manager holds both IDs before any WebSocket client can connect. A WebSocket client that asks for one of them gets `refused` with `id-in-use`. Only the source `construct-manager` can send `hub/rewind`. The texts of one turn go in one IPC message, so the hub queues the inputs of a step back before the next tick.
+
+The launcher gives each line of the standard output and the standard error of the child to `onLine`. A start that fails rejects with the message of the child, and then no process stays.
+
+`close()` sends `stop`. The child sends `stopping` on each WebSocket link, frees its port, and ends. The launcher sends `SIGKILL` after `stopMs` (default 2000). Each call gives the same promise.
+
+The child ends when its IPC channel disconnects. This happens when the parent ends for any cause, also `SIGKILL`. `ended` resolves with a message when the child ends and no `close()` was called.
+
+`inProcessLauncher(options)` runs the construct in this process with `startProductConstruct`, for tests with a fake clock. Its `LaunchedConstruct` also has `hub`.

@@ -4,7 +4,7 @@ import { createStore } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { serveHub } from '@thrashplay/wishem-host-nodejs'
 import { createHub } from '@thrashplay/wishem-hub'
-import type { Hub, Port } from '@thrashplay/wishem-hub'
+import type { Hub } from '@thrashplay/wishem-hub'
 import { createUpdate } from '@thrashplay/wishem-update'
 import type { NativeBehavior } from '@thrashplay/wishem-update'
 import { CONSTRUCT_MANAGER_ID } from './ids.js'
@@ -34,8 +34,55 @@ export interface ProductConstruct {
   /** For example `ws://127.0.0.1:41377/link`. */
   readonly linkUrl: string
   readonly hub: Hub
-  /** Stops the clock and the hub, closes each link, and releases the port. Gives the same promise on each call. */
+  /** Stops the clock, and stops the hub through the server, which closes each link and releases the port. Gives the same promise on each call. */
   close(): Promise<void>
+}
+
+export interface ProductHubOptions {
+  model: Model
+  behaviors?: readonly NativeBehavior[]
+  running: boolean
+  stepMs?: number
+  onError?: (error: unknown) => void
+}
+
+export interface ProductClockOptions {
+  stepMs?: number
+  timer?: ClockTimer
+  now?: () => number
+}
+
+/** Makes a hub, not started, with the parts `time` and `store`. Only the source `construct-manager` can rewind it. */
+export const createProductHub = (options: ProductHubOptions): Hub => {
+  const stepMs = options.stepMs ?? DEFAULT_STEP_MS
+  const update = createUpdate({ store: createStore({ model: options.model }), behaviors: options.behaviors ?? [] })
+  return createHub({
+    subsystems: [createTime({ running: options.running, stepMs }), update],
+    rewindSources: [CONSTRUCT_MANAGER_ID],
+    ...(options.onError === undefined ? {} : { onError: options.onError }),
+  })
+}
+
+/** Starts a clock on a running hub. Throws when the clock cannot start, and then holds no port and no timer. */
+export const startProductClock = (hub: Hub, options: ProductClockOptions = {}): { stop(): void } => {
+  const clockPort = hub.attach({ id: 'clock', kind: 'input' })
+  let clock: Clock
+  try {
+    clock = startClock(clockPort, {
+      stepMs: options.stepMs ?? DEFAULT_STEP_MS,
+      ...(options.timer === undefined ? {} : { timer: options.timer }),
+      ...(options.now === undefined ? {} : { now: options.now }),
+    })
+  } catch (error) {
+    clockPort.close()
+    throw error
+  }
+  return {
+    stop: () => {
+      clock.stop()
+      clockPort.close()
+    },
+  }
 }
 
 /**
@@ -45,27 +92,14 @@ export interface ProductConstruct {
  * Rejects with the error of a step, and then holds no port and no timer.
  */
 export const startProductConstruct = async (options: ProductConstructOptions): Promise<ProductConstruct> => {
-  const stepMs = options.stepMs ?? DEFAULT_STEP_MS
-  const update = createUpdate({ store: createStore({ model: options.model }), behaviors: options.behaviors ?? [] })
-  const hub = createHub({
-    subsystems: [createTime({ running: options.running, stepMs }), update],
-    rewindSources: [CONSTRUCT_MANAGER_ID],
-    ...(options.onError === undefined ? {} : { onError: options.onError }),
-  })
+  const hub = createProductHub(options)
   const server = await serveHub(hub, { port: options.port ?? 0 })
 
-  let clock: Clock | undefined
-  let clockPort: Port | undefined
+  let clock: { stop(): void }
   try {
     hub.start()
-    clockPort = hub.attach({ id: 'clock', kind: 'input' })
-    clock = startClock(clockPort, {
-      stepMs,
-      ...(options.timer === undefined ? {} : { timer: options.timer }),
-      ...(options.now === undefined ? {} : { now: options.now }),
-    })
+    clock = startProductClock(hub, options)
   } catch (error) {
-    clock?.stop()
     await server.close()
     throw error
   }
@@ -80,7 +114,6 @@ export const startProductConstruct = async (options: ProductConstructOptions): P
       closing ??= (async () => {
         try {
           clock.stop()
-          clockPort.close()
         } finally {
           await server.close()
         }
