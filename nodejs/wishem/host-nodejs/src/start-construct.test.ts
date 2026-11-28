@@ -341,6 +341,9 @@ describe('startConstruct', () => {
     )
     await start()
     expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
+    const line = lines.find((entry) => entry.includes('warning'))
+    expect(line?.startsWith('wishem: warning in definitions/other.json: ')).toBe(true)
+    expect(line).toContain('have the same label "AppBar"')
     await new Promise((resolve) => setTimeout(resolve, 300))
     expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
   })
@@ -599,12 +602,12 @@ describe('startConstruct with a product', () => {
     await rm(productFolder, { recursive: true, force: true })
   })
 
-  describe('A warning of the product that has no source', () => {
+  describe('A warning of a definition file of the product', () => {
     const DUPLICATE = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
     const duplicateLabel = { ...counterDefinition('Counter'), id: DUPLICATE, fields: [] }
     const warnings = () => lines.filter((line) => line.includes('warning'))
 
-    it('names the product when the warning is found at the start', async () => {
+    it('names the absolute path of the later product file when the warning is found at the start', async () => {
       await writeModel(
         productFolder,
         [colorDefinition, counterDefinition('Counter'), duplicateLabel],
@@ -612,24 +615,31 @@ describe('startConstruct with a product', () => {
       )
       await start()
       expect(warnings()).toHaveLength(1)
-      expect(warnings()[0]).toMatch(/^wishem: product: warning: /)
+      expect(
+        warnings()[0]?.startsWith(
+          `wishem: warning in ${path.join(productFolder, 'definitions', `${DUPLICATE}.json`)}: `,
+        ),
+      ).toBe(true)
+      expect(lines.some((line) => line.startsWith('wishem: product: warning'))).toBe(false)
     })
 
-    it('names the product when a change of the files causes the warning', async () => {
+    it('names the absolute path of the later product file when a change of the files causes the warning', async () => {
       await start()
-      await writeFile(path.join(productFolder, 'definitions', 'dup.json'), JSON.stringify(duplicateLabel))
+      const file = path.join(productFolder, 'definitions', 'dup.json')
+      await writeFile(file, JSON.stringify(duplicateLabel))
       await eventually(() => warnings().length === 1)
-      expect(warnings()[0]).toMatch(/^wishem: product: warning: /)
+      expect(warnings()[0]?.startsWith(`wishem: warning in ${file}: `)).toBe(true)
+      expect(lines.some((line) => line.startsWith('wishem: product: warning'))).toBe(false)
     })
 
-    it('does not name the product for a warning of the workbench', async () => {
+    it('names the relative path for a warning of the workbench folder', async () => {
       await writeFile(
         path.join(folder, 'definitions', 'dup.json'),
         JSON.stringify({ ...definition, id: DUPLICATE, fields: [] }),
       )
       await start()
       expect(warnings()).toHaveLength(1)
-      expect(warnings()[0]).toMatch(/^wishem: warning: /)
+      expect(warnings()[0]?.startsWith('wishem: warning in definitions/dup.json: ')).toBe(true)
     })
   })
 

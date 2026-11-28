@@ -95,6 +95,16 @@ describe('the generate script', () => {
     expect(run.lines).toContain('wishem: wrote Header.view.gen.ts')
   })
 
+  it('names the definition file in the line of a warning for a duplicate label', () => {
+    const copy = { id: 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d', label: 'AppBar', fields: [] }
+    writeFileSync(join(model, 'definitions', 'zz-copy.json'), JSON.stringify(copy))
+    const run = generate('--check')
+    expect(run.code).toBe(0)
+    expect(run.lines[1]).toBe(
+      `wishem: warning in definitions/zz-copy.json: Component types ${APP_BAR} and ${copy.id} have the same label "AppBar"`,
+    )
+  })
+
   it('prints each error of the generator and stops with a non-zero exit code', () => {
     sidecar('AppBar')
     const path = definitionPath(model)

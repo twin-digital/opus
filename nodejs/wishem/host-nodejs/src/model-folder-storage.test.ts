@@ -233,6 +233,9 @@ describe('the storage subsystem for files', () => {
         JSON.stringify({ ...definition('AppBar'), id: other }),
       )
       await eventually(() => warnings() === 1)
+      const line = lines.find((entry) => entry.includes('warning'))
+      expect(line?.startsWith('wishem: warning in definitions/other.json: ')).toBe(true)
+      expect(line).toContain('have the same label "AppBar"')
     })
 
     it('prints one warning for a burst of writes', async () => {
@@ -981,6 +984,30 @@ describe('two storage subsystems on one hub', () => {
       await setCount('2')
       await eventually(() => productLines.some((line) => line.includes('cannot write')))
       expect(productLines).toContain(`wishem: cannot write ${path.join(productFolder, 'state.json')}: EACCES`)
+    })
+
+    it('names the absolute path of the later definition file in a warning', async () => {
+      await attach({ absoluteSources: true })
+      const file = path.join(productFolder, 'definitions', 'zz-copy.json')
+      await writeFile(file, JSON.stringify({ ...productDefinition('Counter'), id: CT2 }))
+      await eventually(() => productLines.some((line) => line.includes('warning')))
+      expect(productLines.find((line) => line.includes('warning'))?.startsWith(`wishem: warning in ${file}: `)).toBe(
+        true,
+      )
+    })
+
+    it('names the relative path of the later definition file in a warning when the option is false', async () => {
+      await attach({ absoluteSources: false })
+      await writeFile(
+        path.join(productFolder, 'definitions', 'zz-copy.json'),
+        JSON.stringify({ ...productDefinition('Counter'), id: CT2 }),
+      )
+      await eventually(() => productLines.some((line) => line.includes('warning')))
+      expect(
+        productLines
+          .find((line) => line.includes('warning'))
+          ?.startsWith('wishem: warning in definitions/zz-copy.json: '),
+      ).toBe(true)
     })
 
     it('keeps the relative source by default', async () => {
