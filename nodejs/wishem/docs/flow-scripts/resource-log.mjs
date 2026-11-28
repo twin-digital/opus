@@ -6,7 +6,12 @@ import { join } from 'node:path'
 const dir = join(homedir(), '.local', 'state', 'wishem')
 const out = join(dir, 'resources.csv')
 const CG = '/sys/fs/cgroup'
-const LOCKS = ['/tmp/wishem-heavy.lock', '/tmp/wishem-heavy-2.lock']
+const LOCKS = [
+  '/tmp/wishem-heavy.lock',
+  '/tmp/wishem-heavy-2.lock',
+  '/tmp/wishem-heavy-3.lock',
+  '/tmp/wishem-heavy-4.lock',
+]
 const HEAVY = /vitest|tsc|eslint|turbo|tsdown|playwright|godot|docker/
 const intervalMs = Number(process.argv[2] ?? 60000)
 const MB = 1024 * 1024
