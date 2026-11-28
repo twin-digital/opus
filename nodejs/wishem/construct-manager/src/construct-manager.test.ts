@@ -17,6 +17,8 @@ import {
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { attachConstructManager } from './construct-manager.js'
 import type { ConstructManager, ConstructManagerOptions } from './construct-manager.js'
+import { inProcessLauncher } from './launchers.js'
+import type { InProcessConstruct, InProcessLauncherOptions } from './launchers.js'
 import { constructInputs, createConstructList } from './construct-list.js'
 import type { ConstructEntry, ConstructList } from './construct-list.js'
 import { CONSTRUCT_MANAGER_ID, CONSTRUCT_MANAGER_READER_ID } from './ids.js'
@@ -116,6 +118,8 @@ const exploding: NativeBehavior = {
   update: (fields) => fields,
 }
 
+type TestOptions = Partial<ConstructManagerOptions> & Pick<InProcessLauncherOptions, 'behaviors' | 'stepMs'>
+
 describe('attachConstructManager', () => {
   let clock: ReturnType<typeof makeClock>
   let hub: Hub
@@ -125,7 +129,20 @@ describe('attachConstructManager', () => {
   let sockets: WebSocket[]
   let links: RemoteLink[]
 
-  const setup = (options: Partial<ConstructManagerOptions> = {}) => {
+  const attachManager = ({ behaviors: list = behaviors, stepMs, ...rest }: TestOptions) =>
+    attachConstructManager({
+      hub,
+      log: (line) => lines.push(line),
+      launch: inProcessLauncher({
+        behaviors: list,
+        ...(stepMs === undefined ? {} : { stepMs }),
+        timer: clock.timer,
+        now: clock.now,
+      }),
+      ...rest,
+    })
+
+  const setup = (options: TestOptions = {}) => {
     clock = makeClock()
     lines = []
     sockets = []
@@ -135,21 +152,11 @@ describe('attachConstructManager', () => {
     })
     hub.start()
     tester = hub.attach({ id: 'tester', kind: 'input' })
-    manager = attachConstructManager({
-      hub,
-      behaviors,
-      log: (line) => lines.push(line),
-      timer: clock.timer,
-      now: clock.now,
-      ...options,
-    })
+    manager = attachManager(options)
   }
 
   /** Runs `prepare` on the hub before the construct manager attaches. */
-  const setupLate = async (
-    prepare: () => Promise<void>,
-    options: () => Partial<ConstructManagerOptions> = () => ({}),
-  ) => {
+  const setupLate = async (prepare: () => Promise<void>, options: () => TestOptions = () => ({})) => {
     clock = makeClock()
     lines = []
     sockets = []
@@ -160,14 +167,7 @@ describe('attachConstructManager', () => {
     hub.start()
     tester = hub.attach({ id: 'tester', kind: 'input' })
     await prepare()
-    manager = attachConstructManager({
-      hub,
-      behaviors,
-      log: (line) => lines.push(line),
-      timer: clock.timer,
-      now: clock.now,
-      ...options(),
-    })
+    manager = attachManager(options())
   }
 
   afterEach(async () => {
@@ -190,7 +190,7 @@ describe('attachConstructManager', () => {
     if (!found) {
       throw new Error(`The construct ${id} does not run.`)
     }
-    return found
+    return found as InProcessConstruct
   }
 
   const start = async (id = 'play', running?: boolean) => {
@@ -387,6 +387,61 @@ describe('attachConstructManager', () => {
     const statuses = reports().map((input) => (input.payload as { status: string }).status)
     expect(statuses).toEqual(['failed', 'running'])
     expect(entry('play')?.link).toMatch(/^ws:\/\/127\.0\.0\.1:\d+\/link$/)
+    expect(manager.running.has('play')).toBe(true)
+  })
+
+  it('keeps the new start when a stop and a start come while the end of the old construct is reported', async () => {
+    clock = makeClock()
+    lines = []
+    sockets = []
+    links = []
+    hub = createHub({
+      subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
+    })
+    hub.start()
+    tester = hub.attach({ id: 'tester', kind: 'input' })
+    const inner = inProcessLauncher({ behaviors, timer: clock.timer, now: clock.now })
+    let endNow: (message: string) => void = () => undefined
+    let releaseClose: () => void = () => undefined
+    let first = true
+    manager = attachConstructManager({
+      hub,
+      log: (line) => lines.push(line),
+      launch: async (startArgs, hooks) => {
+        const launched = await inner(startArgs, hooks)
+        if (!first) {
+          return launched
+        }
+        first = false
+        const gate = new Promise<void>((resolve) => {
+          releaseClose = resolve
+        })
+        const ended = new Promise<string>((resolve) => {
+          endNow = resolve
+        })
+        return {
+          id: launched.id,
+          linkUrl: launched.linkUrl,
+          pid: launched.pid,
+          input: launched.input,
+          reader: launched.reader,
+          ended,
+          close: async () => {
+            await gate
+            await launched.close()
+          },
+        }
+      },
+    })
+    await start()
+    endNow('The process of the construct ended with the exit code 3.')
+    await settle()
+    expect((await tester.submit(constructInputs.stop('play'))).ok).toBe(true)
+    expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
+    releaseClose()
+    await eventually(() => entry('play')?.status === 'running')
+    await settle()
+    expect(entry('play')).toMatchObject({ want: 'running', status: 'running' })
     expect(manager.running.has('play')).toBe(true)
   })
 
@@ -993,7 +1048,7 @@ describe('attachConstructManager', () => {
     const stopped = lines.indexOf('wishem: construct play stopped')
     expect(stopped).toBeGreaterThan(-1)
     expect(lines.slice(stopped + 1).some((line) => line.startsWith('wishem: construct play runs, link at '))).toBe(true)
-    expect(lines.filter((line) => line.startsWith('wishem: construct play runs'))).toHaveLength(2)
+    expect(lines.filter((line) => line.startsWith('wishem: construct play runs, '))).toHaveLength(2)
   })
 
   it('starts a new construct after a rewind to a different start', async () => {
@@ -1037,7 +1092,7 @@ describe('attachConstructManager', () => {
     await tester.submit(constructInputs.start('play'))
     await settle()
     expect(construct('play')).toBe(before)
-    expect(lines.filter((line) => line.startsWith('wishem: construct play runs'))).toHaveLength(1)
+    expect(lines.filter((line) => line.startsWith('wishem: construct play runs, '))).toHaveLength(1)
   })
 
   it('stops a construct after a rewind of the workbench before its start, and sends no report for it', async () => {

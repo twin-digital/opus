@@ -28,7 +28,7 @@ Terms in each group are in alphabetical order.
 
 **Product**: The part of a project that the designer ships. A product is a model. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the list `behaviors`, which holds the native behaviors of the product. The update subsystem of each product construct runs them. The designer names it with the option `--product-code` of the `start` script.
+**Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the list `behaviors`, which holds the native behaviors of the product. Each product construct process loads the product code, and the update subsystem of the product construct runs the behaviors. The designer names it with the option `--product-code` of the `start` script.
 
 **Product panel** (**Proposed**): The tool of the workbench page that lists the entities of the mounted product and changes and clears their field values. It is derived from the definitions of the product. It reads the part `product` and sends `product/set-field` and `product/clear-field`.
 
@@ -148,7 +148,9 @@ Terms in each group are in alphabetical order.
 
 **Construct list** (**Proposed**): The model subsystem `constructs` of the workbench construct. It holds one entry for each product construct that must run: the wanted state, the sequence number of the start that wrote it, the status that the construct manager reported last, and the address of the link. A client changes it with the inputs `constructs/start`, `constructs/stop`, `constructs/send`, and `constructs/rewind`. Only the construct manager reports a status.
 
-**Construct manager** (**Proposed**): The I/O part of the workbench construct that reads the construct list, starts each product construct in the process of the workbench, and gives it the product model. It sends each later change of the product model as inputs, passes inputs from a client to a product construct, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem. Only the construct manager can rewind a product construct.
+**Construct manager** (**Proposed**): The I/O part of the workbench construct that reads the construct list, starts each product construct in a product construct process, and gives it the product model. It reaches each product construct through a link on the IPC channel of its process. It sends each later change of the product model as inputs, passes inputs from a client to a product construct, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem. Only the construct manager can rewind a product construct.
+
+**Product construct process** (**Proposed**): The Node.js child process of the workbench process that runs one product construct. It loads the product code, serves the link of the construct, and ends when the workbench process ends.
 
 **Godot view** (**Proposed**): The kind of view that the Godot renderer runs, with a sidecar of the kind `godot`. A Godot view makes one node for each component of its component type. Rule R17 gives each renderer its own kind of view, as for the PixiJS view.
 

@@ -405,8 +405,9 @@ These items are **Proposed**:
 - The workbench construct has the store `store` for the model of the workbench. It has the store `product` for the **mounted** product. The store `product` validates the product model alone, and the product model refers to nothing of the workbench.
 - The workbench construct has the model subsystem `constructs`, which holds the list of the product constructs that must run.
 - The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
-  - It starts and stops the product constructs. A product construct is a hub in the process of the workbench, with the parts `time` and `store`, the rules of the product, a clock, and its own link.
+  - It starts and stops the product constructs. A product construct is a hub in a product construct process, a child process of the workbench process, with the parts `time` and `store`, the rules of the product, a clock, and its own link.
   - It gives each product construct the product model.
+  - A fault of the product code ends or fails one product construct process. The workbench continues.
   - It sends each later change of the product model to the product construct as an input.
   - It reports the status of each product construct to the workbench hub as inputs.
 - To a product construct, the construct manager is also an output subsystem and an input subsystem. A hub does not connect to a hub.

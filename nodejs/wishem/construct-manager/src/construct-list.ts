@@ -36,6 +36,8 @@ export interface ReportPayload {
   time?: TimeState
   message?: string
   lastSend?: { seq: number; result: PassResult }
+  /** The start that the report is about. A report for a different start of the construct changes nothing. */
+  startSeq?: number
 }
 
 export interface RewindPayload {
@@ -138,7 +140,7 @@ const report = (part: ConstructList, input: RecordedInput): ConstructList => {
   const payload = payloadOf(input)
   const id = constructOf(payload)
   const entry = entryOf(part, id)
-  const { status, link, time, message, lastSend } = payload
+  const { status, link, time, message, lastSend, startSeq } = payload
   if (typeof status !== 'string' || !REPORTED.includes(status)) {
     return refuse('The status is not "running", "stopped", or "failed"', ['payload', 'status'])
   }
@@ -153,6 +155,9 @@ const report = (part: ConstructList, input: RecordedInput): ConstructList => {
   }
   if (lastSend !== undefined && (!isRecord(lastSend) || typeof lastSend.seq !== 'number')) {
     return refuse('The lastSend has no number "seq" key', ['payload', 'lastSend'])
+  }
+  if (startSeq !== undefined && startSeq !== entry.startSeq) {
+    return part
   }
   const live = status === 'running'
   const kept = (lastSend ?? entry.lastSend) as ConstructEntry['lastSend']

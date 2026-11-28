@@ -743,10 +743,19 @@ const cProcess = el(
   'Runs the constructs and serves the page.',
   { pkg: 'Package: workbench-app' },
 )
+const cPcp = el(
+  'container',
+  COLUMN,
+  cProcess.y + CARD_H + 150,
+  'Product construct process',
+  '[Container: Node.js]',
+  'Runs one product construct.',
+  { pkg: 'Package: construct-manager' },
+)
 const cModel = el(
   'store',
   COLUMN,
-  752,
+  cPcp.y + CARD_H + 110,
   'Model folder',
   '[Container: JSON files]',
   'Holds the definitions and the authored state.',
@@ -849,7 +858,8 @@ const stacked = (tone, from, to, x, line) => {
   return rel(tone, from === upper ? [bottom(from, x), top(to, x)] : [top(from, x), bottom(to, x)], line, [x, y])
 }
 
-const SKIP_X = 310
+const MODEL_X = 304
+const SKIP_X = 376
 const COMMAND_X = 550
 const LANE_SAMPLE_X = 330
 const LANE_TCP_X = 370
@@ -860,7 +870,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has eleven containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub and to each product construct over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
+    'Wishem has twelve containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub and to each product construct over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The workbench process starts a product construct process for each product construct, reaches its hub over a child process link, and passes the WebSocket link of the product construct to it. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
   width: WIDTH_PX,
   height: LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -868,6 +878,7 @@ const containers = {
     cDesigner,
     cPage,
     cProcess,
+    cPcp,
     cModel,
     cProduct,
     cCommand,
@@ -882,7 +893,7 @@ const containers = {
     // The designer
     designerArrow(0, 'flow', cPage, 340, 'Looks at [web browser]'),
     designerArrow(1, 'quiet', cProcess, 590, 'Starts and stops [terminal]'),
-    designerArrow(2, 'flow', cModel, 816, 'Edits files [text editor]'),
+    designerArrow(2, 'flow', cModel, cModel.y + 64, 'Edits files [text editor]'),
     designerArrow(3, 'quiet', cProduct, cProduct.y + 40, 'Edits files [text editor]'),
     designerArrow(4, 'quiet', cCommand, cCommand.y + 64, 'Starts and stops [terminal]'),
     designerArrow(5, 'flow', cReactPage, cReactPage.y + 40, 'Looks at [web browser]'),
@@ -895,10 +906,17 @@ const containers = {
     // The workbench process
     stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
     stacked('flow', cPage, cProcess, 265, 'Connects to the hub\nand to each product\nconstruct [WebSocket]'),
-    stacked('flow', cProcess, cModel, 165, 'Reads, watches, and writes [file system]'),
+    stacked('flow', cProcess, cPcp, 100, 'Starts, stops, and\nreaches the hub\n[child process,\nlink over IPC]'),
+    stacked('flow', cProcess, cPcp, 225, 'Passes the\nproduct links\n[WebSocket]'),
+    rel(
+      'flow',
+      [right(cProcess, 626), [MODEL_X, 626], [MODEL_X, cModel.y + 30], right(cModel, cModel.y + 30)],
+      'Reads,\nwatches, and\nwrites\n[file system]',
+      [MODEL_X, (cPcp.y + CARD_H + cModel.y) / 2],
+    ),
     rel(
       'quiet',
-      [right(cProcess, 620), [SKIP_X, 620], [SKIP_X, cProduct.y + 90], right(cProduct, cProduct.y + 90)],
+      [right(cProcess, 608), [SKIP_X, 608], [SKIP_X, cProduct.y + 66], right(cProduct, cProduct.y + 66)],
       'Reads, watches, and writes [file system]',
       [SKIP_X, (cModel.y + STORE_H + cProduct.y) / 2],
     ),
@@ -928,8 +946,8 @@ const containers = {
       [
         right(cSample, cSample.y + 20),
         [LANE_SAMPLE_X, cSample.y + 20],
-        [LANE_SAMPLE_X, cProduct.y + 66],
-        right(cProduct, cProduct.y + 66),
+        [LANE_SAMPLE_X, cProduct.y + 90],
+        right(cProduct, cProduct.y + 90),
       ],
       'Reads [file system]',
       [LANE_SAMPLE_X, cReactPage.y - UNIT_GAP / 2],
@@ -1258,24 +1276,16 @@ const wManager = wpComponent(
   '[Component: construct-manager]',
   'Starts and stops the product constructs.',
 )
-const wProducts = wpComponent(
+const wLauncher = wpComponent(
   LEFT,
   3,
-  'Product constructs',
+  'Launcher',
   '[Component: construct-manager]',
-  'A hub, a store, and a clock each, with a link.',
-)
-const wUpdate = wpComponent(LEFT, 4, 'Update subsystem', '[Component: update]', 'Runs the behaviors at each tick.')
-const wCode = wpComponent(
-  LEFT,
-  5,
-  'Product code',
-  '[Component: dynamic import]',
-  'The native behaviors of the product.',
+  'Starts, stops, and reaches a product construct process.',
 )
 
 const WP_GROUP_Y = 244
-const WP_GROUP_BOTTOM = WP_ROW(5) + CARD_H + 30
+const WP_GROUP_BOTTOM = WP_ROW(4) + CARD_H + 30
 const WP_FOLDER_Y = WP_GROUP_BOTTOM + 72
 const WP_FOLDER_H = 112
 const wModel = el(
@@ -1287,24 +1297,33 @@ const wModel = el(
   'Holds the definitions and state.json.',
   { h: WP_FOLDER_H },
 )
+const wPcp = el(
+  'container',
+  LEFT,
+  WP_FOLDER_Y,
+  'Product construct process',
+  '[Container: Node.js]',
+  'Runs one product construct.',
+)
+const WP_PRODUCT_Y = WP_FOLDER_Y + CARD_H + 72
 const wProduct = el(
   'store',
   LEFT,
-  WP_FOLDER_Y,
+  WP_PRODUCT_Y,
   'Product model folder',
   '[Container: JSON files]',
   'The model of the mounted product.',
   { h: WP_FOLDER_H },
 )
-const WP_LEGEND_Y = WP_FOLDER_Y + WP_FOLDER_H + 40
-const WP_LANE = { construct: 440, code: 380, storage: 545 }
+const WP_LEGEND_Y = WP_PRODUCT_Y + WP_FOLDER_H + 40
+const WP_LANE = { construct: 440, code: 380, storage: 545, product: 560 }
 const WP_MID = (row) => WP_ROW(row) + CARD_H + 48
 
 const componentsWorkbenchProcess = {
   name: 'components-workbench-process',
   title: 'Component diagram: the workbench process',
   description:
-    'The workbench process has nine components. The start script loads the product code, starts the workbench construct and the Vite development server, and attaches the construct manager with the behaviors. The page gets page code from the Vite development server and connects to the hub and to each product construct through it. The Vite development server passes the link to the workbench construct, and the link of each product construct to the product construct. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads the product and the construct list from the workbench construct, and starts, stops, and updates the product constructs. Each product construct runs the behaviors with the update subsystem, which calls the product code. The generator of the view types reads the definitions from the workbench construct.',
+    'The workbench process has seven components. The start script checks the product code with the launcher, starts the workbench construct and the Vite development server, and attaches the construct manager with the launcher. The page gets page code from the Vite development server and connects to the hub and to each product construct through it. The Vite development server passes the link to the workbench construct, and the link of each product construct to its product construct process, outside the boundary. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads the product and the construct list from the workbench construct, and starts, stops, and updates the product constructs through the launcher. The launcher starts, stops, and reaches each product construct process through a child process link. The generator of the view types reads the definitions from the workbench construct.',
   width: WIDTH_PX,
   height: WP_LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -1323,9 +1342,8 @@ const componentsWorkbenchProcess = {
     wStorage,
     wStart,
     wManager,
-    wProducts,
-    wUpdate,
-    wCode,
+    wLauncher,
+    wPcp,
     wModel,
     wProduct,
 
@@ -1340,9 +1358,9 @@ const componentsWorkbenchProcess = {
     rel('flow', [bottom(wVite, 630), top(wConstruct, 630)], 'Passes the link [WebSocket]', [630, WP_MID(1)]),
     rel(
       'flow',
-      [left(wVite, WP_ROW(1) + 90), [520, WP_ROW(1) + 90], [520, WP_ROW(3) + 60], right(wProducts, WP_ROW(3) + 60)],
+      [left(wVite, WP_ROW(1) + 90), [520, WP_ROW(1) + 90], [520, WP_FOLDER_Y + 52], right(wPcp, WP_FOLDER_Y + 52)],
       'Passes each\nproduct link\n[WebSocket]',
-      [450, WP_ROW(3) + 60],
+      [410, WP_FOLDER_Y + 52],
     ),
 
     // The start script
@@ -1358,17 +1376,17 @@ const componentsWorkbenchProcess = {
       'Starts',
       [WP_LANE.construct, WP_ROW(1) + 150],
     ),
-    rel('quiet', [bottom(wStart, 173), top(wManager, 173)], 'Attaches with the behaviors', [173, WP_MID(1)]),
+    rel('quiet', [bottom(wStart, 173), top(wManager, 173)], 'Attaches with the launcher', [173, WP_MID(1)]),
     rel(
       'quiet',
       [
         right(wStart, WP_ROW(1) + 52),
         [WP_LANE.code, WP_ROW(1) + 52],
-        [WP_LANE.code, WP_ROW(5) + 52],
-        right(wCode, WP_ROW(5) + 52),
+        [WP_LANE.code, WP_ROW(3) + 52],
+        right(wLauncher, WP_ROW(3) + 52),
       ],
-      'Loads and checks [import()]',
-      [WP_LANE.code, WP_ROW(4) + 52],
+      'Checks the\nproduct code',
+      [WP_LANE.code, WP_MID(2)],
     ),
 
     // The construct manager and the product constructs
@@ -1376,9 +1394,16 @@ const componentsWorkbenchProcess = {
       450,
       WP_ROW(2) + 52,
     ]),
-    rel('flow', [bottom(wManager, 173), top(wProducts, 173)], 'Starts, stops, and updates [port]', [173, WP_MID(2)]),
-    rel('flow', [bottom(wProducts, 173), top(wUpdate, 173)], 'Runs the behaviors with', [173, WP_MID(3)]),
-    rel('quiet', [bottom(wUpdate, 173), top(wCode, 173)], 'Calls', [173, WP_MID(4)]),
+    rel('flow', [bottom(wManager, 173), top(wLauncher, 173)], 'Starts and stops each\nproduct construct', [
+      173,
+      WP_MID(2),
+    ]),
+    rel(
+      'flow',
+      [bottom(wLauncher, 173), top(wPcp, 173)],
+      'Starts, stops, and reaches the hub\n[child process, link over IPC]',
+      [173, WP_GROUP_BOTTOM + 24],
+    ),
 
     // The storage subsystems and the generator
     rel('quiet', [top(wGen, 700), bottom(wConstruct, 700)], 'Reads the definitions [port]', [700, WP_MID(2)]),
@@ -1399,9 +1424,15 @@ const componentsWorkbenchProcess = {
     ]),
     rel(
       'quiet',
-      [bottom(wStorage, 610), [610, WP_GROUP_BOTTOM + 36], [230, WP_GROUP_BOTTOM + 36], top(wProduct, 230)],
-      'Reads, watches, and writes [file system]',
-      [420, WP_GROUP_BOTTOM + 36],
+      [
+        bottom(wStorage, 610),
+        [610, WP_GROUP_BOTTOM + 36],
+        [WP_LANE.product, WP_GROUP_BOTTOM + 36],
+        [WP_LANE.product, WP_PRODUCT_Y + 56],
+        right(wProduct, WP_PRODUCT_Y + 56),
+      ],
+      'Reads, watches, and\nwrites [file system]',
+      [420, WP_PRODUCT_Y + 56],
     ),
     {
       kind: 'legend',

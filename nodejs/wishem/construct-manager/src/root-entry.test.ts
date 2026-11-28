@@ -51,5 +51,11 @@ it('exports these names from the root entry', () => {
 })
 
 it('exports these names from the node entry', () => {
-  expect(Object.keys(node).sort()).toEqual(['attachConstructManager', 'startProductConstruct'])
+  expect(Object.keys(node).sort()).toEqual([
+    'attachConstructManager',
+    'checkProductCode',
+    'childProcessLauncher',
+    'inProcessLauncher',
+    'startProductConstruct',
+  ])
 })
