@@ -150,12 +150,18 @@ describe('parseHubMessage', () => {
     }
   })
 
-  it('reads a result with an error and a rejection', () => {
+  it('reads a result with an error', () => {
     const failed = { t: 'result', request: 2, error: 'It broke.' }
     expect(parseHubMessage(json(failed))).toEqual({ kind: 'message', message: failed })
-    const rejected = { t: 'result', request: 3, result: { ok: false, reason: 'invalid', problems: [] } }
-    expect(parseHubMessage(json(rejected))).toEqual({ kind: 'message', message: rejected })
   })
+
+  it.each(['not-permitted', 'not-running', 'unknown-type', 'invalid'])(
+    'reads a result with a rejection for %s',
+    (reason) => {
+      const rejected = { t: 'result', request: 3, result: { ok: false, reason, problems: [] } }
+      expect(parseHubMessage(json(rejected))).toEqual({ kind: 'message', message: rejected })
+    },
+  )
 
   it.each([
     ['text that is not JSON', '{'],
@@ -213,6 +219,18 @@ describe('parseHubMessage', () => {
     [
       'a result with a rejection with problems that are not a list',
       json({ t: 'result', request: 1, result: { ok: false, reason: 'invalid', problems: {} } }),
+    ],
+    [
+      'a result with a rejection with no ok',
+      json({ t: 'result', request: 1, result: { reason: 'invalid', problems: [] } }),
+    ],
+    [
+      'a result with a rejection with an ok that is not a boolean',
+      json({ t: 'result', request: 1, result: { ok: 'no', reason: 'invalid', problems: [] } }),
+    ],
+    [
+      'a result with an acceptance with an ok that is not a boolean',
+      json({ t: 'result', request: 1, result: { ok: 1, seq: 4 } }),
     ],
     ['a result with an acceptance with no seq', json({ t: 'result', request: 1, result: { ok: true } })],
     [
