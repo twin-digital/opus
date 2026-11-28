@@ -88,6 +88,33 @@ describe('render.mjs --check, with the real document', () => {
   })
 })
 
+describe('the container diagram', () => {
+  const svg = readFileSync(join(architectureFolder, 'containers-light.svg'), 'utf8')
+
+  it('shows no package', () => {
+    expect(svg).not.toContain('TypeScript package')
+  })
+
+  it('shows no import', () => {
+    expect(svg).not.toContain('[import]')
+  })
+
+  it('names the package of each unit', () => {
+    const lines = svg.match(/(?:Package|Example): [a-z-]+/g) ?? []
+    expect(lines.sort()).toEqual([
+      'Example: sample-product',
+      'Package: pixi-page',
+      'Package: pixi-page',
+      'Package: renderer-godot',
+      'Package: renderer-godot',
+      'Package: renderer-godot',
+      'Package: workbench',
+      'Package: workbench-app',
+      'Package: workbench-app',
+    ])
+  })
+})
+
 describe('render.mjs, the cards of the package dependency view', () => {
   it('names the files that a new runtime dependency makes out of date, and writes a card without --check', () => {
     const fixture = makeFixture()

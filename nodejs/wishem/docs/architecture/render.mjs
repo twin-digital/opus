@@ -202,7 +202,7 @@ const wrap = (line, maxWidth, maxLines) => {
  * `shape` is `person`, `system`, `container`, `store`, or `component`.
  */
 const element = (c, item) => {
-  const { x, y, w, h, shape, name, type, description, focus = false } = item
+  const { x, y, w, h, shape, name, type, description, pkg, focus = false } = item
   const style = shapeStyle(c, shape, focus)
   const attributes = `fill="${style.fill}" stroke="${style.stroke}" filter="url(#shadow)"`
   const out = [shape === 'store' ? `<path d="${cylinder(item, STORE_RY)}" ${attributes}/>` : rect(item, 14, attributes)]
@@ -215,6 +215,7 @@ const element = (c, item) => {
   const lines = [
     { line: name, size: SIZE.name, weight: 600, color: style.ink, lead: LEAD.name },
     { line: type, size: SIZE.detail, weight: 400, color: style.muted, lead: LEAD.type },
+    ...(pkg === undefined ? [] : [{ line: pkg, size: SIZE.detail, weight: 400, color: style.muted, lead: LEAD.type }]),
     ...(description === undefined ? [] : wrap(description, inner, DESCRIPTION_LINES)).map((line) => ({
       line,
       size: SIZE.detail,
@@ -250,8 +251,11 @@ const MIN_PLAIN = 56
 const MIN_SIDE = 28
 const CHIP_PAD = 22
 
-/** The lines of a label: the verb phrase, and the technology in brackets on a second line. */
+/** The lines of a label: the lines that the label gives, or the verb phrase and the technology in brackets. */
 const labelLines = (label) => {
+  if (label.includes('\n')) {
+    return label.split('\n')
+  }
   const split = label.indexOf(' [')
   return split === -1 ? [label] : [label.slice(0, split), label.slice(split + 1)]
 }
@@ -259,7 +263,7 @@ const labelLines = (label) => {
 /** The size of the chip of a label. */
 const chipSize = (label) => ({
   w: Math.max(...labelLines(label).map((line) => textWidth(line, { size: SIZE.detail, weight: 500 }))) + CHIP_PAD,
-  h: labelLines(label).length === 1 ? 24 : 40,
+  h: labelLines(label).length === 1 ? 24 : 10 + 15 * labelLines(label).length,
 })
 
 /** Fails the run when an arrow is too short to read, or when its chip leaves too little line. */
@@ -372,7 +376,7 @@ const arrow = (c, item) => {
       out.push(
         text(c, {
           x: at[0],
-          y: lines.length === 1 ? at[1] + 4.5 : at[1] - 3 + index * 15,
+          y: at[1] + 4.5 - ((lines.length - 1) * 15) / 2 + index * 15,
           line: part,
           weight: index === 0 ? 500 : 400,
           color,
@@ -680,444 +684,181 @@ const context = {
   ],
 }
 
-// Containers. The gutter on the left holds the arrow from the page to `hub`.
-const GUTTER = 64
-const gx = (x) => x + GUTTER
-const cDesigner = el('person', gx(MIDDLE), 64, 'Designer', '[Person]', 'Makes a product with the workbench.', {
+// Containers: one column of the runtime units. Each arrow from the designer runs through the area on the right and
+// enters the right edge of its unit. A deeper unit gets a line farther to the right and a higher start point, so that
+// no two of these lines cross.
+const COLUMN = 40
+const UNIT_GAP = 70
+const STORE_H = 128
+const cDesigner = el('person', COLUMN, 64, 'Designer', '[Person]', 'Makes a product with the workbench.', {
   h: 124,
 })
+
 const cPage = el(
   'container',
-  gx(LEFT),
+  COLUMN,
   284,
   'Page',
   '[Container: React, web browser]',
   'Draws each component that has a view.',
-)
-const cModel = el(
-  'store',
-  gx(RIGHT),
-  284,
-  'Model folder',
-  '[Container: JSON files]',
-  'Holds the definitions and the authored state.',
-)
-const cProduct = el(
-  'store',
-  gx(RIGHT),
-  564,
-  'Product model folder',
-  '[Container: JSON files]',
-  'Holds the model of the mounted product.',
+  { pkg: 'Package: workbench-app' },
 )
 const cProcess = el(
   'container',
-  gx(MIDDLE),
-  564,
+  COLUMN,
+  538,
   'Workbench process',
   '[Container: Node.js]',
   'Runs the constructs and serves the page.',
+  { pkg: 'Package: workbench-app' },
 )
-const cHost = el(
-  'container',
-  gx(LEFT),
-  804,
-  'host-nodejs',
-  '[Container: TypeScript package]',
-  'Runs a construct and serves the link.',
+const cModel = el(
+  'store',
+  COLUMN,
+  752,
+  'Model folder',
+  '[Container: JSON files]',
+  'Holds the definitions and the authored state.',
+  { h: STORE_H, pkg: 'Package: workbench' },
 )
-const cCore = el(
-  'container',
-  gx(RIGHT),
-  804,
-  'core',
-  '[Container: TypeScript package]',
-  'Checks a model and holds the store.',
+const cProduct = el(
+  'store',
+  COLUMN,
+  cModel.y + STORE_H + UNIT_GAP,
+  'Product model folder',
+  '[Container: JSON files]',
+  'Holds the model of the mounted product.',
+  { h: STORE_H, pkg: 'Example: sample-product' },
 )
-const cManager = el(
-  'container',
-  gx(MIDDLE),
-  1004,
-  'construct-manager',
-  '[Container: TypeScript package]',
-  'The construct list and the construct manager.',
-)
-const cHub = el(
-  'container',
-  gx(MIDDLE),
-  1204,
-  'hub',
-  '[Container: TypeScript package]',
-  'Joins the subsystems and carries the link.',
-)
-const cRenderer = el(
-  'container',
-  gx(MIDDLE),
-  2044,
-  'renderer-react',
-  '[Container: TypeScript package]',
-  'Draws React views from a port.',
-)
-
-const cClock = el(
-  'container',
-  gx(MIDDLE),
-  1424,
-  'clock',
-  '[Container: TypeScript package]',
-  'Holds the time subsystem and the clock.',
-)
-
-// The update subsystem sits in its own column on the right, so that its arrows keep a free zone for their labels.
-const UPDATE_X = 1320
-const cUpdate = el(
-  'container',
-  UPDATE_X,
-  1000,
-  'update',
-  '[Container: TypeScript package]',
-  'The update subsystem: runs the native behaviors at each tick.',
-  { h: 160 },
-)
-
 const cPixiPage = el(
   'container',
-  gx(LEFT),
-  1824,
+  COLUMN,
+  cProduct.y + STORE_H + UNIT_GAP,
   'PixiJS page',
   '[Container: PixiJS, web browser]',
   'Draws the PixiJS construct and sends the keys.',
+  { pkg: 'Package: pixi-page' },
 )
 const cPixiProcess = el(
   'container',
-  gx(RIGHT),
-  1824,
+  COLUMN,
+  cPixiPage.y + CARD_H + 150,
   'PixiJS process',
   '[Container: Node.js]',
   'Runs the construct and serves the page.',
-)
-const cRendererPixi = el(
-  'container',
-  gx(LEFT),
-  2044,
-  'renderer-pixi',
-  '[Container: TypeScript package]',
-  'Draws PixiJS views from a port.',
-)
-const cSample = el(
-  'container',
-  gx(RIGHT),
-  2044,
-  'sample-product',
-  '[Container: TypeScript package]',
-  'Holds the example model folder and the count behavior.',
-)
-
-const cGodotRunner = el(
-  'container',
-  gx(MIDDLE),
-  2290,
-  'Godot runner',
-  '[Container: Node.js]',
-  'Starts Godot in Docker, carries the link.',
+  { pkg: 'Package: pixi-page' },
 )
 const cGodotApp = el(
   'container',
-  gx(MIDDLE),
-  2610,
+  COLUMN,
+  cPixiProcess.y + CARD_H + UNIT_GAP,
   'Godot application',
   '[Container: GDScript, Docker]',
   'Draws the construct and writes screenshots.',
+  { pkg: 'Package: renderer-godot' },
+)
+const cGodotRunner = el(
+  'container',
+  COLUMN,
+  cGodotApp.y + CARD_H + 150,
+  'Godot runner',
+  '[Container: Node.js]',
+  'Starts Godot in Docker, carries the link.',
+  { pkg: 'Package: renderer-godot' },
 )
 const cGodotProcess = el(
   'container',
-  gx(RIGHT),
-  2610,
+  COLUMN,
+  cGodotRunner.y + CARD_H + 110,
   'Godot process',
   '[Container: Node.js]',
   'Runs the construct with a clock.',
+  { pkg: 'Package: renderer-godot' },
 )
 
-/** Moves each item of a diagram down by `dy`. */
-const shiftY = (items, dy) =>
-  items.map((it) =>
-    it.kind === 'arrow' ?
-      {
-        ...it,
-        points: it.points.map(([x, y]) => [x, y + dy]),
-        label: { ...it.label, at: [it.label.at[0], it.label.at[1] + dy] },
-      }
-    : { ...it, y: it.y + dy },
-  )
+// The arrow k of the designer: it leaves the right edge of the designer at a height that depends on k, runs to a
+// position that depends on k, and enters the right edge of `target` at `at`. The label sits in the middle of the last line.
+const designerArrow = (k, tone, target, at, line) => {
+  const x = 560 + 40 * k
+  const y = 176 - 12 * k
+  return rel(tone, [right(cDesigner, y), [x, y], [x, at], right(target, at)], line, [(x + CARD_W + COLUMN) / 2, at])
+}
 
-// The system boundary reaches the update column.
-const GROUP_W = UPDATE_X + CARD_W + 20 - 24
+// A vertical arrow between two stacked units, at the horizontal position `x`.
+const stacked = (tone, from, to, x, line) => {
+  const [upper, lower] = from.y < to.y ? [from, to] : [to, from]
+  const y = (upper.y + upper.h + lower.y) / 2
+  return rel(tone, from === upper ? [bottom(from, x), top(to, x)] : [top(from, x), bottom(to, x)], line, [x, y])
+}
+
+const SKIP_X = 310
+const UNITS_BOTTOM = cGodotProcess.y + CARD_H
+const LEGEND_Y = UNITS_BOTTOM + 62
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has eighteen containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process runs the behaviors with the update package, serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The designer starts the three processes and the Godot runner, edits the two folders, and looks at the two pages.',
-  width: 1614,
-  height: 3090,
-  items: shiftY(
-    [
-      { kind: 'group', x: 24, y: 224, w: GROUP_W, h: 2676, label: SYSTEM },
-      cDesigner,
-      cPage,
-      cModel,
-      cProduct,
-      cProcess,
-      cHost,
-      cCore,
-      cManager,
-      cHub,
-      cRenderer,
-      cClock,
-      cUpdate,
-      cPixiPage,
-      cPixiProcess,
-      cRendererPixi,
-      cSample,
-      cGodotRunner,
-      cGodotApp,
-      cGodotProcess,
+    'Wishem has nine containers. The designer starts the three processes and the Godot runner, edits the model folder and the product model folder, and looks at the two pages. The page gets page code over HTTP and connects to the hub over a WebSocket link through the workbench process. The workbench process reads, watches, and writes the two folders. The PixiJS page connects the same way to the PixiJS process. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process.',
+  width: WIDTH_PX,
+  height: LEGEND_Y + LEGEND_H + 24,
+  items: [
+    { kind: 'group', x: 24, y: 212, w: 832, h: UNITS_BOTTOM + 30 - 212, label: SYSTEM },
+    cDesigner,
+    cPage,
+    cProcess,
+    cModel,
+    cProduct,
+    cPixiPage,
+    cPixiProcess,
+    cGodotApp,
+    cGodotRunner,
+    cGodotProcess,
 
-      // The primary path: a change to the model becomes a new picture
-      rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [
-        gx(240),
-        200,
-      ]),
-      rel('flow', [right(cDesigner, 126), [gx(640), 126], top(cModel, gx(640))], 'Edits files [text editor]', [
-        gx(640),
-        200,
-      ]),
-      rel(
-        'flow',
-        [top(cProcess, 530), [530, 424], [800, 424], bottom(cModel, 800)],
-        'Reads, watches, and writes [file system]',
-        [663, 424],
-      ),
-      rel(
-        'quiet',
-        [top(cProcess, 590), [590, 500], [850, 500], top(cProduct, 850)],
-        'Reads, watches, and writes [file system]',
-        [720, 500],
-      ),
-      rel(
-        'quiet',
-        [right(cDesigner, 96), [930, 96], [930, 616], right(cProduct, 616)],
-        'Edits files [text editor]',
-        [760, 96],
-      ),
-      rel('flow', [bottom(cPage, gx(96)), [gx(96), 640], left(cProcess, 640)], 'Connects to the hub [WebSocket link]', [
-        gx(96),
-        550,
-      ]),
+    // The designer
+    designerArrow(0, 'flow', cPage, 340, 'Looks at [web browser]'),
+    designerArrow(1, 'quiet', cProcess, 590, 'Starts and stops [terminal]'),
+    designerArrow(2, 'flow', cModel, 816, 'Edits files [text editor]'),
+    designerArrow(3, 'quiet', cProduct, cProduct.y + 40, 'Edits files [text editor]'),
+    designerArrow(4, 'flow', cPixiPage, cPixiPage.y + 40, 'Looks at and presses keys [web browser]'),
+    designerArrow(5, 'quiet', cPixiProcess, cPixiProcess.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(6, 'quiet', cGodotRunner, cGodotRunner.y + 52, 'Starts and looks at the screenshots [terminal]'),
+    designerArrow(7, 'quiet', cGodotProcess, cGodotProcess.y + 52, 'Starts and stops [terminal]'),
 
-      // The other relationships
-      rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [gx(440), 336]),
-      rel('quiet', [bottom(cPage, gx(250)), [gx(250), 600], left(cProcess, 600)], 'Gets page code [HTTP]', [
-        gx(250),
-        524,
-      ]),
-      rel('quiet', [bottom(cProcess, gx(375)), [gx(375), 716], [gx(173), 716], top(cHost)], 'Runs [import]', [
-        gx(274),
-        716,
-      ]),
-      rel('quiet', [bottom(cProcess, 569), [569, 716], [860, 716], top(cCore, 860)], 'Uses [import]', [670, 716]),
-      rel(
-        'quiet',
-        [bottom(cProcess, 470), top(cManager, 470)],
-        'Runs the product constructs with [import]',
-        [470, 940],
-      ),
-      rel(
-        'quiet',
-        [bottom(cProcess, 520), [520, 770], [923, 770], [923, 2096], right(cSample, 2096)],
-        'Loads the product code [dynamic import]',
-        [693, 770],
-      ),
-      rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [570, 856]),
-      rel('quiet', [bottom(cCore, 771), [771, 1256], right(cHub, 1256)], 'Builds on [import]', [771, 1130]),
-      rel('quiet', [bottom(cHost, gx(173)), [gx(173), 1220], left(cHub, 1220)], 'Builds on [import]', [gx(173), 1100]),
-      rel('quiet', [left(cPage, 360), [68, 360], [68, 1252], left(cHub, 1252)], 'Builds on [import]', [223, 1252]),
-      rel(
-        'quiet',
-        [left(cPage, 330), [44, 330], [44, 2190], [460, 2190], bottom(cRenderer, 460)],
-        'Builds on [import]',
-        [250, 2190],
-      ),
-      rel(
-        'quiet',
-        [bottom(cProcess, 614), [614, 692], [950, 692], [950, 2190], [548, 2190], bottom(cRenderer, 548)],
-        'Builds on [import]',
-        [840, 692],
-      ),
-      rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1366]),
-      rel(
-        'quiet',
-        [bottom(cRenderer, 420), [420, 2212], [90, 2212], [90, 1294], left(cHub, 1294)],
-        'Builds on [import]',
-        [250, 1294],
-      ),
+    // The workbench process
+    stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
+    stacked('flow', cPage, cProcess, 250, 'Connects to the hub [WebSocket link]'),
+    stacked('flow', cProcess, cModel, 165, 'Reads, watches, and writes [file system]'),
+    rel(
+      'quiet',
+      [right(cProcess, 620), [SKIP_X, 620], [SKIP_X, cProduct.y + 90], right(cProduct, cProduct.y + 90)],
+      'Reads, watches, and writes [file system]',
+      [SKIP_X, (cModel.y + STORE_H + cProduct.y) / 2],
+    ),
 
-      // The construct manager
-      rel('quiet', [bottom(cManager), top(cHub)], 'Builds on [import]', [gx(440), 1156]),
-      rel('quiet', [right(cManager, 1050), [690, 1050], bottom(cCore, 690)], 'Builds on [import]', [690, 975]),
-      rel('quiet', [left(cManager, 1050), [310, 1050], bottom(cHost, 310)], 'Builds on [import]', [310, 975]),
-      rel(
-        'quiet',
-        [right(cManager, 1080), [700, 1080], [700, 1450], right(cClock, 1450)],
-        'Builds on [import]',
-        [700, 1330],
-      ),
+    // The PixiJS process
+    stacked('quiet', cPixiPage, cPixiProcess, 100, 'Gets page code [HTTP]'),
+    stacked('flow', cPixiPage, cPixiProcess, 250, 'Connects to the hub [WebSocket link]'),
 
-      // The PixiJS construct
-      rel(
-        'flow',
-        [left(cDesigner, 160), [14, 160], [14, 1876], left(cPixiPage, 1876)],
-        'Looks at and presses keys [web browser]',
-        [180, 160],
-      ),
-      rel(
-        'quiet',
-        [right(cDesigner, 160), [1016, 160], [1016, 1876], right(cPixiProcess, 1876)],
-        'Starts and stops [terminal]',
-        [800, 160],
-      ),
-      rel('quiet', [right(cPixiPage, 1852), left(cPixiProcess, 1852)], 'Gets page code [HTTP]', [gx(440), 1852]),
-      rel('flow', [right(cPixiPage, 1906), left(cPixiProcess, 1906)], 'Connects to the hub [WebSocket link]', [
-        gx(440),
-        1906,
-      ]),
-      rel('quiet', [bottom(cPixiPage), top(cRendererPixi)], 'Builds on [import]', [gx(173), 1986]),
-      rel(
-        'quiet',
-        [top(cPixiPage, 250), [250, 1380], [410, 1380], bottom(cHub, 410)],
-        'Builds on [import]',
-        [250, 1570],
-      ),
-      rel('quiet', [top(cPixiPage, 345), [345, 1476], left(cClock, 1476)], 'Builds on [import]', [345, 1640]),
-      rel('quiet', [top(cPixiProcess, 660), [660, 1500], right(cClock, 1500)], 'Builds on [import]', [660, 1660]),
-      rel(
-        'quiet',
-        [top(cPixiProcess, 760), [760, 1380], [600, 1380], bottom(cHub, 600)],
-        'Builds on [import]',
-        [760, 1570],
-      ),
-      rel('quiet', [top(cPixiProcess, 850), bottom(cCore, 850)], 'Builds on [import]', [850, 1400]),
-      rel(
-        'quiet',
-        [top(cPixiProcess, 700), [700, 1770], [125, 1770], bottom(cHost, 125)],
-        'Serves the link with [import]',
-        [500, 1770],
-      ),
-      // The update subsystem
-      rel('quiet', [left(cUpdate, 1030), [1165, 1030], [1165, 850], right(cCore, 850)], 'Builds on [import]', [
-        UPDATE_X - 80,
-        1030,
-      ]),
-      rel('quiet', [left(cUpdate, 1080), [1125, 1080], [1125, 1226], right(cHub, 1226)], 'Builds on [import]', [
-        UPDATE_X - 80,
-        1080,
-      ]),
-      rel('quiet', [left(cUpdate, 1130), [1145, 1130], [1145, 1435], right(cClock, 1435)], 'Builds on [import]', [
-        UPDATE_X - 80,
-        1130,
-      ]),
-      rel(
-        'quiet',
-        [right(cPixiProcess, 1850), [1420, 1850], bottom(cUpdate, 1420)],
-        'Runs the behaviors with [import]',
-        [1420, 1500],
-      ),
-
-      rel(
-        'quiet',
-        [right(cManager, 1010), [1135, 1010], [1135, 970], [1500, 970], top(cUpdate, 1500)],
-        'Runs the behaviors with [import]',
-        [1340, 970],
-      ),
-      rel(
-        'quiet',
-        [bottom(cProcess, 592), [592, 744], [1540, 744], top(cUpdate, 1540)],
-        'Checks the product code with [import]',
-        [1300, 744],
-      ),
-
-      // The Godot construct
-      rel(
-        'quiet',
-        [top(cDesigner, 540), [540, -20], [1056, -20], [1056, 2370], right(cGodotRunner, 2370)],
-        'Starts and stops [terminal]',
-        [800, -20],
-      ),
-      rel(
-        'quiet',
-        [top(cDesigner, 600), [600, 30], [1040, 30], [1040, 2640], right(cGodotProcess, 2640)],
-        'Starts and stops [terminal]',
-        [900, 30],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotRunner, 440), top(cGodotApp, 440)],
-        'Starts and copies the screenshots [Docker]',
-        [440, 2455],
-      ),
-      rel(
-        'flow',
-        [top(cGodotApp, 610), bottom(cGodotRunner, 610)],
-        'Connects to the hub [WebSocket link]',
-        [610, 2540],
-      ),
-      rel(
-        'quiet',
-        [right(cGodotRunner, 2342), [770, 2342], top(cGodotProcess, 770)],
-        'Carries the link [TCP]',
-        [770, 2476],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 660), [660, 2796], [102, 2796], [102, 870], left(cHost, 870)],
-        'Serves the link with [import]',
-        [300, 2796],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 690), [690, 2842], [1105, 2842], [1105, 880], right(cCore, 880)],
-        'Builds on [import]',
-        [960, 2842],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 740), [740, 2796], [1090, 2796], [1090, 1290], right(cHub, 1290)],
-        'Builds on [import]',
-        [960, 2796],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotProcess, 790), [790, 2750], [1075, 2750], [1075, 1475], right(cClock, 1475)],
-        'Builds on [import]',
-        [960, 2750],
-      ),
-      {
-        kind: 'legend',
-        x: 24,
-        y: 2930,
-        w: GROUP_W,
-        entries: [
-          ['person', 'Person'],
-          ['container', 'Container'],
-          ['store', 'Store'],
-          ['boundary', 'Boundary'],
-          ['flow', 'Primary path'],
-          ['quiet', 'Other relationship'],
-        ],
-      },
-    ],
-    60,
-  ),
+    // The Godot application, the Godot runner, and the Godot process
+    stacked('quiet', cGodotRunner, cGodotApp, 100, 'Starts and copies\nthe screenshots\n[Docker]'),
+    stacked('flow', cGodotApp, cGodotRunner, 255, 'Connects to the hub [WebSocket link]'),
+    stacked('quiet', cGodotRunner, cGodotProcess, 165, 'Carries the link [TCP]'),
+    {
+      kind: 'legend',
+      x: 24,
+      y: LEGEND_Y,
+      w: 832,
+      entries: [
+        ['person', 'Person'],
+        ['container', 'Container'],
+        ['store', 'Store'],
+        ['boundary', 'Boundary'],
+        ['flow', 'Primary path'],
+        ['quiet', 'Other relationship'],
+      ],
+    },
+  ],
 }
 
 // Dynamic: the path of a change
