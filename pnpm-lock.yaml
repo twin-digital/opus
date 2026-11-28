@@ -3061,7 +3061,7 @@ importers:
     dependencies:
       '@julusian/midi':
         specifier: ^3.6.1
-        version: 3.8.0
+        version: 3.8.1
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -5409,8 +5409,12 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@julusian/midi@3.8.0':
-    resolution: {integrity: sha512-zlOEsgDry/Wj1df1U6SfR2Z2RDHAZjXl9vFdV84DaaxmkA/7p6l1qX6yvCRAhKl9EnIpiAy+MrNrisKv+0N8Vw==}
+  '@julusian/midi@3.8.1':
+    resolution: {integrity: sha512-T+Ecn2pWTFu0G81PUa64Tk7yqzS6KlW61BKIaWVCBeXKXtXQ8ARgn6NcqmH6kABOM3FA8DV7XaPcw7VDBtgxKQ==}
+    engines: {node: '>=14.15'}
+
+  '@julusian/midi@3.9.0':
+    resolution: {integrity: sha512-nn5ry0YLfJ+u/cxuaGIpsM8XqnkLRIQp9ZNGC+NbOxuTYIZuJmkojLkKFZr+g040P9uAZDUwBevAxWswsyheFA==}
     engines: {node: '>=14.15'}
 
   '@langchain/classic@1.0.34':
@@ -11970,6 +11974,9 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
+  tslib@2.9.1:
+    resolution: {integrity: sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA==}
+
   tsx@4.23.13:
     resolution: {integrity: sha512-BL5MGkRln6aDYhb0xbQlEAGw743BaZYWdbWtdJOBriYJboKgUUYCadFp2/FpBBZquBC/ezNBn7wMMPx7FDZUDw==}
     engines: {node: '>=18.0.0'}
@@ -13809,11 +13816,17 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@julusian/midi@3.8.0':
+  '@julusian/midi@3.8.1':
     dependencies:
       node-addon-api: 6.1.0
       pkg-prebuilds: 1.1.0
       tslib: 2.8.1
+
+  '@julusian/midi@3.9.0':
+    dependencies:
+      node-addon-api: 6.1.0
+      pkg-prebuilds: 1.1.0
+      tslib: 2.9.1
 
   '@langchain/classic@1.0.34(@langchain/core@1.2.9(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2))(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2)':
     dependencies:
@@ -17406,7 +17419,7 @@ snapshots:
 
   easymidi@3.2.0:
     dependencies:
-      '@julusian/midi': 3.8.0
+      '@julusian/midi': 3.9.0
 
   ecdsa-sig-formatter@1.0.11:
     dependencies:
@@ -20867,6 +20880,8 @@ snapshots:
   tslib@2.4.0: {}
 
   tslib@2.8.1: {}
+
+  tslib@2.9.1: {}
 
   tsx@4.23.13:
     dependencies:
