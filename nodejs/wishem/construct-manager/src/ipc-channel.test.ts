@@ -58,17 +58,14 @@ describe('ipcChannel', () => {
     const { endpoint, emitter } = makeEndpoint()
     const channel = ipcChannel(endpoint)
     const seen: string[] = []
-    let timerStarted = false
     channel.onMessage((text) => {
       seen.push(text)
-      if (!timerStarted) {
-        timerStarted = true
-        setTimeout(() => {
-          seen.push('timer')
-        }, 0)
-      }
     })
+    setTimeout(() => {
+      seen.push('timer')
+    }, 0)
     emitter.emit('message', { t: 'link', texts: ['a', 'b', 'c'] })
+    expect(seen).toEqual(['a', 'b', 'c'])
     await new Promise((resolve) => setTimeout(resolve, 10))
     expect(seen).toEqual(['a', 'b', 'c', 'timer'])
   })
@@ -140,5 +137,55 @@ describe('ipcChannel', () => {
     channel.onClose(onClose)
     await Promise.resolve()
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+  it('does not give a message of a type that is not link to the listener, also with texts', () => {
+    const { endpoint, emitter } = makeEndpoint()
+    const channel = ipcChannel(endpoint)
+    const listener = vi.fn()
+    channel.onMessage(listener)
+    emitter.emit('message', { t: 'serve', texts: ['a'] })
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('does not give a message after a disconnect to the listener', () => {
+    const { endpoint, emitter } = makeEndpoint()
+    const channel = ipcChannel(endpoint)
+    const listener = vi.fn()
+    channel.onMessage(listener)
+    emitter.emit('disconnect')
+    emitter.emit('message', { t: 'link', texts: ['a'] })
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('gives the held texts of two messages to the listener in the order of arrival', () => {
+    const { endpoint, emitter } = makeEndpoint()
+    const channel = ipcChannel(endpoint)
+    emitter.emit('message', { t: 'link', texts: ['a', 'b'] })
+    emitter.emit('message', { t: 'link', texts: ['c'] })
+    const seen: string[] = []
+    channel.onMessage((text) => seen.push(text))
+    expect(seen).toEqual(['a', 'b', 'c'])
+  })
+
+  it('gives a held text one time when the listener is set again', () => {
+    const { endpoint, emitter } = makeEndpoint()
+    const channel = ipcChannel(endpoint)
+    emitter.emit('message', { t: 'link', texts: ['a'] })
+    const first = vi.fn()
+    const second = vi.fn()
+    channel.onMessage(first)
+    channel.onMessage(second)
+    expect(first).toHaveBeenCalledTimes(1)
+    expect(second).not.toHaveBeenCalled()
+  })
+
+  it('removes both listeners from the endpoint on close', () => {
+    const { endpoint, emitter } = makeEndpoint()
+    const channel = ipcChannel(endpoint)
+    expect(emitter.listenerCount('message')).toBe(1)
+    expect(emitter.listenerCount('disconnect')).toBe(1)
+    channel.close()
+    expect(emitter.listenerCount('message')).toBe(0)
+    expect(emitter.listenerCount('disconnect')).toBe(0)
   })
 })

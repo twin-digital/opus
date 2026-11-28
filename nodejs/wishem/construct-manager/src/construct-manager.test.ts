@@ -18,7 +18,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { attachConstructManager } from './construct-manager.js'
 import type { ConstructManager, ConstructManagerOptions } from './construct-manager.js'
 import { inProcessLauncher } from './launchers.js'
-import type { InProcessConstruct, InProcessLauncherOptions } from './launchers.js'
+import type { InProcessConstruct, InProcessLauncherOptions, ProductConstructLauncher } from './launchers.js'
 import { constructInputs, createConstructList } from './construct-list.js'
 import type { ConstructEntry, ConstructList } from './construct-list.js'
 import { CONSTRUCT_MANAGER_ID, CONSTRUCT_MANAGER_READER_ID } from './ids.js'
@@ -442,6 +442,118 @@ describe('attachConstructManager', () => {
     await eventually(() => entry('play')?.status === 'running')
     await settle()
     expect(entry('play')).toMatchObject({ want: 'running', status: 'running' })
+    expect(manager.running.has('play')).toBe(true)
+  })
+
+  /** Sets up the hub and a manager with a launcher that wraps `inProcessLauncher`. */
+  const setupWrapped = (
+    options: { closeRejects?: boolean; log?: (line: string) => void; hold?: Promise<void> } = {},
+  ) => {
+    clock = makeClock()
+    lines = []
+    sockets = []
+    links = []
+    hub = createHub({
+      subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
+    })
+    hub.start()
+    tester = hub.attach({ id: 'tester', kind: 'input' })
+    const inner = inProcessLauncher({ behaviors, timer: clock.timer, now: clock.now })
+    const ends: ((message: string) => void)[] = []
+    const calls = { launch: 0, close: 0 }
+    const launch: ProductConstructLauncher = async (startArgs, hooks) => {
+      calls.launch += 1
+      if (options.hold !== undefined && calls.launch === 1) {
+        await options.hold
+      }
+      const launched = await inner(startArgs, hooks)
+      const ended = new Promise<string>((resolve) => {
+        ends.push(resolve)
+      })
+      return {
+        id: launched.id,
+        linkUrl: launched.linkUrl,
+        pid: launched.pid,
+        input: launched.input,
+        reader: launched.reader,
+        ended,
+        close: async () => {
+          calls.close += 1
+          await launched.close()
+          if (options.closeRejects === true) {
+            throw new Error('close broke')
+          }
+        },
+      }
+    }
+    manager = attachConstructManager({
+      hub,
+      log: options.log ?? ((line) => lines.push(line)),
+      launch,
+    })
+    return { ends, calls }
+  }
+
+  it('closes the construct, logs the end, and reports failed when the close of the ended construct rejects', async () => {
+    const { ends, calls } = setupWrapped({ closeRejects: true })
+    await start()
+    ends[0]('gone')
+    await eventually(() => entry('play')?.status === 'failed')
+    expect(entry('play')).toMatchObject({ status: 'failed', message: 'gone' })
+    expect(calls.close).toBe(1)
+    expect(lines).toContain('wishem: construct play failed: gone')
+    expect(manager.running.has('play')).toBe(false)
+  })
+
+  it('ignores the end of a construct that a stop and a start replaced', async () => {
+    const { ends } = setupWrapped()
+    await start()
+    expect((await tester.submit(constructInputs.stop('play'))).ok).toBe(true)
+    expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
+    await eventually(() => entry('play')?.status === 'running' && ends.length === 2)
+    ends[0]('old end')
+    await settle()
+    expect(entry('play')).toMatchObject({ want: 'running', status: 'running' })
+    expect(manager.running.has('play')).toBe(true)
+    expect(lines.join('\n')).not.toContain('old end')
+  })
+
+  it('keeps the new start when a stop and a start come while the first start fails', async () => {
+    let release: () => void = () => undefined
+    const hold = new Promise<void>((_resolve, reject) => {
+      release = () => {
+        reject(new Error('late failure'))
+      }
+    })
+    const { calls } = setupWrapped({ hold })
+    expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
+    await eventually(() => calls.launch === 1)
+    expect((await tester.submit(constructInputs.stop('play'))).ok).toBe(true)
+    expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
+    release()
+    await eventually(() => entry('play')?.status === 'running')
+    expect(entry('play')?.message).toBeUndefined()
+    expect(calls.launch).toBe(2)
+    expect(lines).toContain('wishem: construct play failed: late failure')
+  })
+
+  it('goes on after an error in the handling of an end', async () => {
+    let broken = true
+    const { ends } = setupWrapped({
+      log: (line) => {
+        if (broken && line === 'wishem: construct play failed: gone') {
+          broken = false
+          throw new Error('log broke')
+        }
+        lines.push(line)
+      },
+    })
+    await start()
+    ends[0]('gone')
+    await eventually(() => lines.includes('wishem: construct manager: log broke'))
+    expect((await tester.submit(constructInputs.stop('play'))).ok).toBe(true)
+    expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
+    await eventually(() => entry('play')?.status === 'running')
     expect(manager.running.has('play')).toBe(true)
   })
 

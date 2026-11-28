@@ -236,6 +236,17 @@ describe('attachConstructManager with product construct processes', () => {
     },
   )
 
+  it('starts a product construct process when the option launch is not set', { timeout: 20000 }, async () => {
+    setup()
+    await manager.close()
+    manager = attachConstructManager({ hub, log: (line) => lines.push(line) })
+    await start()
+    expect(entry('play')?.status).toBe('running')
+    const { pid } = construct('play')
+    pids.push(pid)
+    expect(pid).not.toBe(process.pid)
+  })
+
   it('runs play and check in two processes with two addresses', { timeout: 20000 }, async () => {
     setup()
     await start('play')
