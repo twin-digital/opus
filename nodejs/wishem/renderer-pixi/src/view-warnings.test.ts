@@ -61,6 +61,13 @@ describe('viewWarnings', () => {
     expect(warnings.map((warning) => warning.kind)).toEqual(['empty-name', 'same-name'])
   })
 
+  it('sorts an empty-name warning before a same-name warning that the table gives first', () => {
+    const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [
+      definition(TYPE_A, 'Max health', 'max-health', '???'),
+    ])
+    expect(warnings.map((warning) => warning.kind)).toEqual(['empty-name', 'same-name'])
+  })
+
   it('sorts the same-name warnings of one component type by name', () => {
     const warnings = viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_A, 'b', 'B', 'a', 'A')])
     expect(warnings.map((warning) => warning.name)).toEqual(['a', 'b'])
