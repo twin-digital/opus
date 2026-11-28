@@ -3883,6 +3883,9 @@ importers:
       '@thrashplay/wishem-renderer-godot':
         specifier: workspace:*
         version: link:../renderer-godot
+      '@thrashplay/wishem-workbench-app':
+        specifier: workspace:*
+        version: link:../workbench-app
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config

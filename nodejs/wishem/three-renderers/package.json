@@ -36,7 +36,7 @@
     "preview": "vite preview",
     "react-page": "exec node scripts/react-page.ts",
     "test": "opus-test",
-    "test:ui": "node scripts/browser-server.ts node --test \"tests/*.ui.test.ts\"",
+    "test:ui": "node scripts/browser-server.ts node --test --test-concurrency=1 \"tests/*.ui.test.ts\"",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
   },
@@ -56,6 +56,7 @@
     "@playwright/test": "catalog:",
     "@thrashplay/wishem-pixi-page": "workspace:*",
     "@thrashplay/wishem-renderer-godot": "workspace:*",
+    "@thrashplay/wishem-workbench-app": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

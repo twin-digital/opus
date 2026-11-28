@@ -79,16 +79,20 @@ The page opens one link at `/link` of its own address, with one output subsystem
 pnpm --filter @thrashplay/wishem-three-renderers test:ui
 ```
 
-The test needs Docker. Docker runs the pinned browser image and the Godot image. A run takes about 30 seconds.
+The test needs Docker. Docker runs the pinned browser image and the Godot image. The two test files run one after the other.
 
 The test starts the sample construct paused, the React page, the PixiJS page, and the Godot application. It opens the two pages in a browser and opens a link of its own to the construct. Each step reads the joined state from the hub and compares the pixels of each renderer with the color of that state.
 
-| Step                            | Check                                                                         |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| First picture                   | Each pixel of the three pictures is `#1d4ed8`.                                |
-| `time/advance` of 500           | Each picture is `#b91c1c` within 5 seconds, and the two pages changed.        |
-| Wait of 1500 ms                 | The two page pictures stay the same, and Godot makes no new shot.             |
-| `time/set-running` with `true`  | Each picture leaves `#b91c1c` within 5 seconds.                               |
-| `time/set-running` with `false` | Each picture has the color of the last tick within 2 seconds, and then stays. |
+| Step                            | Check                                                                              |
+| ------------------------------- | ---------------------------------------------------------------------------------- |
+| First picture                   | Each pixel of the three pictures is `#1d4ed8`.                                     |
+| `time/advance` of 500           | Each picture is `#b91c1c` within 5 seconds, and the two pages changed.             |
+| Wait of 1500 ms                 | The two page pictures stay the same, and Godot makes no new shot.                  |
+| `time/set-running` with `true`  | Each picture leaves `#b91c1c` within 5 seconds.                                    |
+| `time/set-running` with `false` | Each picture has the color of the last tick within 2 seconds, and then stays.      |
+| Period key and space key        | The keys of the PixiJS page step and run the clock, and the three pictures follow. |
+| Size of the Godot shot          | The first shot is 640 by 360 pixels.                                               |
 
-The test stops the link, the browser, the Godot run, and the three child processes in a `finally` block. After the test, `docker ps -a` shows no container of the run.
+The test stops the link, the browser, the Godot run, and the three child processes in a `finally` block. After the test, `docker ps -a` shows no container of Godot.
+
+The second file, `tests/three-renderers.lifecycle.guide.ui.test.ts`, starts the pages and Godot before the construct. It checks the text of each part while the construct is absent. It stops the construct with `SIGINT`, starts it again on the same port, and checks that the pages do not reload. It starts a second construct on the same port and a workbench, and checks the exit codes. It ends each part with `SIGINT`, checks the exit code 0 of each, and checks that no container of Godot is left. The workbench needs its build: `pnpm build --filter @thrashplay/wishem-workbench-app...`.
