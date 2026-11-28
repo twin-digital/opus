@@ -76,6 +76,8 @@ The product folder has the same form as the model folder. The construct mounts i
 
 ## Problems
 
+The `wishem` command of [`@thrashplay/wishem-command`](../command/README.md) prints the lines below.
+
 - At the start, the command prints each problem with the file that has the problem. If the model is not correct, it does not start the server and it stops with exit code 1.
 - During a run, if the model is not correct, the command prints each problem and `the last correct model stays`. The store keeps the last correct model. When the files are correct again, the command prints that the model is correct.
 - The command prints each warning.

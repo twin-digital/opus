@@ -1,6 +1,6 @@
 # @thrashplay/wishem-command
 
-The `wishem` command of Wishem. It starts a construct for a model folder with `startConstruct` of [`@thrashplay/wishem-host-nodejs`](../host-nodejs/README.md). The package is private and exports no code.
+The `wishem` command of Wishem. It starts a construct for a model folder with `startConstruct` of [`@thrashplay/wishem-host-nodejs`](../host-nodejs/README.md). The package is private and has no public API of code. Its `exports` are `./package.json` and `./*`, the entries that `pnpm sync` writes.
 
 ## The command
 
@@ -34,7 +34,7 @@ wishem: link at ws://127.0.0.1:4747/link
 
 ## Product constructs
 
-With `--product`, the construct of the command holds the construct list as the part `constructs`. The command attaches the construct manager of [`@thrashplay/wishem-construct-manager`](../construct-manager/README.md) to its hub with `childProcessLauncher()`. Each product construct runs in a product construct process, a child process of the command. With no `--product`, the command has no part `constructs` and no construct manager.
+With `--product`, the construct of the command holds the construct list as the part `constructs`. The command attaches the construct manager of [`@thrashplay/wishem-construct-manager`](../construct-manager/README.md) to its hub with `childProcessLauncher({ productCode })`. `productCode` is the module of `--product-code`, and it is absent when the option is not given. Each product construct runs in a product construct process, a child process of the command. With no `--product`, the command has no part `constructs` and no construct manager.
 
 A client of the link of the command sends these inputs: `constructs/start`, `constructs/stop`, `constructs/send`, and `constructs/rewind`. With `--product-code`, each product construct runs the behaviors of the product code. With no `--product-code`, a product construct has no behaviors.
 
@@ -62,6 +62,8 @@ The command prints `wishem: product code <value>` after the line of the product 
 ```
 wishem start ./model --product ./product --product-code @thrashplay/wishem-sample-product
 ```
+
+The package name must resolve from the command package, so it must be a dependency of `@thrashplay/wishem-command`. In this repository, only `@thrashplay/wishem-sample-product` resolves. For each other module, use a path.
 
 If the code cannot be used, the command prints the reason, starts no server, and stops:
 

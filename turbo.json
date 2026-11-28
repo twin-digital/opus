@@ -101,6 +101,7 @@
       "inputs": [
         "src/**",
         "behavior_pack/**",
+        "$TURBO_ROOT$/nodejs/wishem/workbench/model/**",
         "package.json",
         "vitest.config.ts",
         "vitest.config.d/**",
@@ -233,6 +234,11 @@
       "outputs": []
     },
     "@twin-digital/credential-shelf#typecheck": {
+      "dependsOn": ["upstream-sources", "build"],
+      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**", "bin/**"],
+      "outputs": []
+    },
+    "@thrashplay/wishem-command#typecheck": {
       "dependsOn": ["upstream-sources", "build"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**", "bin/**"],
       "outputs": []

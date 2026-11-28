@@ -46,7 +46,7 @@ New private package `@thrashplay/wishem-command` in `nodejs/wishem/command`. It 
 
 - `dependencies`: `@thrashplay/wishem-construct-manager`, `@thrashplay/wishem-core`, `@thrashplay/wishem-host-nodejs`. `devDependencies`: `@thrashplay/wishem-hub` (link clients of the tests), `@thrashplay/wishem-sample-product` (the product code and the model of the tests), and the shared tooling.
 - `cli.ts` imports `startConstruct`, `DEFAULT_PORT`, and `PRODUCT_ID` from `@thrashplay/wishem-host-nodejs`, and `describeCounts` and `formatProblem` from `@thrashplay/wishem-host-nodejs/format`. `host-nodejs` gets no new export. `cli.signal.test.ts` mocks `@thrashplay/wishem-host-nodejs` in place of `./start-construct.js`.
-- The package exports no code. `package.json` has the `bin`, `files` (`bin`, `dist`), and `exports` with only `"./package.json"`. The build compiles `src/cli.ts` to `dist/cli.js`, as in `host-nodejs` on `main`. `pnpm install && pnpm sync` writes the shared config, and Task 1 keeps what it writes.
+- The package has no public API of code. `package.json` has the `bin`, `files` (`bin`, `dist`), and `exports` with `"./package.json"` and `"./*"` (the entry that `pnpm sync` writes for each package). The build compiles `src/cli.ts` to `dist/cli.js`, as in `host-nodejs` on `main`. `pnpm install && pnpm sync` writes the shared config, and Task 1 keeps what it writes.
 - `workbench` replaces `@thrashplay/wishem-host-nodejs` with `@thrashplay/wishem-command` in `dependencies`, and keeps `host-nodejs` in `devDependencies` for `model.test.ts` (`readModelFolder`). pnpm links the bin of a dependency into `node_modules/.bin` of `workbench`, so its `start` script and `pnpm --filter @thrashplay/wishem-workbench exec wishem` do not change. A package does not get a link to its own bin, so the bin cannot go into `workbench` itself.
 - `host-nodejs` removes `bin/`, the `bin` field, `bin` in `files`, `src/cli.ts`, and the three test files. Its README keeps "The link", "Serve the link of a hub", "The model folder", "More model subsystems", "The product folder", "Problems" (the problems of `startConstruct`), and "Use in code". The section "The command" moves to the README of `command`, and the README of `host-nodejs` gets one line with a link to it.
 - `turbo.json`: the entry `@thrashplay/wishem-host-nodejs#test` becomes `@thrashplay/wishem-command#test` with the same `dependsOn` (`"^build", "build"`) and inputs. The tests that stay in `host-nodejs` do not read `dist/`. `^build` also builds `construct-manager`, so `dist/product-construct-process.js` of #628 exists for the tests of Task 2.
@@ -257,7 +257,7 @@ Idempotence: `close()` of the manager and of the construct give the same promise
 A run with the sample product (the lines after the address come from the construct manager):
 
 ```text
-$ pnpm --filter @thrashplay/wishem-workbench exec wishem start /workspace/opus/.superpowers/a4cmd/model --product /workspace/opus/.superpowers/a4cmd/product --product-code @thrashplay/wishem-sample-product --port 4760
+$ node nodejs/wishem/command/bin/wishem.js start /workspace/opus/.superpowers/a4cmd/model --product /workspace/opus/.superpowers/a4cmd/product --product-code @thrashplay/wishem-sample-product --port 4760
 wishem: model /workspace/opus/.superpowers/a4cmd/model
 wishem: product /workspace/opus/.superpowers/a4cmd/product
 wishem: product code @thrashplay/wishem-sample-product
@@ -323,7 +323,7 @@ Open tasks of the same files: **#568** (the findings of the reviews of #531) nam
 
 ## The test guide
 
-The final reviewer does these steps on the branch, with real processes and real files, and reports the real result of each step. The results of steps 1 to 11 are the results after this change: on `main`, the command has no construct list and no `--product-code`. Run each command from the root of the worktree. Terminal 1 runs the command. Terminal 2 runs the other commands. Set the variables of step 0 in each terminal.
+The final reviewer does these steps on the branch, with real processes and real files, and reports the real result of each step. The results of steps 1 to 11 are the results after this change: on `main`, the command has no construct list and no `--product-code`. Run each command from the root of the worktree. `W` runs the bin of the command directly with `node`, so `echo $?` gives the exit code of the command. A run through `pnpm exec` gives the exit code of pnpm instead: 130 after Ctrl+C, and 1 for each non-zero exit code of the command. Terminal 1 runs the command. Terminal 2 runs the other commands. Set the variables of step 0 in each terminal.
 
 ### 0. Prepare
 
@@ -331,7 +331,7 @@ The final reviewer does these steps on the branch, with real processes and real 
 pnpm install
 pnpm build --filter "@thrashplay/wishem-*"
 D=$PWD/.superpowers/a4cmd
-W="pnpm --filter @thrashplay/wishem-workbench exec wishem"
+W="node nodejs/wishem/command/bin/wishem.js"
 L=ws://127.0.0.1:4760/link
 RAW=nodejs/wishem/docs/milestones/a1-construct/raw-link.mjs
 LISTEN=nodejs/wishem/docs/milestones/a1-construct/link-client.mjs
@@ -464,10 +464,10 @@ node $RAW --url $L --once --send '{"type":"constructs/start","payload":{"constru
 sleep 1; PID=$(pgrep -f product-construct-process); echo $PID; P=$(link_of_play)
 pkill -KILL -f 'bin/wishem.js start'
 sleep 2; pgrep -fc product-construct-process; ps -p $PID > /dev/null; echo $?
-node $RAW --url $P --once; echo $?
+node $RAW --url $P --once | grep -c 'connection failed'
 ```
 
-Result: `PID` is one process ID. After the kill, `pgrep -fc` prints `0`, `ps` gives exit code 1, and the last `node` command cannot connect and gives a non-zero exit code.
+Result: `PID` is one process ID. After the kill, `pgrep -fc` prints `0`, `ps` gives exit code 1, and the last command prints `1`: `raw-link.mjs` prints `error: the connection failed` and `closed: code 1006`, and exits with code 0 (it has no non-zero exit code for a refused connection).
 
 ### 10. The product code as a package name
 
@@ -499,7 +499,7 @@ time $W start $D/model --product $D/product --product-code $D/loop.mjs; echo "ex
 pgrep -fc product-construct-process
 ```
 
-Result: (1) `wishem: --product-code needs --product`, the usage line with `[--product-code <module>]`, `exit 2`. (2) The usage line, `exit 2`. (3) `wishem: the product code <D>/missing.mjs cannot be loaded: <reason>`, `exit 1`. (4) `wishem: the product code has no correct list behaviors: The behaviors are not a list.`, `exit 1`. (5) After 5 to 7 seconds, `wishem: the product code <D>/loop.mjs cannot be loaded: The check did not end in 5 seconds.`, `exit 1`. `pgrep -fc` prints `0`. pnpm can show a line of its own after a non-zero exit code.
+Result: (1) `wishem: --product-code needs --product`, the usage line with `[--product-code <module>]`, `exit 2`. (2) The usage line, `exit 2`. (3) `wishem: the product code <D>/missing.mjs cannot be loaded: <reason>`, `exit 1`. (4) `wishem: the product code has no correct list behaviors: The behaviors are not a list.`, `exit 1`. (5) After 5 to 7 seconds, `wishem: the product code <D>/loop.mjs cannot be loaded: The check did not end in 5 seconds.`, `exit 1`. `pgrep -fc` prints `0`.
 
 ### 12. With no product, the command does not change
 
