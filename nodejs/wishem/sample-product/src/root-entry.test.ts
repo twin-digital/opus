@@ -1,7 +1,6 @@
-/// <reference types="vite/client" />
 import { describe, expect, it } from 'vitest'
 
-const sources = import.meta.glob<string>('./*.ts', { query: '?raw', import: 'default', eager: true })
+const sources = import.meta.glob<string>('./**/*.ts', { query: '?raw', import: 'default', eager: true })
 
 describe('the root entry', () => {
   it('has source files', () => {

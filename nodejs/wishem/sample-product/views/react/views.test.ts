@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 import { collectViews } from '@thrashplay/wishem-renderer-react'
 import { describe, expect, it } from 'vitest'
 import { COLOR_TYPE, COUNTER_TYPE } from '../../src/index.js'

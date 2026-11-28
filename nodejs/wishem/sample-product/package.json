@@ -29,10 +29,8 @@
   "scripts": {
     "build": "build",
     "clean": "clean",
-    "dev": "vite --host",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "preview": "vite preview",
     "test": "opus-test",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
@@ -49,7 +47,6 @@
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
-    "@twin-digital/vite-config": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "^19.2.6",
@@ -67,7 +64,6 @@
     "react-dom": "^19.2.0",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {
