@@ -90,6 +90,7 @@ The test starts the sample construct paused, the React page, the PixiJS page, an
 | Step                            | Check                                                                              |
 | ------------------------------- | ---------------------------------------------------------------------------------- |
 | First picture                   | Each pixel of the three pictures is `#1d4ed8`.                                     |
+| Size of the Godot shot          | The first shot is 640 by 360 pixels.                                               |
 | `time/advance` of 500           | Each picture is `#b91c1c` within 5 seconds, and the two pages changed.             |
 | Wait of 1500 ms                 | The two page pictures stay the same, and Godot makes no new shot.                  |
 | `time/set-running` with `true`  | Each picture leaves `#b91c1c` within 5 seconds.                                    |
@@ -99,7 +100,6 @@ The test starts the sample construct paused, the React page, the PixiJS page, an
 | `store/set-field` with a color  | Each picture is `#15803d` within 5 seconds.                                        |
 | `store/replace-model`, no value | The model has no value for the field `color`. Each picture is `#ff00ff`.           |
 | `store/replace-model`, `???`    | The label of the field `color` gives an empty name. Each picture is `#ff00ff`.     |
-| Size of the Godot shot          | The first shot is 640 by 360 pixels.                                               |
 
 The test stops the link, the browser, the Godot run, and the three child processes in a `finally` block. After the test, `docker ps -a` shows no container of Godot.
 

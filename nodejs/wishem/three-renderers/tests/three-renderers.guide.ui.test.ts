@@ -10,7 +10,7 @@ import type { RemoteLink } from '@thrashplay/wishem-hub'
 import { runGodot } from '@thrashplay/wishem-renderer-godot'
 import type { GodotRun } from '@thrashplay/wishem-renderer-godot'
 import { storeInputs } from '@thrashplay/wishem-core'
-import type { Model } from '@thrashplay/wishem-core'
+import type { Entity, Model } from '@thrashplay/wishem-core'
 import { COLORS, COLOR_FIELD, COLOR_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
 import { FALLBACK_COLOR } from '@thrashplay/wishem-sample-product/color-cases'
 import {
@@ -98,7 +98,18 @@ await test('the three renderers draw the state of the hub', async () => {
     const pixi: Renderer = { name: 'the PixiJS page', picture: () => canvas.screenshot() }
     const godotRenderer: Renderer = { name: 'Godot', picture: () => Promise.resolve(lastShot()) }
     const renderers = [react, pixi, godotRenderer]
-    const colors = (color: string, ms: number) => Promise.all(renderers.map((r) => waitForColor(r, color, ms)))
+    const colors = async (color: string, ms: number) => {
+      const results = await Promise.allSettled(renderers.map((r) => waitForColor(r, color, ms)))
+      const failed = results.flatMap((result, i) =>
+        result.status === 'rejected' ?
+          [
+            `${renderers[i].name} is not ${color}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+          ]
+        : [],
+      )
+      assert.equal(failed.length, 0, failed.join('; '))
+      return results.map((result) => (result as PromiseFulfilledResult<Buffer>).value)
+    }
 
     // Step 5: a link of the test, with one input subsystem.
     const inputId = `e2e-${String(process.pid)}`
@@ -181,23 +192,38 @@ await test('the three renderers draw the state of the hub', async () => {
     await colors('#15803d', POLL_MS)
 
     // Step 16: no value gives the fallback color.
-    const model = () => structuredClone(port.read().store as Model)
-    const noValue = model()
-    const components = noValue.entities.find((e) => e.id === SAMPLE_ENTITY)?.components
-    assert.notEqual(components, undefined, 'the sample entity has components')
-    ;(components as Record<string, unknown>)[COLOR_TYPE] = {}
-    await submitOk(store.replaceModel(noValue))
+    const editModel = (edit: (model: Model) => void) => {
+      const model = structuredClone(port.read().store as Model)
+      edit(model)
+      return submitOk(store.replaceModel(model))
+    }
+    const sampleFields = (model: Model, type: string) => {
+      const fields = model.entities.find((e) => e.id === SAMPLE_ENTITY)?.components[type]
+      assert.notEqual(fields, undefined, `the sample entity has the component ${type}`)
+      return fields ?? {}
+    }
+    const colorField = (model: Model) => {
+      const field = model.definitions.find((d) => d.id === COLOR_TYPE)?.fields.find((f) => f.id === COLOR_FIELD)
+      assert.notEqual(field, undefined, 'the color type has the color field')
+      return field ?? { id: COLOR_FIELD, label: '' }
+    }
+    await editModel((model) => {
+      const entity = model.entities.find((e) => e.id === SAMPLE_ENTITY)
+      assert.notEqual(entity, undefined, 'the model has the sample entity')
+      ;(entity as Entity).components[COLOR_TYPE] = {}
+    })
     await colors(FALLBACK_COLOR, POLL_MS)
 
     // Step 17: a label that gives an empty name gives the fallback color.
-    const emptyName = model()
-    const colorType = emptyName.definitions.find((d) => d.id === COLOR_TYPE)
-    const colorDefinition = colorType?.fields.find((f) => f.id === COLOR_FIELD)
-    assert.notEqual(colorDefinition, undefined, 'the color type has the color field')
-    ;(colorDefinition as { label: string }).label = '???'
-    const entityFields = emptyName.entities.find((e) => e.id === SAMPLE_ENTITY)?.components[COLOR_TYPE]
-    ;(entityFields as Record<string, unknown>)[COLOR_FIELD] = '#1d4ed8'
-    await submitOk(store.replaceModel(emptyName))
+    // A valid label and a color come first, so that the picture is not the fallback color before the step.
+    await editModel((model) => {
+      sampleFields(model, COLOR_TYPE)[COLOR_FIELD] = '#15803d'
+    })
+    await colors('#15803d', POLL_MS)
+    await editModel((model) => {
+      colorField(model).label = '???'
+      sampleFields(model, COLOR_TYPE)[COLOR_FIELD] = '#1d4ed8'
+    })
     await colors(FALLBACK_COLOR, POLL_MS)
   } finally {
     // Step 11: close in this order.
