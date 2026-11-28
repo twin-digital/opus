@@ -42,13 +42,13 @@ static func new_id(prefix: String) -> String:
 	return "%s-%s" % [prefix, Crypto.new().generate_random_bytes(8).hex_encode()]
 
 
-## Gives an integer for an integer or a whole float, and `null` for each other value.
+## Gives an integer for an integer or a whole float from 0, and `null` for each other value.
 static func as_int(value: Variant) -> Variant:
 	if typeof(value) == TYPE_INT:
-		return value
+		return value if int(value) >= 0 else null
 	if typeof(value) != TYPE_FLOAT:
 		return null
 	var number: float = value
-	if not is_finite(number) or absf(number) > float(MAX_INTEGER) or floorf(number) != number:
+	if not is_finite(number) or absf(number) > float(MAX_INTEGER) or floorf(number) != number or number < 0.0:
 		return null
 	return int(number)

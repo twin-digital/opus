@@ -113,6 +113,38 @@ func test_a_welcome_with_a_state_that_is_not_an_object_closes_the_socket() -> vo
 	assert_equal(h.linked_events.size(), 0)
 
 
+func test_a_welcome_with_the_status_stopped_closes_the_socket() -> void:
+	var h := Fake.Harness.new()
+	h.connect_socket()
+	h.welcome({"status": "stopped"})
+	assert_equal(h.sockets[0].close_count, 1)
+	assert_equal(h.linked_events.size(), 0)
+
+
+func test_a_welcome_with_an_unknown_status_closes_the_socket() -> void:
+	var h := Fake.Harness.new()
+	h.connect_socket()
+	h.welcome({"status": "paused"})
+	assert_equal(h.sockets[0].close_count, 1)
+	assert_equal(h.linked_events.size(), 0)
+
+
+func test_a_welcome_with_a_negative_seq_closes_the_socket() -> void:
+	var h := Fake.Harness.new()
+	h.connect_socket()
+	h.welcome({"seq": -1})
+	assert_equal(h.sockets[0].close_count, 1)
+	assert_equal(h.linked_events.size(), 0)
+
+
+func test_a_welcome_with_a_fractional_seq_closes_the_socket() -> void:
+	var h := Fake.Harness.new()
+	h.connect_socket()
+	h.welcome({"seq": 1.5})
+	assert_equal(h.sockets[0].close_count, 1)
+	assert_equal(h.linked_events.size(), 0)
+
+
 func test_a_message_that_is_not_an_object_closes_the_socket() -> void:
 	for text in ["[1]", "garbage", '{"no":"type"}']:
 		var h := Fake.Harness.new()
@@ -162,6 +194,26 @@ func test_a_result_with_neither_result_nor_error_closes_the_socket_and_gives_dow
 	h.receive({"t": "result", "request": 1})
 	assert_equal(h.sockets[0].close_count, 1)
 	assert_equal(h.down_count, 1)
+
+
+func test_a_result_with_result_and_error_closes_the_socket_and_gives_down_once() -> void:
+	var h := Fake.Harness.new()
+	var ports := h.link()
+	var submission = ports[1].submit({"type": "a"})
+	h.receive({"t": "result", "request": 1, "result": {"ok": true, "seq": 4}, "error": "x"})
+	assert_equal(h.sockets[0].close_count, 1)
+	assert_equal(h.down_count, 1)
+	assert_equal(submission.result, {"error": "The link closed."})
+
+
+func test_a_result_with_no_ok_closes_the_socket_and_gives_down_once() -> void:
+	var h := Fake.Harness.new()
+	var ports := h.link()
+	var submission = ports[1].submit({"type": "a"})
+	h.receive({"t": "result", "request": 1, "result": {"seq": 4}})
+	assert_equal(h.sockets[0].close_count, 1)
+	assert_equal(h.down_count, 1)
+	assert_equal(submission.result, {"error": "The link closed."})
 
 
 func test_a_result_for_an_unknown_request_changes_nothing() -> void:
