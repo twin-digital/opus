@@ -237,5 +237,5 @@ await test('the three renderers draw the state of the hub', async () => {
 })
 
 await test('no container of Godot is left after the test', () => {
-  assert.deepEqual(godotContainers(), [])
+  assert.deepEqual(godotContainers(SHOTS_DIR), [])
 })
