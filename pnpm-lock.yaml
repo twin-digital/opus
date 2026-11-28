@@ -3506,6 +3506,9 @@ importers:
       '@thrashplay/wishem-renderer-pixi':
         specifier: workspace:*
         version: link:../renderer-pixi
+      '@thrashplay/wishem-update':
+        specifier: workspace:*
+        version: link:../update
       pixi.js:
         specifier: 'catalog:'
         version: 8.23.0
