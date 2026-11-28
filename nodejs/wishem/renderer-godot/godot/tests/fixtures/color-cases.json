@@ -1,0 +1,101 @@
+[
+  {
+    "name": "color #1d4ed8",
+    "value": "#1d4ed8",
+    "color": "#1d4ed8"
+  },
+  {
+    "name": "color #b91c1c",
+    "value": "#b91c1c",
+    "color": "#b91c1c"
+  },
+  {
+    "name": "color #15803d",
+    "value": "#15803d",
+    "color": "#15803d"
+  },
+  {
+    "name": "color #a16207",
+    "value": "#a16207",
+    "color": "#a16207"
+  },
+  {
+    "name": "black",
+    "value": "#000000",
+    "color": "#000000"
+  },
+  {
+    "name": "upper case",
+    "value": "#1D4ED8",
+    "color": "#1d4ed8"
+  },
+  {
+    "name": "no value",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "empty text",
+    "value": "",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "CSS name red",
+    "value": "red",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "CSS name transparent",
+    "value": "transparent",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "CSS function",
+    "value": "rgb(29, 78, 216)",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "short form",
+    "value": "#fff",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "with alpha",
+    "value": "#1d4ed880",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "no hash sign",
+    "value": "1d4ed8",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "not hexadecimal",
+    "value": "#1d4eg8",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "a space before",
+    "value": " #1d4ed8",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "a space after",
+    "value": "#1d4ed8 ",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "free text",
+    "value": "blue-ish",
+    "color": "#ff00ff"
+  },
+  {
+    "name": "a number",
+    "value": 5,
+    "color": "#ff00ff"
+  },
+  {
+    "name": "a boolean",
+    "value": true,
+    "color": "#ff00ff"
+  }
+]

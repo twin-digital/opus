@@ -132,7 +132,13 @@ var renderer := Renderer.new(port, views, self, func() -> Vector2: return get_vi
 
 ### The view ClearColor
 
-`godot/views/ClearColor.gd` makes a `ColorRect` that covers the viewport with the color of the prop `color`. The node is hidden when the prop has no value or is not a color.
+`godot/views/ClearColor.gd` makes a `ColorRect` that covers the viewport with the color of the prop `color`. The node is always visible.
+
+- A color is a text that matches `^#[0-9a-fA-F]{6}$` as a whole. The view draws it.
+- For no value and for each other value, the view draws the fallback color `#ff00ff`.
+- A `RegEx` in the view holds the rule. The view does not import the table of color cases.
+- `godot/tests/fixtures/color-cases.json` is a copy of `COLOR_CASES` of `@thrashplay/wishem-sample-product/color-cases`. `src/color-cases.test.ts` checks that the copy is equal to the table.
+- `godot/tests/test_clear_color.gd` checks each case of the copy.
 
 ### Add a view
 
