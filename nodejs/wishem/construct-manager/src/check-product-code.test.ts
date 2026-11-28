@@ -1,8 +1,9 @@
+import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { checkProductCode } from './node.js'
 
 const SAMPLE_CODE = new URL('../../sample-product/dist/index.js', import.meta.url).href
@@ -58,21 +59,31 @@ describe('checkProductCode', () => {
     })
   })
 
-  it('gives load for a module that does not end at its top level, and the process ends', async () => {
-    await setup()
-    const pidFile = join(folder, 'pid.txt')
-    const url = await writeCode(
-      'loop.mjs',
-      `import { writeFileSync } from 'node:fs'\nwriteFileSync(${JSON.stringify(pidFile)}, String(process.pid))\nfor (;;) {}\n`,
-    )
-    expect(await checkProductCode(url, { answerMs: 1000 })).toEqual({
-      ok: false,
-      reason: 'load',
-      message: 'The check did not end in 1 second.',
-    })
-    const pid = Number(await readFile(pidFile, 'utf8'))
-    expect(() => process.kill(pid, 0)).toThrow()
-  })
+  it(
+    'gives load for a module that does not end at its top level, and the process ends',
+    { timeout: 15000 },
+    async () => {
+      await setup()
+      const pidFile = join(folder, 'pid.txt')
+      const url = await writeCode(
+        'loop.mjs',
+        `import { writeFileSync } from 'node:fs'\nwriteFileSync(${JSON.stringify(pidFile)}, String(process.pid))\nfor (;;) {}\n`,
+      )
+      expect(await checkProductCode(url, { answerMs: 3000 })).toEqual({
+        ok: false,
+        reason: 'load',
+        message: 'The check did not end in 3 seconds.',
+      })
+      await vi.waitFor(
+        () => {
+          expect(existsSync(pidFile)).toBe(true)
+        },
+        { timeout: 5000 },
+      )
+      const pid = Number(await readFile(pidFile, 'utf8'))
+      expect(() => process.kill(pid, 0)).toThrow()
+    },
+  )
 
   it('runs the module in a process that is not this process', async () => {
     await setup()

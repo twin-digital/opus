@@ -57,6 +57,7 @@ describe('the faults of a product construct process', () => {
     await expect(
       childProcessLauncher(options)({ id: 'play', model, running: true }, { onProcess: (pid) => pids.push(pid) }),
     ).rejects.toThrow(message)
+    expect(pids.length).toBeGreaterThan(0)
     expect(alive(pids[pids.length - 1])).toBe(false)
   }
 
@@ -102,7 +103,8 @@ describe('the faults of a product construct process', () => {
       const begin = Date.now()
       const construct = await launch({ productCode, stepMs: 10, pingMs: 200, answerMs: 1000 })
       expect(await construct.ended).toBe('The construct did not answer in 1 second.')
-      expect(Date.now() - begin).toBeLessThan(2000)
+      // The ping kill takes about 1.2 s. The answer limit of a submit or of the default is 5 s.
+      expect(Date.now() - begin).toBeLessThan(4000)
       expect(alive(construct.pid)).toBe(false)
     },
   )

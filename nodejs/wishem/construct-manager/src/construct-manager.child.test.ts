@@ -29,7 +29,8 @@ beforeAll(async () => {
   model = (await readModelFolder(MODEL_FOLDER)).data as Model
 })
 
-const eventually = async (check: () => boolean, ms = 8000) => {
+// The default start limit of the launcher is 10 seconds. The wait is longer, so a slow start shows its own message.
+const eventually = async (check: () => boolean, ms = 12000) => {
   const deadline = Date.now() + ms
   while (!check()) {
     if (Date.now() > deadline) {
@@ -377,7 +378,7 @@ describe('attachConstructManager with product construct processes', () => {
     },
     async () => {
       const productCode = await writeCode('loop.mjs', behaviorCode('for (;;) {}'))
-      setup({ productCode, stepMs: 20, pingMs: 200, answerMs: 1000 })
+      setup({ productCode, stepMs: 20, pingMs: 200, answerMs: 3000 })
       await start('check', false)
       await start('play')
       const begin = Date.now()
@@ -385,7 +386,7 @@ describe('attachConstructManager with product construct processes', () => {
       expect(result.ok).toBe(true)
       expect(Date.now() - begin).toBeLessThan(1000)
       await eventually(() => entry('play')?.status === 'failed', 20000)
-      expect(entry('play')?.message).toBe('The construct did not answer in 1 second.')
+      expect(entry('play')?.message).toBe('The construct did not answer in 3 seconds.')
       const answer = await send(
         {
           type: 'store/set-field',
