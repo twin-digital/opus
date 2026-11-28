@@ -60,8 +60,8 @@ The architecture document SHALL hold a C4 component diagram of the page of the w
 
 #### Scenario: A tool of the page reads a different part
 
-- **WHEN** the product panel reads the part `product` through the output port and sends `product/set-field` through the input port
-- **THEN** the component diagram shows the product panel as a component with its relationship to the client of the hub, and its relationship to the catalog
+- **WHEN** the product panel reads the part `product` through the output port and sends `product/set-field` and `product/clear-field` through the input port
+- **THEN** the component diagram shows the product panel as a component with its relationship to the client of the hub, which names `set-field` and `clear-field`, and its relationship to the catalog
 
 ### Requirement: The entity diagram of the model folder
 
