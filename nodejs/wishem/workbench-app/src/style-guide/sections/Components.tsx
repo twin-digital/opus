@@ -1,7 +1,11 @@
 import type { ReactNode } from 'react'
-import type { FieldDefinition } from '@thrashplay/wishem-core'
+import type { FieldDefinition, Model } from '@thrashplay/wishem-core'
+import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
 import { AppBar, type RenameOutcome } from '../../components/AppBar.js'
+import { EntityInspector, type InspectedComponent } from '../../components/EntityInspector.js'
+import { EntityList, type EntityListItem } from '../../components/EntityList.js'
 import { FieldRow, type ChangeOutcome, type ReferenceOption } from '../../components/FieldRow.js'
+import { ProductPanel } from '../../components/ProductPanel.js'
 import { ZeroState } from '../../components/ZeroState.js'
 import { Section } from '../Section.js'
 
@@ -20,11 +24,51 @@ const options: ReferenceOption[] = [
 ]
 const keep = (): Promise<ChangeOutcome> => Promise.resolve({ saved: true })
 
+const SWITCH_TYPE = 'ct_3c1b7a52-0d4e-4f6a-9b8c-5e2d1f0a9c77'
+const TARGET_FIELD = 'fld_8a2f6d14-7b3c-4e90-a1d5-6c4b2e0f9d38'
+const SWITCH_ENTITY = 'e_5f0c1d2e-8b7a-4c63-9d14-2a6e0b3f7c91'
+
+const colorType = {
+  id: COLOR_TYPE,
+  label: 'Color',
+  fields: [{ id: COLOR_FIELD, label: 'color', type: 'string' }],
+} satisfies Model['definitions'][number]
+const counterType = {
+  id: COUNTER_TYPE,
+  label: 'Counter',
+  fields: [{ id: COUNT_FIELD, label: 'count', type: 'number' }],
+} satisfies Model['definitions'][number]
+const switchType = {
+  id: SWITCH_TYPE,
+  label: 'Switch',
+  fields: [{ id: TARGET_FIELD, label: 'target', type: 'reference' }],
+} satisfies Model['definitions'][number]
+
+const model: Model = {
+  definitions: [colorType, counterType, switchType],
+  entities: [
+    {
+      id: SAMPLE_ENTITY,
+      components: { [COLOR_TYPE]: { [COLOR_FIELD]: '#1d4ed8' }, [COUNTER_TYPE]: { [COUNT_FIELD]: 0 } },
+    },
+    { id: SWITCH_ENTITY, components: { [SWITCH_TYPE]: { [TARGET_FIELD]: SAMPLE_ENTITY } } },
+  ],
+}
+const listItems: EntityListItem[] = [
+  { id: SAMPLE_ENTITY, name: 'Color, Counter', shortId: 'e_99969ed3' },
+  { id: SWITCH_ENTITY, name: 'Switch', shortId: 'e_5f0c1d2e' },
+]
+const sampleComponents: InspectedComponent[] = [
+  { definition: colorType, values: { [COLOR_FIELD]: '#1d4ed8' } },
+  { definition: counterType, values: { [COUNT_FIELD]: 0 } },
+]
+const select = (): void => undefined
+
 const accept = (): Promise<RenameOutcome> => Promise.resolve({ saved: true })
 
 /** The components of the workbench, each in each state. */
 export const Components = () => (
-  <Section id='components' title='Components'>
+  <Section id='components' title='Components' stacked>
     <Specimen label='App bar'>
       <AppBar title='Wishem' />
     </Specimen>
@@ -55,6 +99,21 @@ export const Components = () => (
         <ZeroState label='Workbench' message='Nothing to show yet.' />
       </div>
     </Specimen>
+    <Specimen label='Entity list'>
+      <div className='w-[288px]'>
+        <EntityList items={listItems} onSelect={select} />
+      </div>
+    </Specimen>
+    <Specimen label='Entity list, selected'>
+      <div className='w-[288px]'>
+        <EntityList items={listItems} selected={SWITCH_ENTITY} onSelect={select} />
+      </div>
+    </Specimen>
+    <Specimen label='Entity list, empty'>
+      <div className='w-[288px]'>
+        <EntityList items={[]} onSelect={select} />
+      </div>
+    </Specimen>
     <Specimen label='Field row, string'>
       <FieldRow field={field('color', 'string')} value='#1d4ed8' onChange={keep} />
     </Specimen>
@@ -83,6 +142,21 @@ export const Components = () => (
     </Specimen>
     <Specimen label='Field row, disabled'>
       <FieldRow field={field('count', 'number')} value={0} />
+    </Specimen>
+    <Specimen label='Inspector, nothing selected'>
+      <EntityInspector options={options} />
+    </Specimen>
+    <Specimen label='Inspector, an entity'>
+      <EntityInspector
+        entity={{ id: SAMPLE_ENTITY, name: 'Color, Counter', components: sampleComponents }}
+        options={options}
+        onChange={keep}
+      />
+    </Specimen>
+    <Specimen label='Product panel'>
+      <div className='w-[720px]'>
+        <ProductPanel model={model} selected={SAMPLE_ENTITY} onSelect={select} onChange={keep} />
+      </div>
     </Specimen>
   </Section>
 )
