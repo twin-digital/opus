@@ -446,6 +446,88 @@ describe('attachConstructManager', () => {
     expect(construct('play').hub.seq).toBe(0)
   })
 
+  const startSeqs = () =>
+    hub
+      .record()
+      .filter((input) => input.type === 'constructs/start')
+      .map((input) => input.seq)
+
+  it('starts a new construct when a stop and a start are applied in one pass', async () => {
+    setup()
+    await start('play', false)
+    for (let i = 0; i < 3; i++) {
+      clock.fire(50)
+    }
+    const old = construct('play')
+    const oldLink = old.linkUrl
+    const viewer = await open(oldLink)
+    const events: HubEvent['type'][] = []
+    viewer.subscribe((event) => events.push(event.type))
+    const results = await Promise.all([
+      tester.submit(constructInputs.stop('play')),
+      tester.submit(constructInputs.start('play', { running: false })),
+    ])
+    expect(results.every((result) => result.ok)).toBe(true)
+    await eventually(() => manager.running.get('play') !== undefined && manager.running.get('play') !== old)
+    await eventually(() => entry('play')?.status === 'running' && entry('play')?.link !== oldLink)
+    const fresh = construct('play')
+    expect(fresh.linkUrl).not.toBe(oldLink)
+    expect(entry('play')?.link).toBe(fresh.linkUrl)
+    expect(events).toContain('stopping')
+    expect(await canListen(portOf(oldLink))).toBe(true)
+    expect(fresh.hub.seq).toBe(0)
+    expect(timeOf(fresh.hub)).toMatchObject({ ticks: 0, running: false })
+    expect(countOf(fresh.hub)).toBe(0)
+    const stopped = lines.indexOf('wishem: construct play stopped')
+    expect(stopped).toBeGreaterThan(-1)
+    expect(lines.slice(stopped + 1).some((line) => line.startsWith('wishem: construct play runs, link at '))).toBe(true)
+    expect(lines.filter((line) => line.startsWith('wishem: construct play runs'))).toHaveLength(2)
+  })
+
+  it('starts a new construct after a rewind to a different start', async () => {
+    setup()
+    await start()
+    const [first] = startSeqs()
+    const oldLink = construct('play').linkUrl
+    await tester.submit(constructInputs.stop('play'))
+    await eventually(() => entry('play')?.status === 'stopped')
+    await start()
+    const second = construct('play')
+    expect(entry('play')?.startSeq).not.toBe(first)
+    await tester.submit(hubInputs.rewind(first))
+    await eventually(() => entry('play')?.startSeq === first && manager.running.get('play') !== second)
+    await eventually(() => entry('play')?.status === 'running' && entry('play')?.link === construct('play').linkUrl)
+    expect(construct('play')).not.toBe(second)
+    expect(construct('play').linkUrl).not.toBe(second.linkUrl)
+    expect(construct('play').linkUrl).not.toBe(oldLink)
+    expect(entry('play')?.startSeq).toBe(first)
+  })
+
+  it('keeps one live construct for the last start when a stop and a start reach a running start', async () => {
+    setup()
+    await tester.submit(constructInputs.start('play'))
+    await tester.submit(constructInputs.stop('play'))
+    await tester.submit(constructInputs.start('play'))
+    const last = startSeqs().at(-1)
+    await eventually(
+      () => entry('play')?.status === 'running' && entry('play')?.link === manager.running.get('play')?.linkUrl,
+    )
+    await settle()
+    expect(manager.running.size).toBe(1)
+    expect(entry('play')).toMatchObject({ startSeq: last, status: 'running', want: 'running' })
+    expect(entry('play')?.link).toBe(construct('play').linkUrl)
+  })
+
+  it('keeps the same construct for two starts with no stop', async () => {
+    setup()
+    await start()
+    const before = construct('play')
+    await tester.submit(constructInputs.start('play'))
+    await settle()
+    expect(construct('play')).toBe(before)
+    expect(lines.filter((line) => line.startsWith('wishem: construct play runs'))).toHaveLength(1)
+  })
+
   it('stops a construct after a rewind of the workbench before its start, and sends no report for it', async () => {
     setup()
     await start()

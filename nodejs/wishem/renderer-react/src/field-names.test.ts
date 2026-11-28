@@ -44,9 +44,10 @@ describe('propNames', () => {
     expect(result.problems).toEqual([])
   })
 
-  it('reports an empty name', () => {
+  it('gives no prop for an empty name, and reports it', () => {
     const result = propNames(definition('title', '???'))
     expect(result.problems).toEqual([{ kind: 'empty-name', field: 'fld_1' }])
+    expect(result.props.map((prop) => prop.name)).toEqual(['title'])
   })
 
   it('reports a name that starts with a digit', () => {
@@ -80,6 +81,7 @@ describe('propNames', () => {
       { kind: 'empty-name', field: 'fld_0' },
       { kind: 'empty-name', field: 'fld_1' },
     ])
+    expect(result.props).toEqual([])
   })
 
   it('reports two labels with one name, and keeps the first field only', () => {

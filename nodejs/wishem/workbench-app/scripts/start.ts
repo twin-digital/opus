@@ -314,7 +314,12 @@ const main = async () => {
       views: values.views === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.views),
       viewTypes: values['no-view-types'] !== true,
     })
+    let stopping = false
     const stop = () => {
+      if (stopping) {
+        return
+      }
+      stopping = true
       workbench.close().then(
         () => process.exit(0),
         (error: unknown) => {
@@ -325,8 +330,8 @@ const main = async () => {
     }
     // Removes the exit handler of Vite, so that one handler stops both parts.
     process.removeAllListeners('SIGTERM')
-    process.once('SIGINT', stop)
-    process.once('SIGTERM', stop)
+    process.on('SIGINT', stop)
+    process.on('SIGTERM', stop)
   } catch (error) {
     if (!(error instanceof StartError)) {
       console.error(error instanceof Error ? `wishem: ${error.message}` : error)

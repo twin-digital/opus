@@ -34,6 +34,8 @@ interface Live {
   readonly construct: ProductConstruct
   readonly input: Port
   readonly reader: Port
+  /** The `startSeq` of the entry when the construct started. */
+  readonly startSeq: number
   /** The product model that the construct manager last gave to the construct. */
   given: Model
 }
@@ -147,6 +149,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
         construct,
         input: construct.hub.attach({ id: CONSTRUCT_MANAGER_ID, kind: 'input' }),
         reader: construct.hub.attach({ id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' }),
+        startSeq: entry.startSeq,
         given: product,
       }
     } catch (error) {
@@ -171,7 +174,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     const state = reader.read()
     const list = listOf(state)
     for (const [id, item] of [...live]) {
-      if (!Object.hasOwn(list, id) || list[id].want !== 'running') {
+      if (!Object.hasOwn(list, id) || list[id].want !== 'running' || list[id].startSeq !== item.startSeq) {
         await stopConstruct(id, item)
       }
     }

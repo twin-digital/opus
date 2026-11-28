@@ -456,8 +456,29 @@ describe('startConstruct with more model subsystems', () => {
   it('rejects a subsystem with the ID store, and the port is free', async () => {
     const port = await freePort()
     const clash: ModelSubsystem<null> = { id: 'store', inputs: ['clash/go'], initial: null, apply: () => null }
-    await expect(start({ subsystems: [clash], port })).rejects.toThrow()
+    await expect(start({ subsystems: [clash], port })).rejects.toThrow('is in use')
     expect(await canListen(port)).toBe(true)
+  })
+
+  it('rejects a subsystem with the ID product when the construct mounts a product', async () => {
+    const clash: ModelSubsystem<null> = { id: PRODUCT_ID, inputs: ['clash/go'], initial: null, apply: () => null }
+    await expect(start({ subsystems: [clash], product: productFolder })).rejects.toThrow('is in use')
+  })
+
+  it('puts the parts of two subsystems in the order of the list', async () => {
+    const second: ModelSubsystem<{ n: number }> = { ...extra, id: 'second', inputs: ['second/add'] }
+    const started = await start({ subsystems: [extra, second] })
+    expect(Object.keys(started.hub.read())).toEqual(['store', 'extra', 'second'])
+  })
+
+  it('applies the inputs of each subsystem of the list', async () => {
+    const second: ModelSubsystem<{ n: number }> = { ...extra, id: 'second', inputs: ['second/add'] }
+    const started = await start({ subsystems: [extra, second] })
+    const port = started.hub.attach({ id: 'client', kind: 'input' })
+    await port.submit({ type: 'second/add' })
+    await port.submit({ type: 'second/add' })
+    await port.submit({ type: 'extra/add' })
+    expect(started.hub.read()).toMatchObject({ extra: { n: 1 }, second: { n: 2 } })
   })
 
   it('gives the same joined state as before with no option', async () => {

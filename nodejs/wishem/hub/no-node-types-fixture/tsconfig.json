@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "customConditions": ["source"],
+    "lib": ["ESNext"],
+    "module": "node20",
+    "moduleResolution": "nodenext",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2024",
+    "types": [],
+    "verbatimModuleSyntax": true
+  },
+  "files": ["index.ts"]
+}

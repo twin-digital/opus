@@ -173,7 +173,8 @@ The owner decided on 2026-11-27 that a break-test is not a step of a change. A c
 - After a change is merged, create one issue for each library package that the change changed. A library package is a package that a different package depends on: `core`, `hub`, `clock`, and `host-nodejs` at this time.
 - The issue has the type `Review`, the title "Break-test: `<package>` after #`<issue of the change>`", the label `app:wishem`, and the milestone of the change. Add it to the project. Do not assign it to the owner.
 - The scope of the break-test is the source files of the package that the change added or changed, and the tests that the change added or changed. The issue lists these files and gives the range of commits.
-- When one or more of these issues are open, one break-test is always in work. Do them in the order in which they were created, the oldest one first. Do not run two at the same time.
+- When one or more of these issues are open, one break-test is always in work. Do them in the order in which they were created, the oldest one first.
+- A break-test does not take a slot that other work can use. When no other item can start and fewer than five subagents run, start more break-tests, the oldest first, to fill the slots. Do not run two break-tests of the same package at the same time. The owner decided this on 2026-11-28: the limit of one break-test keeps the break-tests from stopping other issues, and it is not a limit on the number of subagents.
 - A break-test runs in a worktree of its own, from `main`. Its result is a pull request that changes tests only, and that closes the issue. The description of the pull request gives the totals of the two passes.
 - When a break-test finds a fault of the source, create an issue of the type `Bug` for the fault. Do not correct the source in the pull request of the break-test.
 
