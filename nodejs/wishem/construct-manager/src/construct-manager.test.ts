@@ -93,7 +93,7 @@ const setColor = (value: string): Input => ({
   payload: { entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD, value },
 })
 
-const setCount = (store: string, value: string): Input => ({
+const setCount = (store: string, value: number): Input => ({
   type: `${store}/set-field`,
   payload: { entity: SAMPLE_ENTITY, componentType: COUNTER_TYPE, field: COUNT_FIELD, value },
 })
@@ -227,9 +227,9 @@ describe('attachConstructManager', () => {
     await start('play')
     await start('check')
     expect(entry('play')?.link).not.toBe(entry('check')?.link)
-    await send(setCount('store', '100'), 'play')
-    expect(countOf(construct('play').hub)).toBe('100')
-    expect(countOf(construct('check').hub)).toBe('0')
+    await send(setCount('store', 100), 'play')
+    expect(countOf(construct('play').hub)).toBe(100)
+    expect(countOf(construct('check').hub)).toBe(0)
   })
 
   it('reports failed when the start fails, and the workbench continues', async () => {
@@ -285,7 +285,7 @@ describe('attachConstructManager', () => {
       .filter((input) => input.type === 'store/set-field')
     expect(changes).toHaveLength(1)
     expect(changes[0]?.source).toBe(CONSTRUCT_MANAGER_ID)
-    expect(countOf(construct('play').hub)).toBe('3')
+    expect(countOf(construct('play').hub)).toBe(3)
   })
 
   it('sends one replace-model for a change of a label', async () => {
@@ -303,7 +303,7 @@ describe('attachConstructManager', () => {
     const record = construct('play').hub.record()
     expect(record.filter((input) => input.type === 'store/replace-model')).toHaveLength(1)
     expect((construct('play').hub.read().store as Model).definitions[0]?.label).toBe('Renamed')
-    expect(countOf(construct('play').hub)).toBe('0')
+    expect(countOf(construct('play').hub)).toBe(0)
   })
 
   it('sends the difference after a rewind of the workbench, and does not rewind the product construct', async () => {
@@ -346,7 +346,7 @@ describe('attachConstructManager', () => {
     setup()
     await start('play', false)
     await send({ type: 'time/advance', payload: { ms: 50 } })
-    expect(countOf(construct('play').hub)).toBe('1')
+    expect(countOf(construct('play').hub)).toBe(1)
   })
 
   it('passes a rewind to a product construct and changes no file', async () => {
@@ -357,7 +357,7 @@ describe('attachConstructManager', () => {
     }
     await send({ type: 'hub/rewind', payload: { seq: 1 } })
     expect(timeOf(construct('play').hub).ticks).toBe(1)
-    expect(countOf(construct('play').hub)).toBe('1')
+    expect(countOf(construct('play').hub)).toBe(1)
   })
 
   it('reports an unknown type', async () => {
@@ -423,11 +423,11 @@ describe('attachConstructManager', () => {
     for (let i = 0; i < 3; i++) {
       clock.fire(50)
     }
-    expect(countOf(construct('play').hub)).toBe('3')
+    expect(countOf(construct('play').hub)).toBe(3)
     await tester.submit(constructInputs.stop('play'))
     await eventually(() => entry('play')?.status === 'stopped')
     await start()
-    expect(countOf(construct('play').hub)).toBe('0')
+    expect(countOf(construct('play').hub)).toBe(0)
     expect(construct('play').hub.seq).toBe(0)
   })
 
