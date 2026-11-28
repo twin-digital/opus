@@ -70,7 +70,7 @@ export const startPixi = async (options: PixiStartOptions = {}): Promise<PixiSta
         host: PAGE_ADDRESS,
         port,
         strictPort: true,
-        hmr: false,
+        ws: false,
         proxy: { '^/link$': { target: construct.url, ws: true, changeOrigin: false } },
       },
     })

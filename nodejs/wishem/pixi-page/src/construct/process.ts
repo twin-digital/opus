@@ -66,9 +66,12 @@ export const startPixiConstruct = async (options: PixiConstructOptions): Promise
     hub,
     close: () => {
       closing ??= (async () => {
-        clock.stop()
-        clockPort.close()
-        await server.close()
+        try {
+          clock.stop()
+          clockPort.close()
+        } finally {
+          await server.close()
+        }
       })()
       return closing
     },

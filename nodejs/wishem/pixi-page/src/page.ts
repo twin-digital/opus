@@ -20,6 +20,8 @@ export interface PageOptions {
   /** Gets the key events. */
   keys: EventTarget
   connect: PageConnector
+  /** Gets the `pagehide` event. The page stops when it fires. */
+  lifecycle?: EventTarget
   onStatus: (status: LinkStatus) => void
   onError?: (error: unknown) => void
 }
@@ -35,7 +37,7 @@ const reportToConsole = (error: unknown): void => {
 
 /** Draws the output port of each link, and sends the keys through the input port of the link. */
 export const startPage = (options: PageOptions): PixiPage => {
-  const { stage, viewport, keys, connect, onStatus, onError = reportToConsole } = options
+  const { stage, viewport, keys, connect, lifecycle, onStatus, onError = reportToConsole } = options
   let stopped = false
   const isStopped = () => stopped
   let linkNumber = 0
@@ -92,15 +94,22 @@ export const startPage = (options: PageOptions): PixiPage => {
     },
   })
 
-  return {
+  const onPageHide = (): void => {
+    page.stop()
+  }
+  lifecycle?.addEventListener('pagehide', onPageHide)
+
+  const page: PixiPage = {
     stop: () => {
       if (stopped) {
         return
       }
       stopped = true
+      lifecycle?.removeEventListener('pagehide', onPageHide)
       client.close()
       detachKeys()
       release()
     },
   }
+  return page
 }

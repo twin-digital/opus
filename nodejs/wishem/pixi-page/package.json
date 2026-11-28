@@ -11,7 +11,7 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "preview": "vite preview",
-    "start": "node scripts/start.ts",
+    "start": "exec node scripts/start.ts",
     "test": "opus-test",
     "test:ui": "node scripts/browser-server.ts playwright test",
     "test:ui:update": "node scripts/browser-server.ts playwright test --update-snapshots",

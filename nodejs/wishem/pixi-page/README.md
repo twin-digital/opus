@@ -66,7 +66,7 @@ N is the number of the link since the page loaded. It starts at 1.
 
 When the process stops, the page keeps the last color. The page tries again after 500 milliseconds, then after a delay that doubles each time, at most 5 seconds. When the process starts again, the status line shows the next link number, and the page draws the new construct. The page does not reload.
 
-The page server runs with no HMR. The HMR client of Vite reloads the page when its server comes back. A reload hides the new link. After a change to a view file, reload the page by hand.
+The page server runs with `server.ws: false`. The Vite client does not open its WebSocket, so it does not reload the page when the server comes back. A reload would hide the new link. The page has no hot reload. After a change to a view file, reload the page by hand.
 
 ## Rewind
 
@@ -161,7 +161,7 @@ The test does these steps:
 4. It waits 1500 milliseconds. The canvas must still match `tick-1.png`, because the time is paused.
 5. It presses the space key. The canvas must change.
 
-A fault in the link, the proxy, the input subsystem, or the renderer makes step 3 fail.
+A fault in the link, the proxy, the input subsystem, or the renderer makes step 2 or step 3 fail.
 
 ### Update the baselines
 

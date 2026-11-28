@@ -73,7 +73,20 @@ The code of `src/readme-example.test.ts` runs this example. The test gives the m
 import { Container } from 'pixi.js'
 import { createStore } from '@thrashplay/wishem-core'
 import { createHub } from '@thrashplay/wishem-hub'
+import type { Model } from '@thrashplay/wishem-core'
 import { collectViews, startRenderer } from '@thrashplay/wishem-renderer-pixi'
+
+const CLEAR_COLOR = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
+const COLOR_FIELD = 'fld_9a1c2b3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d'
+
+const model: Model = {
+  definitions: [
+    { id: CLEAR_COLOR, label: 'Clear color', fields: [{ id: COLOR_FIELD, label: 'Color', type: 'string' }] },
+  ],
+  entities: [
+    { id: 'e_5b0e2c4a-9d13-4f7e-8a26-3c1d4e5f6a7b', components: { [CLEAR_COLOR]: { [COLOR_FIELD]: '#1d4ed8' } } },
+  ],
+}
 
 const hub = createHub({ subsystems: [createStore({ model })] })
 hub.start()

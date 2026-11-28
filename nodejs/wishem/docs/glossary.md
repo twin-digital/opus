@@ -158,7 +158,7 @@ Terms in each group are in alphabetical order.
 
 **Output subsystem**: A subsystem that only reads. It shows or plays a construct. Examples: renderer, sound.
 
-**PixiJS view** (**Agreed**): The kind of view that the PixiJS renderer runs: a file with a default export of `create` and `update`, and a sidecar of the kind `pixi`. A PixiJS view makes one display object for each component of its component type.
+**PixiJS view** (**Proposed**): The kind of view that the PixiJS renderer runs: a file with a default export of `create` and `update`, and a sidecar of the kind `pixi`. A PixiJS view makes one display object for each component of its component type.
 
 **Port** (**Proposed**): The interface that an I/O subsystem uses to communicate with the hub. A port has three operations: `submit(input)` sends an input, `read()` gets the joined state, and `subscribe(listener)` gets the hub events. Only an input subsystem can use `submit`. A model subsystem gets no port. In the process of the hub, a port is direct calls.
 

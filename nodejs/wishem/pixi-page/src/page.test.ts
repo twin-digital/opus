@@ -254,6 +254,18 @@ describe('startPage', () => {
       expect(hub.record()).toHaveLength(before)
     })
 
+    it('stops the page on pagehide, and removes the listener after a stop', () => {
+      const lifecycle = new EventTarget()
+      const first = makePage({ lifecycle })
+      lifecycle.dispatchEvent(new Event('pagehide'))
+      expect(first.close).toHaveBeenCalledTimes(1)
+
+      const second = makePage({ lifecycle })
+      second.page.stop()
+      lifecycle.dispatchEvent(new Event('pagehide'))
+      expect(second.close).toHaveBeenCalledTimes(1)
+    })
+
     it('does nothing on a second call', async () => {
       const hub = makeHub()
       const { ports } = await openPorts(hub)

@@ -236,6 +236,20 @@ describe('startPixiConstruct', () => {
       expect(portOf(again)).toBe(port)
     })
 
+    it('closes the server and rejects when the stop of the clock throws', async () => {
+      setup()
+      const failing: ClockTimer = {
+        start: () => () => {
+          throw new Error('stop failed')
+        },
+      }
+      const construct = await startPixiConstruct({ port: 0, timer: failing, log: () => undefined })
+      const port = portOf(construct)
+      await expect(construct.close()).rejects.toThrow('stop failed')
+      const again = await start({ port })
+      expect(portOf(again)).toBe(port)
+    })
+
     it('causes no error and no later tick when a listener of the hub closes during a tick', async () => {
       setup()
       const errors: string[] = []

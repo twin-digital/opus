@@ -25,6 +25,7 @@ const run = async (): Promise<void> => {
     stage: app.stage,
     viewport: { width: WIDTH, height: HEIGHT },
     keys: window,
+    lifecycle: window,
     connect: (handlers) =>
       connectLink({
         url: linkUrl(),
@@ -53,4 +54,10 @@ const run = async (): Promise<void> => {
   app.canvas.setAttribute('data-ready', 'true')
 }
 
-void run()
+run().catch((error: unknown) => {
+  console.error('wishem: the page did not start.', error)
+  const statusLine = document.getElementById('status')
+  if (statusLine) {
+    statusLine.textContent = `The page did not start: ${error instanceof Error ? error.message : String(error)}`
+  }
+})

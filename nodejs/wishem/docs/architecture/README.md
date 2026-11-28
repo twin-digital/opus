@@ -35,7 +35,7 @@ The construct of the workbench process is `host-nodejs` at run time. The `start`
 
 The workbench process imports `ModelError` from `core` as a value. The page imports only types from `core`, so the diagram shows no relationship from the page to `core`.
 
-The workbench process makes its hub through `startConstruct` of `host-nodejs`, and it imports only types from `hub`. The diagram shows no relationship from the process to `hub`. The page imports `openLink` and `webSocketChannel` from `hub`, so the diagram shows the relationship from the page to `hub`. The page connects to the workbench process, not to the package `hub`. The arrow from the page to `hub` shows an import.
+The workbench process makes its hub through `startConstruct` of `host-nodejs`, and it imports only types from `hub`. The diagram shows no relationship from the process to `hub`. The page imports `connectLink` from `hub`, so the diagram shows the relationship from the page to `hub`. The page connects to the workbench process, not to the package `hub`. The arrow from the page to `hub` shows an import.
 
 `@thrashplay/wishem-workbench-app` is not a container of its own. It holds the page and the `start` script. They are in the page and in the workbench process.
 
@@ -70,7 +70,7 @@ This is the path of a tick from the clock in the PixiJS process to the picture i
 | Product model folder | Container: JSON files          | The folder of the model of the mounted product. It has the same layout as the model folder. Example: `@thrashplay/wishem-sample-product` (`model/`).                                                                                                                                         |
 | host-nodejs          | Container: TypeScript package  | `startConstruct`, `serveHub`, and `readModelFolder`. A construct holds a hub and the store, reads, watches, and writes a model folder, and serves the link at `/link`. Package: `@thrashplay/wishem-host-nodejs`.                                                                            |
 | core                 | Container: TypeScript package  | The model types, `validateModel`, `ModelError`, `isEqual`, and the store (`createStore`, `storeInputs`). The store is a model subsystem of the hub. It uses no Node.js API. Package: `@thrashplay/wishem-core`.                                                                              |
-| hub                  | Container: TypeScript package  | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. The link: `serveLink`, `openLink`, and `webSocketChannel`. It uses no Node.js API. Package: `@thrashplay/wishem-hub`.                                                            |
+| hub                  | Container: TypeScript package  | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. The link: `serveLink`, `openLink`, `webSocketChannel`, and `connectLink`. It uses no Node.js API. Package: `@thrashplay/wishem-hub`.                                             |
 | clock                | Container: TypeScript package  | The `time` subsystem and the clock of a construct. It builds on the hub. It uses no Node.js API. Package: `@thrashplay/wishem-clock`.                                                                                                                                                        |
 | PixiJS page          | Container: PixiJS, web browser | Draws the color of the construct on a canvas, shows the state of the link, and sends the keys as inputs. Package: `@thrashplay/wishem-pixi-page` (`src/main.ts`, `src/page.ts`, `src/keys.ts`, `src/views/`).                                                                                |
 | PixiJS process       | Container: Node.js             | Runs the PixiJS construct with its clock and the Vite development server, and serves the PixiJS page. Package: `@thrashplay/wishem-pixi-page` (`scripts/start.ts`, `src/construct/`).                                                                                                        |
@@ -80,7 +80,7 @@ This is the path of a tick from the clock in the PixiJS process to the picture i
 
 - `@thrashplay/wishem-workbench-app` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-host-nodejs`, `@thrashplay/wishem-renderer-react`, and `@thrashplay/wishem-workbench`. `@thrashplay/wishem-sample-product` is a development dependency of it, for a test.
 - `@thrashplay/wishem-workbench` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-host-nodejs`. It does not depend on `@thrashplay/wishem-workbench-app`.
-- `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`.
+- `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`. `@thrashplay/wishem-clock` is a development dependency of it, for a test.
 - `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`.
 - `@thrashplay/wishem-renderer-react` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub` for types only. It has `react` as a peer dependency.
 - `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`. `@thrashplay/wishem-pixi-page` depends on it. `@thrashplay/wishem-core` is a development dependency of it, for a test.
