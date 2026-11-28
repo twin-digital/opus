@@ -128,7 +128,7 @@ describe('serveHub', () => {
       await eventually(() => events.some((event) => event.type === 'started'))
     })
 
-    it('refuses a foreign Origin with 403 and attaches nothing', async () => {
+    it('refuses a foreign Origin with 403', async () => {
       setup()
       const hub = makeHub()
       const server = await serve(hub)
