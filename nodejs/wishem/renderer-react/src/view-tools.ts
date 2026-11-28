@@ -44,7 +44,8 @@ export interface ViewToolsTarget {
 const rejection = (reason: Extract<InputOutcome, { ok: false }>['reason'], problems: InputProblem[] = []) =>
   ({ ok: false, reason, problems }) as const
 
-const send = async (input: InputPort | undefined, message: Input): Promise<InputOutcome> => {
+/** Sends one input to the port and gives the outcome. The promise never rejects. With no port, the outcome is `not-permitted`. */
+export const sendInput = async (input: InputPort | undefined, message: Input): Promise<InputOutcome> => {
   if (!input) {
     return rejection('not-permitted')
   }
@@ -66,9 +67,9 @@ export const createViewTools = ({ input, entity, componentType, definition }: Vi
         return Promise.resolve(rejection('invalid', [{ message: `No field has the prop name "${name}"` }]))
       }
       const payload: SetFieldPayload = { entity, componentType, field, value }
-      return send(input, { type: 'store/set-field', payload })
+      return sendInput(input, { type: 'store/set-field', payload })
     },
-    submit: (message) => send(input, message),
+    submit: (message) => sendInput(input, message),
   }
 }
 

@@ -95,6 +95,8 @@ nodejs/football/overrides.json
 
 # End-to-end test copy of the Wishem model
 .e2e-model/
+nodejs/wishem/workbench-app/.e2e-product/
+nodejs/wishem/workbench-app/.e2e-product-model/
 
 # Godot renderer: import cache, screenshots, and test output
 nodejs/wishem/renderer-godot/godot/.godot/
