@@ -1,0 +1,53 @@
+{
+  "private": true,
+  "name": "@thrashplay/wishem-pixi-page",
+  "version": "0.0.0",
+  "description": "The PixiJS page of Wishem: a construct in a Node.js process and a page that draws from its hub through the link.",
+  "type": "module",
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "vite --host",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "preview": "vite preview",
+    "start": "exec node scripts/start.ts",
+    "test": "opus-test",
+    "test:ui": "node scripts/browser-server.ts playwright test",
+    "test:ui:update": "node scripts/browser-server.ts playwright test --update-snapshots",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@thrashplay/wishem-clock": "workspace:*",
+    "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-renderer-pixi": "workspace:*",
+    "pixi.js": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@playwright/test": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vite-config": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}
