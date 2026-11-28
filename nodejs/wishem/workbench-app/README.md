@@ -18,12 +18,19 @@ The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket
 | Option            | Default                                            | Meaning                                         |
 | ----------------- | -------------------------------------------------- | ----------------------------------------------- |
 | `--model`         | the model folder of `@thrashplay/wishem-workbench` | The model folder.                               |
+| `--product`       | none                                               | The folder of a product model to mount.         |
 | `--port`          | `5173`                                             | The port of the page. `0`: the system selects.  |
 | `--hub-port`      | `4747`                                             | The port of the hub. `0`: the system selects.   |
 | `--views`         | `src/views/` of the package                        | The folder of the sidecars and generated files. |
 | `--no-view-types` | off                                                | Do not keep the generated files current.        |
 
-For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`. A relative `--model` path starts from the folder where you run the command, not from the package folder.
+For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`. A relative `--model` or `--product` path starts from the folder where you run the command, not from the package folder.
+
+With `--product`, the script mounts the model of that folder as the store `product` of the construct. It prints `wishem: product <absolute path>` after the model line. The page ignores the part `product`. To start the workbench with the sample product, from the root of the repository:
+
+```
+pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sample-product/model
+```
 
 While the script runs, it keeps the generated files of the views current. It runs the generator at the start, after each change to a definition that the hub accepts, and after each change to a sidecar. A change to `state.json` does not run the generator. The script prints one line for each file that it wrote, changed, or removed, with the new and removed props. It prints each error of the generator and continues to serve the page. With `--no-view-types`, the script writes no generated file.
 

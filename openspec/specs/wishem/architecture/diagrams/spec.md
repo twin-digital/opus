@@ -54,6 +54,21 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows the container `clock` as a TypeScript package, and a relationship from `clock` to `hub` with the label "Builds on [import]"
 
+#### Scenario: The PixiJS process runs the PixiJS construct and serves the PixiJS page
+
+- **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` runs the PixiJS construct and its page server in one Node.js process
+- **THEN** the container diagram shows the PixiJS process as a Node.js container, relationships from the designer to the PixiJS process and to the PixiJS page, and relationships from the PixiJS page to the PixiJS process with the labels "Gets page code [HTTP]" and "Connects to the hub [WebSocket link]"
+
+#### Scenario: The PixiJS process builds on host-nodejs, the clock, core, and hub
+
+- **WHEN** the PixiJS process imports `serveHub` of `@thrashplay/wishem-host-nodejs`, and values of `@thrashplay/wishem-clock`, `@thrashplay/wishem-core`, and `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows the container `clock` as a TypeScript package, a relationship from the PixiJS process to `host-nodejs` with the label "Serves the link with [import]", relationships from the PixiJS process to `clock`, to `core`, and to `hub`, and a relationship from `clock` to `hub`, each with the label "Builds on [import]"
+
+#### Scenario: The PixiJS page builds on the PixiJS renderer, the hub, and the clock
+
+- **WHEN** the PixiJS page imports values of `@thrashplay/wishem-renderer-pixi`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`
+- **THEN** the container diagram shows the PixiJS page as a container in a web browser, the container `renderer-pixi` as a TypeScript package, and a relationship from the PixiJS page to each of the three packages with the label "Builds on [import]"
+
 #### Scenario: A change alters the protocol between two containers
 
 - **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket
@@ -63,6 +78,11 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 
 - **WHEN** a change makes the workbench process write the model folder
 - **THEN** the relationship between the process and the model folder says that the process writes it
+
+#### Scenario: The workbench process mounts a product
+
+- **WHEN** the workbench process keeps the model of a mounted product in a product folder
+- **THEN** the container diagram shows the product model folder as a store of JSON files, a relationship from the workbench process to it with the label "Reads, watches, and writes [file system]", and a relationship from the designer to it with the label "Edits files [text editor]"
 
 ### Requirement: The dynamic diagram of the path of a change
 
@@ -99,12 +119,17 @@ The architecture document SHALL hold a C4 component diagram of the page of the w
 
 ### Requirement: The entity diagram of the model folder
 
-The architecture document SHALL hold an entity diagram of the model folder, in `nodejs/wishem/docs/architecture/entities-model-folder-light.svg` and `entities-model-folder-dark.svg`. The diagram SHALL show each entity of the model folder, its keys, and each relationship with its cardinality.
+The architecture document SHALL hold an entity diagram of the model folder, in `nodejs/wishem/docs/architecture/entities-model-folder-light.svg` and `entities-model-folder-dark.svg`. The diagram SHALL show each entity of the model folder, its keys, and each relationship with its cardinality. The diagram SHALL apply to each model folder: the model folder of the workbench and the product folder have the same entities.
 
 #### Scenario: A change adds an entity to the model folder
 
 - **WHEN** a change adds a kind of record to the model folder, such as a relation between entities
 - **THEN** the entity diagram shows the new entity, its keys, and its relationships
+
+#### Scenario: A second model folder with the same schema
+
+- **WHEN** a change adds a store of persisted data that has the layout of a model folder, such as the product folder
+- **THEN** the architecture document says that the entity diagram applies to that store, and no second entity diagram exists
 
 ### Requirement: Each diagram is written by the render script
 

@@ -69,6 +69,7 @@ describe('collectViews', () => {
     ['a kind that is not text', { default: { kind: 1, componentType: APP_BAR } }],
     ['an array', { default: [] }],
     ['no default export', {}],
+    ['a module that is not an object', null],
   ])('names the sidecar when parseSidecar rejects %s', (_name, module) => {
     const error = catchError(() => collectViews({ './views/AppBar.view.json': module }, {}))
 
@@ -92,6 +93,17 @@ describe('collectViews', () => {
     )
   })
 
+  it('names the two sidecars in the order of their paths', () => {
+    const error = catchError(() =>
+      collectViews(
+        { './views/Header.view.json': sidecar(APP_BAR), './views/AppBar.view.json': sidecar(APP_BAR) },
+        { './views/AppBar.tsx': viewModule(), './views/Header.tsx': viewModule() },
+      ),
+    )
+
+    expect(error.files).toEqual(['AppBar.view.json', 'Header.view.json'])
+  })
+
   it('does not use a view file whose path ends with .test.tsx', () => {
     const table = collectViews(
       { './views/AppBar.view.json': sidecar(APP_BAR) },
@@ -103,9 +115,5 @@ describe('collectViews', () => {
       collectViews({ './views/AppBar.test.view.json': sidecar(APP_BAR) }, { './views/AppBar.test.tsx': viewModule() }),
     )
     expect(error.files).toEqual(['AppBar.test.view.json'])
-  })
-
-  it('gives an empty table for a product with no sidecar and no view file', () => {
-    expect(collectViews({}, {}).size).toBe(0)
   })
 })

@@ -283,6 +283,16 @@ When the connection closes, do this:
 
 A client that gets a malformed message or a wrong sequence number closes the connection and opens a new link. The hub side sends `refused` with the reason `malformed` for a message that is not correct, and closes the connection. That case is a defect in the client. Correct the client.
 
+## A client that connects again
+
+A client opens a new link after each end of a link. Do this:
+
+1. Use new subsystem IDs for each link. A subsystem of an old link can still be attached while the hub side detaches it.
+2. Wait 500 ms before the first new attempt. Double the wait after each failed attempt, up to 5 s. Wait 500 ms again after a `welcome`.
+3. Send no input again after a link ends. See "The end of a link".
+
+`connectLink` of `@thrashplay/wishem-hub` does these steps.
+
 ## A full example
 
 The hub has a model subsystem `counter` with one part: `{ "count": number }`. The hub accepted three inputs before the link starts. The count is 6.

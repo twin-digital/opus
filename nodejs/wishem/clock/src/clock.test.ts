@@ -357,9 +357,24 @@ describe('startClock', () => {
   describe('with the default timer', () => {
     afterEach(() => {
       vi.useRealTimers()
+      vi.restoreAllMocks()
     })
 
-    it('uses setInterval and Date.now', () => {
+    it('follows performance.now, not Date.now', () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+      let real = 5_000
+      vi.spyOn(performance, 'now').mockImplementation(() => real)
+      const hub = createHub({ subsystems: [createTime()] })
+      const clockPort = hub.attach({ id: 'clock', kind: 'input' })
+      hub.start()
+      startClock(clockPort)
+      real += 100
+      vi.advanceTimersByTime(50)
+      expect(hub.read()[TIME_ID]).toMatchObject({ ticks: 2 })
+      hub.stop()
+    })
+
+    it('uses setInterval and the fake real time', () => {
       vi.useFakeTimers()
       const hub = createHub({ subsystems: [createTime()] })
       const clockPort = hub.attach({ id: 'clock', kind: 'input' })
@@ -375,5 +390,65 @@ describe('startClock', () => {
       expect(vi.getTimerCount()).toBe(0)
       expect(events).toContain('stopping')
     })
+  })
+})
+
+describe('startClock and the start of the hub', () => {
+  /** A clock that the test starts, on a hub that the test starts. */
+  const setupBeforeStart = () => {
+    let callback: (() => void) | undefined
+    let time = 1_000_000
+    const hub = createHub({ subsystems: [createTime()] })
+    const clockPort = hub.attach({ id: 'clock', kind: 'input' })
+    const timer = {
+      start: (cb: () => void) => {
+        callback = cb
+        return () => undefined
+      },
+    }
+    return {
+      hub,
+      startClock: () => startClock(clockPort, { stepMs: 100, timer, now: () => time }),
+      wait: (ms: number) => {
+        time += ms
+      },
+      fire: (ms: number) => {
+        time += ms
+        callback?.()
+      },
+      ticks: () => (hub.read()[TIME_ID] as TimePart).ticks,
+    }
+  }
+
+  it('measures from the start of the hub when the clock starts before the hub', () => {
+    const { hub, startClock, wait, fire, ticks } = setupBeforeStart()
+    startClock()
+    wait(600)
+    hub.start()
+    fire(20)
+    expect(ticks()).toBe(0)
+    fire(80)
+    expect(ticks()).toBe(1)
+  })
+
+  it('measures from its own start when the clock starts after the hub', () => {
+    const { hub, startClock, wait, fire, ticks } = setupBeforeStart()
+    hub.start()
+    wait(600)
+    startClock()
+    fire(20)
+    expect(ticks()).toBe(0)
+    fire(80)
+    expect(ticks()).toBe(1)
+  })
+
+  it('changes nothing and sends no tick for a started event after the clock stops', () => {
+    const { hub, startClock, wait, fire, ticks } = setupBeforeStart()
+    startClock().stop()
+    wait(600)
+    hub.start()
+    fire(100)
+    expect(ticks()).toBe(0)
+    expect(hub.seq).toBe(0)
   })
 })

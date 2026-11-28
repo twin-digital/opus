@@ -326,6 +326,7 @@ describe('the storage subsystem for files', () => {
       const before = hub.record().at(-1)?.seq ?? 0
       expect((await setTitle('Hello')).ok).toBe(true)
       await eventually(async () => (await fileTitle()) === 'Hello')
+      await pause(250)
 
       expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
 
@@ -705,6 +706,288 @@ describe('the storage subsystem for files', () => {
       other.attach({ id: 'files-writer', kind: 'output' })
       expect(() => attachModelFolderStorage({ folder, hub: other, first: store(), log: () => undefined })).toThrow()
       expect(() => other.attach({ id: 'files', kind: 'input' })).not.toThrow()
+    })
+  })
+})
+
+describe('two storage subsystems on one hub', () => {
+  const PRODUCT_CT = 'ct_6af38bd9-a91d-49d9-9370-fa4e6c04769d'
+  const PRODUCT_FLD = 'fld_ef085a2e-22ef-4409-bac4-9cd5648d0705'
+  const PRODUCT_E = 'e_99969ed3-f499-4dbb-bf6d-958db4542884'
+  const IDS = { input: 'product-files', output: 'product-files-writer' }
+
+  const productDefinition = (label: string) => ({
+    id: PRODUCT_CT,
+    label,
+    fields: [{ id: PRODUCT_FLD, label: 'count', type: 'string' }],
+  })
+  const productState = (count: string) => ({
+    entities: [{ id: PRODUCT_E, components: { [PRODUCT_CT]: { [PRODUCT_FLD]: count } } }],
+  })
+
+  let folder: string
+  let productFolder: string
+  let lines: string[]
+  let productLines: string[]
+  let hub: Hub
+  let storage: ModelFolderStorage
+  let productStorage: ModelFolderStorage
+  let client: Port
+  const workbenchInputs = storeInputs()
+  const productInputs = storeInputs('product')
+
+  const part = (id: string) => hub.read()[id] as Model
+  const count = () => part('product').entities[0]?.components[PRODUCT_CT]?.[PRODUCT_FLD]
+  const workbenchTitle = () => part('store').entities[0]?.components[CT]?.[FLD]
+  const readJson = async (target: string) =>
+    JSON.parse(await readFile(path.join(target, 'state.json'), 'utf8')) as unknown
+  const fileHas = async (target: string, text: string) => JSON.stringify(await readJson(target)).includes(text)
+  const renamedInto = (target: string) =>
+    vi.mocked(rename).mock.calls.filter(([, to]) => to === path.join(target, 'state.json')).length
+  const setCount = (value: string) =>
+    client.submit(productInputs.setField({ entity: PRODUCT_E, componentType: PRODUCT_CT, field: PRODUCT_FLD, value }))
+  const setTitle = (value: string) =>
+    client.submit(workbenchInputs.setField({ entity: E, componentType: CT, field: FLD, value }))
+  const relabelProduct = () =>
+    client.submit(
+      productInputs.replaceModel({
+        definitions: [productDefinition('Renamed')],
+        entities: part('product').entities,
+      } as Model),
+    )
+  const isProblem = (line: string) => line.startsWith('wishem: problem in ')
+  const isLost = (line: string) => line.includes('does not hold the last changes')
+
+  const model = async (target: string) => {
+    const result = validateModel((await actualRead(target)).data)
+    if (!result.ok) {
+      throw new Error('the fixture is not correct')
+    }
+    return result.model
+  }
+
+  const attach = async (options: { productFolder?: string; absoluteSources?: boolean } = {}) => {
+    const first = await model(folder)
+    const productFirst = await model(productFolder)
+    hub = createHub({
+      subsystems: [createStore({ model: first }), createStore({ id: 'product', model: productFirst })],
+    })
+    storage = attachModelFolderStorage({ folder, hub, first, log: (line) => lines.push(line) })
+    productStorage = attachModelFolderStorage({
+      folder: options.productFolder ?? productFolder,
+      hub,
+      first: productFirst,
+      log: (line) => productLines.push(line),
+      storeId: 'product',
+      subsystemIds: IDS,
+      absoluteSources: options.absoluteSources ?? true,
+    })
+    hub.start()
+    storage.watch()
+    productStorage.watch()
+    client = hub.attach({ id: 'client', kind: 'input' })
+    await pause(150)
+  }
+
+  beforeEach(async () => {
+    lines = []
+    productLines = []
+    vi.mocked(rename).mockClear()
+    vi.mocked(readModelFolder).mockReset()
+    vi.mocked(readModelFolder).mockImplementation(actualRead)
+    folder = await mkdtemp(path.join(tmpdir(), 'wishem-storage-a-'))
+    productFolder = await mkdtemp(path.join(tmpdir(), 'wishem-storage-b-'))
+    await mkdir(path.join(folder, 'definitions'))
+    await mkdir(path.join(productFolder, 'definitions'))
+    await writeFile(path.join(folder, 'definitions', `${CT}.json`), JSON.stringify(definition('AppBar')))
+    await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Wishem')))
+    await writeFile(
+      path.join(productFolder, 'definitions', `${PRODUCT_CT}.json`),
+      JSON.stringify(productDefinition('Counter')),
+    )
+    await writeFile(path.join(productFolder, 'state.json'), JSON.stringify(productState('0')))
+  })
+
+  afterEach(async () => {
+    await Promise.all([storage.close(), productStorage.close()])
+    if (hub.status === 'running') {
+      hub.stop()
+    }
+    vi.mocked(readModelFolder).mockImplementation(actualRead)
+    vi.mocked(writeFile).mockImplementation(actualWriteFile)
+    await rm(folder, { recursive: true, force: true })
+    await rm(productFolder, { recursive: true, force: true })
+  })
+
+  describe('A storage subsystem keeps one store', () => {
+    it('sends one product/replace-model with the source product-files for a hand edit of the product', async () => {
+      await attach()
+      const before = part('store')
+      await writeFile(path.join(productFolder, 'state.json'), JSON.stringify(productState('5')))
+      await eventually(() => count() === '5')
+      await pause(200)
+      expect(hub.record().map(({ type, source }) => [type, source])).toEqual([['product/replace-model', IDS.input]])
+      expect(part('store')).toBe(before)
+    })
+
+    it('sends one store/replace-model with the source files for a hand edit of the model folder', async () => {
+      await attach()
+      const before = part('product')
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('By hand')))
+      await eventually(() => workbenchTitle() === 'By hand')
+      await pause(200)
+      expect(hub.record().map(({ type, source }) => [type, source])).toEqual([['store/replace-model', FILES_ID]])
+      expect(part('product')).toBe(before)
+    })
+
+    it('writes only the file of the store that the input changed', async () => {
+      await attach()
+      await setCount('7')
+      await eventually(() => fileHas(productFolder, '"7"'))
+      await pause(200)
+      expect(renamedInto(productFolder)).toBe(1)
+      expect(renamedInto(folder)).toBe(0)
+      await setTitle('Second')
+      await eventually(() => fileHas(folder, 'Second'))
+      await pause(200)
+      expect(renamedInto(folder)).toBe(1)
+      expect(renamedInto(productFolder)).toBe(1)
+      expect(await readJson(productFolder)).toEqual(productState('7'))
+    })
+
+    it('holds the write of the product and not the write of the model folder', async () => {
+      await attach()
+      expect((await relabelProduct()).ok).toBe(true)
+      await eventually(() => productLines.some(isHeld))
+      await setTitle('Second')
+      await eventually(() => fileHas(folder, 'Second'))
+      await setCount('3')
+      await pause(300)
+      expect(await readJson(productFolder)).toEqual(productState('0'))
+      expect(productLines.filter(isHeld)).toHaveLength(1)
+      expect(lines.filter(isHeld)).toHaveLength(0)
+    })
+
+    it('holds the write of the model folder and not the write of the product', async () => {
+      await attach()
+      await client.submit(
+        workbenchInputs.replaceModel({
+          definitions: [definition('Renamed')],
+          entities: part('store').entities,
+        } as Model),
+      )
+      await eventually(() => lines.some(isHeld))
+      await setCount('4')
+      await eventually(() => fileHas(productFolder, '"4"'))
+      expect(productLines.filter(isHeld)).toHaveLength(0)
+      expect(lines.filter(isHeld)).toHaveLength(1)
+    })
+
+    it('does not wait for a read of the other folder', async () => {
+      await attach()
+      let release: () => void = () => undefined
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(readModelFolder).mockImplementation(async (target) => {
+        const result = await actualRead(target)
+        if (target === productFolder) {
+          await gate
+        }
+        return result
+      })
+      await writeFile(path.join(productFolder, 'state.json'), JSON.stringify(productState('6')))
+      await eventually(() => vi.mocked(readModelFolder).mock.calls.some(([target]) => target === productFolder))
+      await setTitle('Second')
+      await eventually(() => fileHas(folder, 'Second'))
+      release()
+      await eventually(() => count() === '6')
+    })
+
+    it('keeps following the other folder after one storage subsystem closes', async () => {
+      await attach()
+      await productStorage.close()
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Still open')))
+      await eventually(() => workbenchTitle() === 'Still open')
+      await writeFile(path.join(productFolder, 'state.json'), JSON.stringify(productState('9')))
+      await pause(300)
+      expect(count()).toBe('0')
+    })
+
+    it('prints the line of a stop with a hold only for the storage subsystem that is held', async () => {
+      await attach()
+      await relabelProduct()
+      await storage.close()
+      await productStorage.close()
+      expect(lines.filter(isLost)).toHaveLength(0)
+      expect(productLines.filter(isLost)).toHaveLength(1)
+    })
+  })
+
+  describe('The storage subsystems of the product have their own IDs', () => {
+    it('attaches the given IDs, and not the default IDs twice', async () => {
+      await attach()
+      expect(() => hub.attach({ id: IDS.input, kind: 'input' })).toThrow()
+      expect(() => hub.attach({ id: IDS.output, kind: 'output' })).toThrow()
+      expect(() => hub.attach({ id: FILES_ID, kind: 'input' })).toThrow()
+      expect(() => hub.attach({ id: FILES_WRITER_ID, kind: 'output' })).toThrow()
+    })
+
+    it('frees the given IDs at close', async () => {
+      await attach()
+      await productStorage.close()
+      expect(() => {
+        hub.attach({ id: IDS.input, kind: 'input' }).close()
+      }).not.toThrow()
+      expect(() => {
+        hub.attach({ id: IDS.output, kind: 'output' }).close()
+      }).not.toThrow()
+      expect(() => hub.attach({ id: FILES_ID, kind: 'input' })).toThrow()
+    })
+  })
+
+  describe('The option absoluteSources', () => {
+    it('names the absolute path of a file in each problem', async () => {
+      await attach()
+      await writeFile(path.join(productFolder, 'state.json'), '{')
+      await eventually(() => productLines.some(isProblem))
+      expect(productLines[0]).toBe(
+        `wishem: problem in ${path.join(productFolder, 'state.json')}: the text is not valid JSON (line 1)`,
+      )
+      expect(lines).toEqual([])
+    })
+
+    it('names the absolute path for a folder that is given as a relative path', async () => {
+      await attach({ productFolder: path.relative(process.cwd(), productFolder) })
+      await writeFile(path.join(productFolder, 'state.json'), '{')
+      await eventually(() => productLines.some(isProblem))
+      expect(productLines[0]?.startsWith(`wishem: problem in ${path.join(productFolder, 'state.json')}: `)).toBe(true)
+    })
+
+    it('names the absolute path for a problem that the core finds', async () => {
+      await attach()
+      await writeFile(path.join(productFolder, 'state.json'), JSON.stringify({ entities: [{ id: 'bad' }] }))
+      await eventually(() => productLines.some(isProblem))
+      const named = productLines.filter((line) => line.startsWith('wishem: problem'))
+      expect(named.length).toBeGreaterThan(0)
+      named.forEach((line) => {
+        expect(line.startsWith(`wishem: problem in ${path.join(productFolder, 'state.json')}: `)).toBe(true)
+      })
+    })
+
+    it('names the absolute path of state.json in the line of a write that fails', async () => {
+      await attach()
+      vi.mocked(writeFile).mockRejectedValueOnce(new Error('EACCES'))
+      await setCount('2')
+      await eventually(() => productLines.some((line) => line.includes('cannot write')))
+      expect(productLines).toContain(`wishem: cannot write ${path.join(productFolder, 'state.json')}: EACCES`)
+    })
+
+    it('keeps the relative source by default', async () => {
+      await attach({ absoluteSources: false })
+      await writeFile(path.join(productFolder, 'state.json'), '{')
+      await eventually(() => productLines.some(isProblem))
+      expect(productLines[0]).toBe('wishem: problem in state.json: the text is not valid JSON (line 1)')
     })
   })
 })

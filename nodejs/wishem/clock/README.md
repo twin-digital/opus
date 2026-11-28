@@ -31,6 +31,8 @@ After the hub applies the input `hub/rewind`, the clock measures real time again
 
 ## Start and stop
 
+When the hub starts, the clock measures real time again from the `started` event. The real time before the start causes no tick after it.
+
 `startClock` throws an `Error` in these cases:
 
 - The port is not the port of an input subsystem.
@@ -40,7 +42,7 @@ After the hub applies the input `hub/rewind`, the clock measures real time again
 
 The clock stops when you call `stop()` and when the hub sends the `stopping` event. A second `stop()` does nothing.
 
-The options `timer` and `now` replace `setInterval` and `Date.now`. A test gives a timer that it calls itself and a source of real time that it sets.
+The options `timer` and `now` replace `setInterval` and `performance.now()`. A test gives a timer that it calls itself and a source of real time that it sets.
 
 ## Example
 

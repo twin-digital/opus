@@ -1,0 +1,5 @@
+{
+  "id": "ct_6af38bd9-a91d-49d9-9370-fa4e6c04769d",
+  "label": "Counter",
+  "fields": [{ "id": "fld_ef085a2e-22ef-4409-bac4-9cd5648d0705", "label": "count", "type": "string" }]
+}
