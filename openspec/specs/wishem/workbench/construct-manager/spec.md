@@ -31,12 +31,12 @@ For each construct of the list that is wanted to run and has no product construc
 
 #### Scenario: A start that fails
 
-- **WHEN** the rules of the product throw an error when the construct manager makes the hub of `play`
+- **WHEN** the list of behaviors of the product holds two behaviors with the same ID, and the construct manager makes the hub of `play`
 - **THEN** the part holds `play` with the status `failed` and the text of the error, and the workbench continues
 
 ### Requirement: A product construct holds the product and no storage
 
-A product construct SHALL have the model subsystems `time` and `store`, in this order. The store SHALL start from the product model at the start, wrapped by the rules of the product when the workbench has them. A product construct SHALL have a clock and SHALL have no storage subsystem. A product construct SHALL write no file.
+A product construct SHALL have the model subsystems `time` and `store`, in this order. The model subsystem `store` SHALL be the update subsystem of a store that starts from the product model at the start, with the behaviors of the product, or with no behavior when the workbench has no product code. A product construct SHALL have a clock and SHALL have no storage subsystem. A product construct SHALL write no file.
 
 #### Scenario: The sample product with its rules
 
@@ -47,6 +47,11 @@ A product construct SHALL have the model subsystems `time` and `store`, in this 
 
 - **WHEN** the workbench has no product code, and a construct runs for 500 milliseconds
 - **THEN** the part `time` has more than 0 ticks, and the count is the count of the product model
+
+#### Scenario: A behavior that throws
+
+- **WHEN** the product code has a behavior that throws, and an input subsystem sends `constructs/send` with `time/advance` to `play`
+- **THEN** the part `constructs` holds the result of the pass with `"ok":false` and the reason `invalid`, and a problem names the behavior
 
 #### Scenario: No file changes
 
