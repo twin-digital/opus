@@ -823,6 +823,12 @@ describe('add-reference', () => {
     expect(cardsOf(next)).toEqual([ENT2])
   })
 
+  it('keeps the other fields of the component', () => {
+    const store = createStore({ model: typedModel({ [FLD]: 'x', [FLD2]: 3 }) })
+    const next = send(store, store.initial, 'store/add-reference', add(ENT2))
+    expect(next.entities[0]?.components[CT]).toEqual({ [FLD]: 'x', [FLD2]: 3, [FLD5]: [ENT2] })
+  })
+
   it('accepts an ID that the list holds and gives the same part', () => {
     const store = createStore({ model: listModel([ENT2]) })
     expect(send(store, store.initial, 'store/add-reference', add(ENT2))).toBe(store.initial)
@@ -871,6 +877,7 @@ describe('add-reference', () => {
     const store = createStore({ model: listModel() })
     const error = refusal(() => send(store, store.initial, 'store/add-reference', payload))
     expect(error.problems.map((problem) => problem.path)).toContainEqual(['payload', key])
+    expect(error.problems.map((problem) => problem.message)).toContain(`The payload has no string "${key}" key`)
   })
 
   it('refuses a payload that is not an object', () => {
@@ -898,6 +905,12 @@ describe('remove-reference', () => {
     const next = send(store, store.initial, 'store/remove-reference', remove(ENT3))
     expect(cardsOf(next)).toEqual([ENT2, ENT])
     expect(next.entities[1]).toBe(store.initial.entities[1])
+  })
+
+  it('keeps the other fields of the component', () => {
+    const store = createStore({ model: typedModel({ [FLD]: 'x', [FLD5]: [ENT2] }) })
+    const next = send(store, store.initial, 'store/remove-reference', remove(ENT2))
+    expect(next.entities[0]?.components[CT]).toEqual({ [FLD]: 'x', [FLD5]: [] })
   })
 
   it('leaves [] after the removal of the last item', () => {

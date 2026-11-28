@@ -486,6 +486,18 @@ describe('validateModel', () => {
         expect(problems[0]?.message).toContain('"hero"')
       })
 
+      it.each([
+        ['an object', {}],
+        ['null', null],
+        ['a number', 3],
+      ])('names the entity and the field for %s', (_name, value) => {
+        const problems = errors(withList(value))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath())
+        expect(problems[0]?.message).toContain('"cards"')
+        expect(problems[0]?.message).toContain('"reference-list"')
+      })
+
       it('names an item that is not a string', () => {
         const problems = errors(withList([ENT2, 7]))
         expect(problems).toHaveLength(1)
@@ -498,6 +510,7 @@ describe('validateModel', () => {
         expect(problems[0]?.path).toEqual(listPath(1))
         expect(problems[0]?.message).toContain(ENT)
         expect(problems[0]?.message).toContain(MISSING)
+        expect(problems[0]?.message).toContain('the index 1')
       })
 
       it('names the ID and the later index of an ID two times', () => {
@@ -506,6 +519,7 @@ describe('validateModel', () => {
         expect(problems[0]?.path).toEqual(listPath(2))
         expect(problems[0]?.message).toContain(ENT)
         expect(problems[0]?.message).toContain(ENT2)
+        expect(problems[0]?.message).toContain('the index 2')
       })
 
       it('names each item that has a fault', () => {
