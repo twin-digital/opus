@@ -92,6 +92,12 @@ describe('viewWarnings', () => {
     expect(viewWarnings(views, []).map((warning) => warning.sidecar)).toEqual(['A.view.json', 'B.view.json'])
   })
 
+  it('sorts the warnings of one sidecar name by component type', () => {
+    const views = tableOf(entry('Same.view.json', HEADER), entry('Same.view.json', APP_BAR))
+
+    expect(viewWarnings(views, []).map((warning) => warning.componentType)).toEqual([APP_BAR, HEADER])
+  })
+
   it('sorts the warnings of one sidecar by name', () => {
     const views = tableOf(entry('AppBar.view.json', APP_BAR))
 
@@ -140,6 +146,24 @@ describe('holdWarnings', () => {
         entities: [E_A, E_A],
       },
     ])
+  })
+
+  it('sorts the warnings by sidecar', () => {
+    const OTHER = 'ct_2b3c4d5e-6f70-4a81-9b92-a3b4c5d6e7f8'
+    const FIELD_NEXT = 'fld_3d4e5f60-7182-4a93-8ba4-b5c6d7e8f901'
+    const model: Model = {
+      definitions: [
+        { id: LIST, label: 'List', fields: [{ id: FIELD_FIRST, label: 'first', type: 'reference' }] },
+        { id: OTHER, label: 'Other', fields: [{ id: FIELD_NEXT, label: 'next', type: 'reference' }] },
+      ],
+      entities: [
+        { id: E_A, components: { [LIST]: { [FIELD_FIRST]: E_A } } },
+        { id: E_B, components: { [OTHER]: { [FIELD_NEXT]: E_B } } },
+      ],
+    }
+    const both = tableOf(entry('List.view.json', LIST), entry('A.view.json', OTHER))
+
+    expect(holdWarnings(both, model).map((warning) => warning.sidecar)).toEqual(['A.view.json', 'List.view.json'])
   })
 
   it('gives no warning after the cycle is corrected', () => {
