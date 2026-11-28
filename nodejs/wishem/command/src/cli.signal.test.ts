@@ -247,6 +247,42 @@ describe('the stop signal during the start of the wishem command', () => {
       expect(calls).toEqual(['manager', 'construct'])
     })
 
+    it('closes the construct and exits with code 1 when the manager does not close', async () => {
+      managerClose.mockImplementation(() => {
+        calls.push('manager')
+        return Promise.reject(new Error('manager broke'))
+      })
+      const loaded = load(['--product', '/product'])
+      await vi.waitFor(() => {
+        expect(output).toContain('wishem: product /product')
+      })
+      finish(construct())
+      await loaded
+      handlers.get('SIGINT')?.()
+      await vi.waitFor(() => {
+        expect(exitCodes).toEqual([1])
+      })
+      expect(calls).toEqual(['manager', 'construct'])
+      expect(output.join('\n')).toContain('manager broke')
+    })
+
+    it('closes the construct and reports the error when the attach fails', async () => {
+      vi.mocked(await attached()).mockImplementation(() => {
+        throw new Error('attach broke')
+      })
+      const loaded = load(['--product', '/product'])
+      await vi.waitFor(() => {
+        expect(output).toContain('wishem: product /product')
+      })
+      finish(construct())
+      await loaded
+      await vi.waitFor(() => {
+        expect(exitCodes).toEqual([1])
+      })
+      expect(calls).toEqual(['construct'])
+      expect(output).toContain('wishem: attach broke')
+    })
+
     it('attaches no manager without a product', async () => {
       const loaded = load()
       await vi.waitFor(() => {

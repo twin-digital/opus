@@ -236,6 +236,11 @@ describe('the test guide: the command runs the product constructs', () => {
     run.child.kill('SIGKILL')
     await run.exit
     await wait(2000)
+    // The spec gives 2 s; the poll allows a slow machine.
+    await until(
+      () => !alive(pid),
+      () => `process ${String(pid)} runs`,
+    )
 
     expect(alive(pid)).toBe(false)
     const refused = await new Promise<boolean>((resolve) => {

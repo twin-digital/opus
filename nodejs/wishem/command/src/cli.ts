@@ -61,7 +61,16 @@ const main = async () => {
   const stopState = { requested: false }
   const closeAndExit = (target: Construct, code = 0) => {
     // The manager stops each product construct before the hub closes.
-    const closing = manager === undefined ? target.close() : manager.close().then(() => target.close())
+    const closing =
+      manager === undefined ?
+        target.close()
+      : manager.close().then(
+          () => target.close(),
+          (error: unknown) =>
+            target.close().then(() => {
+              throw error
+            }),
+        )
     closing.then(
       () => process.exit(code),
       (error: unknown) => {
