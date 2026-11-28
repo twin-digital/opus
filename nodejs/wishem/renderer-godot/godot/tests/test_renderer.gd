@@ -362,3 +362,21 @@ func test_warns_for_a_sidecar_with_no_definition_and_draws_the_other_views() -> 
 	assert_equal(_children(host).size(), 2)
 	renderer.stop()
 	host.free()
+
+
+func test_warns_for_two_labels_with_one_name_and_keeps_the_first_value() -> void:
+	var host := _host()
+	var view := RectView.new()
+	var definition := {"id": CT, "label": "Thing", "fields": [{"id": COLOR, "label": "Color", "type": "string"}, {"id": "fld_dup", "label": "color", "type": "string"}]}
+	var port := FakePort.new({"store": _store([_entity("e1", {CT: {COLOR: "#111111", "fld_dup": "#999999"}})], [definition])})
+	var renderer := Renderer.new(port, _box_table(view), host, _size)
+	var line := "wishem: the sidecar Box.view.json: the fields %s and fld_dup of the component type %s give the same name \"color\". The prop has the value of the first field." % [COLOR, CT]
+	assert_equal(renderer.warnings, [line])
+	assert_equal(view.updates[0]["props"], {"color": "#111111"})
+	port.apply(_store([_entity("e1", {CT: {COLOR: "#222222", "fld_dup": "#999999"}})], [definition]))
+	assert_equal(view.updates[1]["props"], {"color": "#222222"})
+	assert_equal(renderer.warnings, [line], "a changed value writes no line")
+	port.apply(_store([_entity("e1", {CT: {COLOR: "#222222"}})], [_definition(CT, "Color")]))
+	assert_equal(renderer.warnings, [line], "a definition with no problem writes no line")
+	renderer.stop()
+	host.free()

@@ -17,7 +17,9 @@ static func view_warnings(views: Dictionary, definitions: Array) -> Array:
 			warnings.append({"kind": "component-type-not-defined", "sidecar": sidecar, "componentType": type})
 			continue
 		for problem: Dictionary in Views.prop_names(by_id[type])["problems"]:
-			if problem["kind"] == "empty-name":
+			if problem["kind"] == "same-name":
+				warnings.append({"kind": "same-name", "sidecar": sidecar, "componentType": type, "name": problem["name"], "fields": problem["fields"]})
+			elif problem["kind"] == "empty-name":
 				warnings.append({"kind": "empty-name", "sidecar": sidecar, "componentType": type, "fields": [problem["field"]]})
 	var ranked: Array = []
 	for index in warnings.size():
@@ -32,6 +34,8 @@ static func describe_warning(warning: Dictionary) -> String:
 	match warning["kind"]:
 		"component-type-not-defined":
 			return "wishem: the sidecar %s names the component type %s, which no definition has. No view is drawn for it." % [warning["sidecar"], warning["componentType"]]
+		"same-name":
+			return "wishem: the sidecar %s: the fields %s and %s of the component type %s give the same name \"%s\". The prop has the value of the first field." % [warning["sidecar"], fields[0], fields[1], warning["componentType"], warning["name"]]
 		"empty-name":
 			return "wishem: the sidecar %s: the label of the field %s of the component type %s gives an empty name. The view does not get the field." % [warning["sidecar"], fields[0], warning["componentType"]]
 	return ""

@@ -60,3 +60,51 @@ func test_describes_the_warning_of_a_missing_definition() -> void:
 		ViewWarnings.describe_warning(warnings[0]),
 		"wishem: the sidecar A.view.json names the component type %s, which no definition has. No view is drawn for it." % CT1,
 	)
+
+
+func _same_name(name: String, fields: Array) -> Dictionary:
+	return {"kind": "same-name", "sidecar": "A.view.json", "componentType": CT1, "name": name, "fields": fields}
+
+
+func test_gives_a_warning_for_two_labels_with_one_name() -> void:
+	var warnings := ViewWarnings.view_warnings(_table(), [_definition(["Max health", "max-health"])])
+	assert_equal(warnings, [_same_name("maxHealth", ["fld_0", "fld_1"])])
+
+
+func test_gives_a_warning_for_each_later_field_with_the_first_field() -> void:
+	var warnings := ViewWarnings.view_warnings(_table(), [_definition(["Color", "color", "color!"])])
+	assert_equal(warnings, [_same_name("color", ["fld_0", "fld_1"]), _same_name("color", ["fld_0", "fld_2"])])
+
+
+func test_sorts_the_warning_empty_name_before_same_name() -> void:
+	var warnings := ViewWarnings.view_warnings(_table(), [_definition(["???", "Max health", "max-health"])])
+	assert_equal(warnings.size(), 2)
+	assert_equal(warnings[0]["kind"], "empty-name")
+	assert_equal(warnings[1]["kind"], "same-name")
+
+
+func test_sorts_the_warnings_by_name() -> void:
+	var warnings := ViewWarnings.view_warnings(_table(), [_definition(["b", "B", "a", "A"])])
+	assert_equal(warnings.map(func(warning: Dictionary) -> String: return warning["name"]), ["a", "b"])
+
+
+func test_keeps_the_order_of_the_fields_for_warnings_that_rank_equal() -> void:
+	var warnings := ViewWarnings.view_warnings(_table(), [_definition(["???", "--", "!!", "##", "%%"])])
+	assert_equal(warnings.map(func(warning: Dictionary) -> String: return warning["fields"][0]), ["fld_0", "fld_1", "fld_2", "fld_3", "fld_4"])
+
+
+func test_sorts_by_sidecar_before_component_type() -> void:
+	var table := {
+		"ct_a": {"sidecar": "B.view.json", "view": RefCounted.new()},
+		"ct_b": {"sidecar": "A.view.json", "view": RefCounted.new()},
+	}
+	var warnings := ViewWarnings.view_warnings(table, [])
+	assert_equal(warnings.map(func(warning: Dictionary) -> String: return warning["componentType"]), ["ct_b", "ct_a"])
+
+
+func test_describes_the_warning_for_the_same_name() -> void:
+	var warnings := ViewWarnings.view_warnings(_table(), [_definition(["Max health", "max-health"])])
+	assert_equal(
+		ViewWarnings.describe_warning(warnings[0]),
+		"wishem: the sidecar A.view.json: the fields fld_0 and fld_1 of the component type %s give the same name \"maxHealth\". The prop has the value of the first field." % CT1,
+	)
