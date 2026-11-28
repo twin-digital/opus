@@ -213,7 +213,7 @@ export const validateModel = (data: unknown): ValidationResult => {
           const before = problems.length
           ;(value as unknown[]).forEach((item, itemIndex) => {
             const itemPath = [...valuePath, itemIndex]
-            const itemThing = `${valueThing} has at the index ${itemIndex} an item that`
+            const itemThing = `${valueThing} has an item at the index ${itemIndex} that`
             if (!checkId(item, 'e', itemThing, itemPath)) {
               return
             }
