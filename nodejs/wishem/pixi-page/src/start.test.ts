@@ -188,10 +188,16 @@ describe('startPixi', () => {
   it('sends stopping to an open link and frees both ports on close', { timeout: 30000 }, async () => {
     const { started } = await begin()
     const { link, port } = await openOutput(started.linkUrl)
-    const { link: proxied } = await openOutput(new URL('link', started.pageUrl.replace('http:', 'ws:')).href)
+    const { link: proxied, port: proxiedPort } = await openOutput(
+      new URL('link', started.pageUrl.replace('http:', 'ws:')).href,
+    )
     const events: HubEvent[] = []
+    const proxiedEvents: HubEvent[] = []
     port.subscribe((event) => {
       events.push(event)
+    })
+    proxiedPort.subscribe((event) => {
+      proxiedEvents.push(event)
     })
 
     await started.close()
@@ -199,6 +205,10 @@ describe('startPixi', () => {
     await until(
       () => events.some((event) => event.type === 'stopping'),
       () => JSON.stringify(events),
+    )
+    await until(
+      () => proxiedEvents.some((event) => event.type === 'stopping'),
+      () => JSON.stringify(proxiedEvents),
     )
     await link.closed
     await proxied.closed
@@ -322,16 +332,23 @@ describe('the start script', () => {
     async (signal) => {
       const { started, pageUrl, link } = await ready([])
       const { link: remote, port } = await openOutput(link)
-      const { link: proxied } = await openOutput(new URL('link', pageUrl.replace('http:', 'ws:')).href)
+      const { link: proxied, port: proxiedPort } = await openOutput(
+        new URL('link', pageUrl.replace('http:', 'ws:')).href,
+      )
       const events: HubEvent[] = []
+      const proxiedEvents: HubEvent[] = []
       port.subscribe((event) => {
         events.push(event)
+      })
+      proxiedPort.subscribe((event) => {
+        proxiedEvents.push(event)
       })
 
       started.child.kill(signal)
 
       expect(await started.exit).toBe(0)
       expect(events.some((event) => event.type === 'stopping')).toBe(true)
+      expect(proxiedEvents.some((event) => event.type === 'stopping')).toBe(true)
       await remote.closed
       await proxied.closed
       expect(await refuses('127.0.0.1', portOf(pageUrl))).toBe(true)

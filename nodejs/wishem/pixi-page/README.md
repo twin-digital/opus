@@ -31,7 +31,7 @@ wishem: link at ws://127.0.0.1:4748/link
 wishem: PixiJS page at http://127.0.0.1:5174/
 ```
 
-Open the page address in a web browser. Press Ctrl+C to stop the command. The command stops the page server and then the construct, and ends with exit code 0.
+Open the page address in a web browser. Press Ctrl+C to stop the command. The command stops the construct and then the page server, and ends with exit code 0.
 
 | Option                | Effect                                                                                 |
 | --------------------- | -------------------------------------------------------------------------------------- |

@@ -175,7 +175,7 @@ The view makes a `Sprite` of `Texture.WHITE`. `update` sets the width and the he
 
 ### 17. The start for a person: one command
 
-`pnpm --filter @thrashplay/wishem-pixi-page start` runs `node scripts/start.ts`. It starts the construct on `127.0.0.1:4748` and the page server on `127.0.0.1:5174`, and prints the two addresses. Options: `--paused`, `--port <number>`, `--hub-port <number>` (0 lets the system select). Ctrl+C or `SIGTERM` stops the page server and then the construct, and the command ends with exit code 0. When a port is in use, the command writes `wishem: port <number> is in use`, stops each part that started, and ends with exit code 1.
+`pnpm --filter @thrashplay/wishem-pixi-page start` runs `node scripts/start.ts`. It starts the construct on `127.0.0.1:4748` and the page server on `127.0.0.1:5174`, and prints the two addresses. Options: `--paused`, `--port <number>`, `--hub-port <number>` (0 lets the system select). Ctrl+C or `SIGTERM` stops the construct (the clock and the hub, so that each open link, also a link through the proxy of the page server, gets `stopping`) and then the page server, and the command ends with exit code 0. When a port is in use, the command writes `wishem: port <number> is in use`, stops each part that started, and ends with exit code 1.
 
 - Reason: the workbench has the same form, and one command is one step for a person.
 - Reason: 4748 and 5174 are next to the ports of the workbench (4747 and 5173), so the workbench and the PixiJS page can run at the same time.
@@ -446,7 +446,7 @@ export interface PixiStartOptions {
 export interface PixiStart {
   pageUrl: string
   linkUrl: string
-  /** Stops the page server, then the construct. */
+  /** Stops the construct, then the page server. */
   close(): Promise<void>
 }
 export const startPixi: (options?: PixiStartOptions) => Promise<PixiStart>

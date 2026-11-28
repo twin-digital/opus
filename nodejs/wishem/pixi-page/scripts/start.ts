@@ -22,7 +22,7 @@ export interface PixiStart {
   pageUrl: string
   /** For example `ws://127.0.0.1:4748/link`. */
   linkUrl: string
-  /** Stops the page server, then the construct. Gives the same promise on each call. */
+  /** Stops the construct, then the page server. Gives the same promise on each call. */
   close(): Promise<void>
 }
 
@@ -102,9 +102,9 @@ export const startPixi = async (options: PixiStartOptions = {}): Promise<PixiSta
     close: () => {
       closing ??= (async () => {
         try {
-          await running.close()
-        } finally {
           await construct.close()
+        } finally {
+          await running.close()
         }
       })()
       return closing

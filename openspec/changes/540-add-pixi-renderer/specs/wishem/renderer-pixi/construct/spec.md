@@ -97,7 +97,7 @@ With the option `--paused`, the `time` subsystem SHALL start with `running` set 
 
 ### Requirement: The command stops the construct and the page server together
 
-On Ctrl+C or `SIGTERM`, the command SHALL stop the page server, stop the clock, stop the hub so that each open link gets the `stopping` event, release each port, and end with exit code 0. A second stop request SHALL do nothing.
+On Ctrl+C or `SIGTERM`, the command SHALL stop the clock, stop the hub so that each open link (also a link through the page server) gets the `stopping` event, stop the page server, release each port, and end with exit code 0. A second stop request SHALL do nothing.
 
 #### Scenario: Stop with an open link
 
