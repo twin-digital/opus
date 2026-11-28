@@ -157,8 +157,13 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 
 #### Scenario: The wishem command runs a construct with no page
 
-- **WHEN** the `start` script of `@thrashplay/wishem-workbench` runs the `wishem` command of `@thrashplay/wishem-host-nodejs`
-- **THEN** the container diagram shows the Wishem command process as a Node.js container, a relationship from the designer to it, and relationships from it to the model folder and to the product model folder with the label "Reads, watches, and writes [file system]"
+- **WHEN** the `start` script of `@thrashplay/wishem-workbench` runs the `wishem` command of `@thrashplay/wishem-command`
+- **THEN** the container diagram shows the Wishem command process as a Node.js container, a relationship from the designer to it, and relationships from it to the model folder and to the product model folder with the label "Reads, watches, and writes [file system]", and the row of the Wishem command process in the table names the package `command` (bin `wishem`)
+
+#### Scenario: The wishem command runs the product constructs
+
+- **WHEN** the `wishem` command runs with `--product`, and its construct manager starts each product construct in a product construct process
+- **THEN** the container diagram shows a relationship from the Wishem command process to the product construct process with the label "Starts, stops, and reaches the hub [child process, link over IPC]", and the row of the Wishem command process names the packages `construct-manager` and `host-nodejs`
 
 #### Scenario: The PixiJS process serves the PixiJS page
 

@@ -118,8 +118,8 @@ describe('the container diagram', () => {
     const lines = svg.match(/(?:Package|Example): [a-z-]+/g) ?? []
     expect(lines.sort()).toEqual([
       'Example: sample-product',
+      'Package: command',
       'Package: construct-manager',
-      'Package: host-nodejs',
       'Package: pixi-page',
       'Package: pixi-page',
       'Package: renderer-godot',
