@@ -59,16 +59,18 @@ gh project item-list 6 --owner twin-digital --limit 200 --format json \
 Lint, type checks, tests, and builds use much memory. They can stop the container.
 
 - At most five subagents run at one time. The owner set this limit on 2026-11-27, after the second retrospective.
-- At most one lint, type check, test, or build command runs at one time. A lock makes this sure. Each agent, and this includes the lead agent, runs each such command in this form:
+- At most two lint, type check, test, or build commands run at one time. The owner set this limit on 2026-11-28 (#686), after the memory of the container became 26 GiB. Two locks, one for each slot, make this sure. Each agent, and this includes the lead agent, runs each such command from the root of its worktree in this form:
 
   ```bash
-  flock -w 15 /tmp/wishem-heavy.lock timeout 140 <command>
+  node nodejs/wishem/docs/flow-scripts/heavy.mjs <command>
   ```
 
-  The command waits while a different agent holds the lock. The lock is the same file for each worktree. The system releases the lock when the command ends or its agent stops.
+  The script takes the lock of a free slot (`/tmp/wishem-heavy.lock` or `/tmp/wishem-heavy-2.lock`) and runs `timeout 140 <command>`. It holds one lock only, so two commands cannot block each other. The locks are the same files for each worktree. The system releases a lock when the command ends or its agent stops.
+
+- If the resource log (`~/.local/state/wishem/resources.csv`) shows memory above 80 % or CPU throttling above 20 % for ten minutes, the lead agent goes back to one slot and adds a note to **Process notes**.
 
 - The system moves a foreground command of a subagent to the background after approximately 180 seconds, and the subagent then loses the result. Thus each command, with its wait for the lock, ends in less than 150 seconds. Divide a longer job into parts, for example one package for each command.
-- `-w 15` stops the wait for the lock after 15 seconds, with exit code 1 and no run of the command. The agent then tries the same command again, at most 40 times.
+- The script stops the wait for a slot after 15 seconds, with exit code 1 and no run of the command. The agent then tries the same command again, at most 40 times.
 - A command that does not end holds the lock. `timeout 140` stops the command after 140 seconds, with exit code 124.
 - A subagent that gets exit code 124, or that does not get the lock in 40 tries, does not try again. It stops and reports the result, with the output of `lslocks`, which shows the process that holds the lock.
 - When a subagent reports such a result, the lead agent finds the process that holds the lock, stops it if it does not end, adds a note to **Process notes**, and starts the task again.
@@ -150,7 +152,7 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
 - Before the push, run `pnpm exec prettier --check` on the folder of the change, on the archive of the change, and on each file that the branch changed. A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
-- The folder [`flow-scripts`](flow-scripts/) holds three scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs` creates the issue of a break-test. Run each one with `node`, as one command.
+- The folder [`flow-scripts`](flow-scripts/) holds three scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs` creates the issue of a break-test. `heavy.mjs <command>` runs a heavy command in a slot (see "Limits on agents"). Run each one with `node`, as one command.
 
 ### The steps that a person does
 
