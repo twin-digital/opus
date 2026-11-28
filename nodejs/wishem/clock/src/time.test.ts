@@ -141,6 +141,11 @@ describe('createTime with a step length', () => {
     expect(part()).toMatchObject({ ticks: 2, stepMs: 50 })
   })
 
+  it('holds a step length of 1 or less than 1', () => {
+    expect(setup({ stepMs: 1 }).part().stepMs).toBe(1)
+    expect(setup({ stepMs: 0.5 }).part().stepMs).toBe(0.5)
+  })
+
   it('gives a part with no key stepMs when there is no option', () => {
     const { part } = setup()
     expect(Object.hasOwn(part(), 'stepMs')).toBe(false)

@@ -789,16 +789,24 @@ describe('attachConstructManager', () => {
       await eventually(() => timeOf(construct('play').hub).ticks === 5)
     })
 
-    it('sends nothing after a rewind of the workbench past a step back', async () => {
+    it('sends only the difference of the product after a rewind of the workbench past a step back', async () => {
       setup()
       await runPaused(4)
+      const original = colorOf(construct('play').hub)
       const before = hub.seq
+      await tester.submit(setColor('#b91c1c'))
+      await eventually(() => colorOf(construct('play').hub) === '#b91c1c')
       await back(1)
       const length = construct('play').hub.record().length
       await tester.submit(hubInputs.rewind(before))
-      await eventually(() => hub.seq > before + 1)
+      await eventually(() => construct('play').hub.record().length > length)
       await settle()
-      expect(construct('play').hub.record()).toHaveLength(length)
+      const types = construct('play')
+        .hub.record()
+        .slice(length)
+        .map((recorded) => recorded.type)
+      expect(types).toEqual(['store/set-field'])
+      expect(colorOf(construct('play').hub)).toBe(original)
     })
 
     it('removes the ticks after the target of a hub/rewind that constructs/send passes', async () => {
@@ -809,6 +817,57 @@ describe('attachConstructManager', () => {
       expect(timeOf(construct('play').hub).ticks).toBe(3)
       await back(1)
       expect(timeOf(construct('play').hub).ticks).toBe(2)
+    })
+
+    it('logs no error of the construct manager when the construct has no tick', async () => {
+      setup()
+      await start('play', false)
+      await back(1)
+      await settle()
+      expect(lines.filter((line) => line.includes('construct manager:'))).toEqual([])
+    })
+
+    it('sends no change when the product did not change after the last tick', async () => {
+      setup()
+      await start()
+      await tester.submit(setColor('#b91c1c'))
+      await eventually(() => colorOf(construct('play').hub) === '#b91c1c')
+      for (let i = 0; i < 3; i++) {
+        clock.fire(50)
+      }
+      await send({ type: 'time/set-running', payload: { running: false } })
+      const from = construct('play').hub.record().length
+      await back(1)
+      const types = construct('play')
+        .hub.record()
+        .slice(from)
+        .map((recorded) => recorded.type)
+      expect(types).toEqual(['hub/rewind', 'time/set-running'])
+    })
+
+    it('logs a change after the step back that the construct refuses', async () => {
+      setup()
+      await start()
+      await send({ type: 'store/remove-entity', payload: { entity: SAMPLE_ENTITY } })
+      for (let i = 0; i < 3; i++) {
+        clock.fire(50)
+      }
+      await send({ type: 'time/set-running', payload: { running: false } })
+      await tester.submit(setColor('#b91c1c'))
+      await eventually(() => entry('play')?.message !== undefined)
+      await back(1)
+      expect(lines).toContain(
+        `wishem: construct play: a change after the step back was refused: No entity has the ID "${SAMPLE_ENTITY}"`,
+      )
+    })
+
+    it('reports the error of a step back that throws', async () => {
+      setup({ behaviors: [exploding] })
+      await runPaused(3)
+      fault.armed = true
+      await back(1)
+      fault.armed = false
+      expect(entry('play')?.lastSend?.result).toEqual({ ok: false, reason: 'error', message: 'boom' })
     })
 
     it('applies the rewind, the changes, and the pause with no tick between them', async () => {
