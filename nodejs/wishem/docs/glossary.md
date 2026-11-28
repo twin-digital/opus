@@ -58,7 +58,7 @@ Terms in each group are in alphabetical order.
 
 **Event** (**Proposed**): Something that happens in a construct at one point in its time. A behavior can respond to an event. A construct can make a bookmark at an event. An event is not a hub event.
 
-**Field**: One declared value in a component. A field has one of four types: `string`, `number`, `boolean`, or `reference`.
+**Field**: One declared value in a component. A field has one of five types: `string`, `number`, `boolean`, `reference`, or `reference-list`.
 
 **ID** (**Agreed** for a component type, a field, and an entity): The name of a registered thing that code and links use. It does not change. It has a prefix for the kind of thing, an underscore, and a UUID in lowercase. Prefixes: `ct_` for a component type, `fld_` for a field, `e_` for an entity.
 
@@ -74,7 +74,7 @@ Terms in each group are in alphabetical order.
 
 **Registry**: The part that reports the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state. The registry is not a job of the hub. The store holds it (**Proposed**).
 
-**Relation**: A declared field of the type `reference`. Its value is the ID of an entity of the same model. Examples: a room contains an entity, and a held item is attached to the hero.
+**Relation**: A declared field of the type `reference` or `reference-list`. The value of a `reference` is the ID of one entity of the same model. The value of a `reference-list` is a list of such IDs, with no ID two times. Examples: a room contains an entity, and a held item is attached to the hero.
 
 **State**: The authored state and the live state together.
 

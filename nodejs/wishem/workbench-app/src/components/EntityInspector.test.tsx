@@ -129,7 +129,7 @@ describe('EntityInspector', () => {
     await act(async () => {
       await Promise.resolve()
     })
-    expect(onChange).toHaveBeenCalledExactlyOnceWith(COUNTER_TYPE, COUNT_FIELD, 5)
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(COUNTER_TYPE, COUNT_FIELD, { operation: 'set-field', value: 5 })
   })
 
   it('disables the controls with no onChange', () => {
@@ -153,6 +153,80 @@ describe('EntityInspector', () => {
   it('disables Clear with no onClear', () => {
     draw()
     expect(container.querySelector('button[aria-label="Clear count"]')?.getAttribute('aria-disabled')).toBe('true')
+  })
+
+  describe('a reference-list field', () => {
+    const deck: ComponentTypeDefinition = {
+      id: 'ct_deck',
+      label: 'Deck',
+      fields: [
+        { id: 'fld_cards', label: 'Cards', type: 'reference-list' },
+        { id: 'fld_name', label: 'name', type: 'string' },
+      ],
+    }
+    const options = [
+      { id: 'e_1', text: 'Deck · e_1' },
+      { id: 'e_2', text: 'Card · e_2' },
+      { id: 'e_3', text: 'Card · e_3' },
+    ]
+    const drawDeck = (onChange: EntityInspectorProps['onChange']) => {
+      draw({
+        entity: {
+          id: 'e_1',
+          name: 'Deck',
+          components: [{ definition: deck, values: { fld_cards: ['e_2'], fld_name: 'x' } }],
+        },
+        options,
+        onChange,
+      })
+    }
+    const press = async (selector: string) => {
+      act(() => {
+        container.querySelector<HTMLButtonElement>(selector)?.click()
+      })
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
+
+    it('passes add-reference with the component type, the field, and the reference', async () => {
+      const onChange = vi.fn(() => Promise.resolve({ saved: true as const }))
+      drawDeck(onChange)
+      await press('[role="group"] button:not([aria-label])')
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('ct_deck', 'fld_cards', {
+        operation: 'add-reference',
+        reference: 'e_1',
+      })
+    })
+
+    it('passes remove-reference with the component type, the field, and the reference', async () => {
+      const onChange = vi.fn(() => Promise.resolve({ saved: true as const }))
+      drawDeck(onChange)
+      await press('button[aria-label="Remove Card · e_2"]')
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('ct_deck', 'fld_cards', {
+        operation: 'remove-reference',
+        reference: 'e_2',
+      })
+    })
+
+    it('still passes set-field for the other rows', async () => {
+      const onChange = vi.fn(() => Promise.resolve({ saved: true as const }))
+      drawDeck(onChange)
+      const input = text('name')
+      expect(input).toBeDefined()
+      if (input) {
+        type(input, 'y')
+      }
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('ct_deck', 'fld_name', { operation: 'set-field', value: 'y' })
+    })
+
+    it('disables the list control with no onChange', () => {
+      drawDeck(undefined)
+      expect(container.querySelector('select')?.disabled).toBe(true)
+    })
   })
 
   it('shows the zero state with no entity', () => {

@@ -181,7 +181,10 @@ The file `src/outcome-text.ts` makes the text of the reason:
 With the part `product` in the joined state of the link, the page shows the product panel below the pictures of the views. Without that part, the page shows the zero state. `ProductTool` in `src/tools/` reads the part with `usePart` and gives it to `ProductPanel` of the catalog. The tool is not a view. The `Renderer` still reads only the part `store`.
 
 - The list shows each entity with its name and the first 10 characters of its ID. Select an entity to see its inspector. The selection is state of the page. A reload clears it.
-- The inspector shows one group for each component of the entity, and one row for each field. A text field changes a `string` or a `number`. A check box changes a `boolean`. A select changes a `reference`.
+- The inspector shows one group for each component of the entity, and one row for each field. A text field changes a `string` or a `number`. A check box changes a `boolean`. A select changes a `reference`. A list control changes a `reference-list`.
+- The list control of a `reference-list` field shows one item for each ID, in order, with the name and the short ID of the entity and the button `Remove` (accessible name `Remove <name> · <short ID>`). Below the items are a select of the entities that the list does not hold (accessible name `Add to <label>`) and the button `Add`. The select includes the entity of the row. An empty list shows `empty list`. A field with no value shows `no value`, and `Add` sets the list. When the list holds each entity, the select and `Add` are disabled.
+- `Add` sends one `product/add-reference` input, and `Remove` sends one `product/remove-reference` input. The payload has the keys `entity`, `componentType`, `field`, and `reference`. The other rows send `product/set-field`. Each change of a list is one step in the record, and a rewind undoes it.
+- After an accepted `Remove`, the focus goes to the button `Remove` of the next item, then of the previous item, then to the select. After an accepted `Add`, the focus stays on `Add`. When the list then holds each entity, the focus goes to the last button `Remove`. After a rejection, the focus stays on the control that the designer used.
 - Enter or a move of the focus commits a text field. Escape restores the value of the part. A text that is not a number gives the alert `Type a number.` and sends no input.
 - A commit sends one `product/set-field` input through the input port of the page. The record of the hub holds the source `page-<hex>-input`. The storage subsystem of the product writes the `state.json` of the product folder.
 - Each row has the button `Clear`. Its accessible name is `Clear <field>`. A press sends one `product/clear-field` input through the input port, and the field has no value. The row then shows `no value` (a reference shows the option `No value`).
@@ -230,11 +233,12 @@ When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the scrip
 
 ## Browser tests of the workbench page
 
-`playwright.config.ts` has three projects:
+`playwright.config.ts` has five projects:
 
 - `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
 - `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
 - `product` runs `tests/product.spec.ts`. The browser opens the page of the workbench with the sample product at `127.0.0.1:4184`.
+- `list` runs `tests/product-list.spec.ts`. The browser opens the page of the workbench with the fixture product `tests/fixtures/list-product/` (a deck of cards) at `127.0.0.1:4188` (`scripts/e2e-server.ts --list`, with the folders `.e2e-list-model/` and `.e2e-list-product/`). Each test restores the `state.json` of the fixture first.
 - `run` runs `tests/run.guide.spec.ts`. The browser opens the page of the workbench with the sample product, its code, and its views at `127.0.0.1:4186` (`scripts/e2e-server.ts --run`, with the folders `.e2e-run-model/`, `.e2e-run-product/`, and `.e2e-run-views/`; the last holds the view files of the sample product with no test file, and ESLint ignores each `.e2e-*` folder). The tests run, pause, step, and step back `play`.
 
 The `webServer` option of the config runs `scripts/e2e-server.ts` (and `scripts/e2e-server.ts --product`) on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, hub port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
@@ -287,10 +291,10 @@ A component uses roles only. A role gives the purpose of a color, for example `b
 
 - `AppBar` (`title`, `onRename`, `initial`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis. With `onRename`, the title is a button. `initial` sets the first state of the edit, for the style guide and the tests.
 - `ZeroState` (`label`, `message`): a mono label and one line of text in the center of the space that it gets. Both texts use `fg-muted`.
-- `FieldRow` (`field`, `value`, `options`, `onChange`, `initial`): one field of a component, with a control for its type (text, number, check box, or reference select). It sends the value with `onChange` and shows the phase: saved, saving, or not saved with a reason. `initial` sets the first phase, for the style guide and the tests.
+- `FieldRow` (`field`, `value`, `options`, `onChange`, `onListChange`, `onClear`, `initial`): one field of a component, with a control for its type (text, number, check box, reference select, or reference list). It sends the value with `onChange`, or a change of a list with `onListChange`, and shows the phase: saved, saving, or not saved with a reason. `initial` sets the first phase, for the style guide and the tests.
 - `EntityList` (`items`, `selected`, `onSelect`): the list of entities. Each item shows a name and a short ID. The selected item has a bar at the start edge.
-- `EntityInspector` (`entity`, `options`, `onChange`): the full ID and the components of one entity, each with a `FieldRow` for each field. With no `entity`, it shows "Select an entity to change it."
-- `ProductPanel` (`model`, `selected`, `onSelect`, `onChange`): the list and the inspector of the entities of a model. It makes the names and the options from the model, and it sends a `SetFieldPayload` with `onChange`.
+- `EntityInspector` (`entity`, `options`, `onChange`, `onClear`): `onChange` gets the component type, the field, and a `FieldChange` (`set-field`, `add-reference`, or `remove-reference`). It shows the full ID and the components of one entity, each with a `FieldRow` for each field. With no `entity`, it shows "Select an entity to change it."
+- `ProductPanel` (`model`, `selected`, `onSelect`, `onChange`, `onClear`): the list and the inspector of the entities of a model. It makes the names and the options from the model, and it sends a `ProductChange` with `onChange`: the operation `set-field` with a `SetFieldPayload`, or `add-reference` or `remove-reference` with a `ReferencePayload`. `onClear` sends a `ClearFieldPayload`. `ProductTool` sends `product/<operation>`.
 
 A new component goes in the Components section of the style guide, in each of its states, in the same change. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.
 

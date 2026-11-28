@@ -26,6 +26,13 @@ const options: ReferenceOption[] = [
   { id: 'e_99969ed3', text: 'Color, Counter · e_99969ed3' },
   { id: 'e_5f0c1d2e', text: 'Switch · e_5f0c1d2e' },
 ]
+const cardOptions: ReferenceOption[] = [
+  { id: 'e_1f2a3b4c', text: 'Deck · e_1f2a3b4c' },
+  { id: 'e_2a3b4c5d', text: 'Card · e_2a3b4c5d' },
+  { id: 'e_3b4c5d6e', text: 'Card · e_3b4c5d6e' },
+  { id: 'e_4c5d6e7f', text: 'Card · e_4c5d6e7f' },
+]
+const cards = ['e_2a3b4c5d', 'e_3b4c5d6e']
 const keep = (): Promise<ChangeOutcome> => Promise.resolve({ saved: true })
 
 const SWITCH_TYPE = 'ct_3c1b7a52-0d4e-4f6a-9b8c-5e2d1f0a9c77'
@@ -191,6 +198,47 @@ export const Components = () => (
     </Specimen>
     <Specimen label='Field row, disabled'>
       <FieldRow field={field('count', 'number')} value={0} />
+    </Specimen>
+    <Specimen label='Field row, reference list'>
+      <FieldRow
+        field={{ id: 'f_cards', label: 'Cards', type: 'reference-list' }}
+        value={cards}
+        options={cardOptions}
+        onListChange={keep}
+        onClear={keep}
+      />
+    </Specimen>
+    <Specimen label='Field row, reference list, empty'>
+      <FieldRow
+        field={{ id: 'f_cards', label: 'Cards', type: 'reference-list' }}
+        value={[]}
+        options={cardOptions}
+        onListChange={keep}
+        onClear={keep}
+      />
+    </Specimen>
+    <Specimen label='Field row, reference list, saving'>
+      <FieldRow
+        field={{ id: 'f_cards', label: 'Cards', type: 'reference-list' }}
+        value={cards}
+        options={cardOptions}
+        onListChange={keep}
+        onClear={keep}
+        initial={{ state: 'saving' }}
+      />
+    </Specimen>
+    <Specimen label='Field row, reference list, not saved'>
+      <FieldRow
+        field={{ id: 'f_cards', label: 'Cards', type: 'reference-list' }}
+        value={cards}
+        options={cardOptions}
+        onListChange={keep}
+        onClear={keep}
+        initial={{ state: 'not-saved', reason: 'The workbench does not run. Start it, and try again.' }}
+      />
+    </Specimen>
+    <Specimen label='Field row, reference list, disabled'>
+      <FieldRow field={{ id: 'f_cards', label: 'Cards', type: 'reference-list' }} value={cards} options={cardOptions} />
     </Specimen>
     <Specimen label='Inspector, nothing selected'>
       <EntityInspector options={options} />

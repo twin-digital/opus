@@ -73,6 +73,13 @@ func test_props_gives_one_prop_for_each_field() -> void:
 	assert_equal(Views.props(_definition(["Max health", "title"]), component), {"maxHealth": "10", "title": "x"})
 
 
+func test_props_gives_an_array_of_the_ids_for_a_reference_list() -> void:
+	var definition := {"id": CT1, "label": "Deck", "fields": [{"id": "fld_cards", "label": "Cards", "type": "reference-list"}]}
+	assert_equal(Views.props(definition, {"fld_cards": ["e_goat", "e_owl"]}), {"cards": ["e_goat", "e_owl"]})
+	assert_equal(Views.props(definition, {"fld_cards": []}), {"cards": []})
+	assert_true(Views.props(definition, {"fld_cards": []})["cards"] is Array, "an Array")
+
+
 func test_props_gives_no_prop_for_a_field_with_no_value() -> void:
 	var props := Views.props(_definition(["Max health", "title"]), {"fld_1": "x"})
 	assert_equal(props, {"title": "x"})

@@ -73,7 +73,7 @@ This is the path of a tick from the clock in the sample construct process to the
 This is the path of a tick from the clock in the sample construct process to the picture in the PixiJS page.
 
 1. The clock sends `time/advance` of 500 milliseconds to the hub, through its input subsystem `clock`.
-2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the `Color` field to the color at the position `ticks` modulo 4.
+2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the field `color` to the color at the position `ticks` modulo 4.
 3. The hub sends the `applied` message with the new parts on each open link. The Vite development server of the PixiJS process passes the WebSocket to the PixiJS page.
 4. The remote port of the PixiJS page tells its subscribers about the `applied` event.
 5. `startRenderer` reads the part `store`, calls `update` of the `ClearColor` view, and the view sets the tint of its sprite.
@@ -97,7 +97,7 @@ This is the path of a tick from the clock in the sample construct process to the
 This is the path of a tick from the clock in the sample construct process to the screenshot.
 
 1. The clock sends `time/advance` of 500 milliseconds to the hub, through its input subsystem `clock`.
-2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the `Color` field to the color at the position `ticks` modulo 4.
+2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the field `color` to the color at the position `ticks` modulo 4.
 3. The hub sends the `applied` message with the new parts on the open link. `serveHub` sends it over the connection that the Godot runner carries.
 4. The remote port in GDScript of the Godot application tells its subscribers about the `applied` event.
 5. The Godot renderer reads the part `store`, calls `update` of the `ClearColor` view, and the view sets the color of its `ColorRect`.
@@ -154,18 +154,18 @@ The `Page` shows the run area when the output port reads a part `constructs`. Th
 
 The stage opens its own link at `/constructs/play/link` (`useStageLink`) while `play` runs. The link has one output subsystem. The stage reads the part `store` of that link and draws it with `Renderer` and the views of the product. It gives the views no input port. `StageFrame` of the catalog frames the picture. `loadProductViews` in `src/tools/product-views.ts` fetches `/@wishem/product-views.json`, imports each file in the list, and collects the views. `src/main.tsx` calls it once and gives the result to the `Page`.
 
-| Element              | Type                          | Responsibility                                                                                                                                                                                                                                    |
-| -------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client of the hub    | Component: `connectHub`       | `connectHub()` in `src/hub-client.ts`. It opens the link at `/link` with an output subsystem and an input subsystem, and gives the two ports of each link to the page.                                                                            |
-| Renderer             | Component: `renderer-react`   | `Renderer` in `renderer-react`. It reads the part `store` of the output port, and it sends the inputs of the views through the input port. It gives each view one prop for each field of the definition, and mounts the view in a marked element. |
-| Table of views       | Component: `renderer-react`   | `collectViews` in `renderer-react`. It pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view.                                                                                         |
-| Sidecars             | Component: JSON files         | `src/views/*.view.json`. Each one holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.                                                                                              |
-| Views                | Component: React              | `src/views/*.tsx`. Each view has a React component as its default export. The file states no ID.                                                                                                                                                  |
-| Product panel        | Component: React              | `ProductTool` in `src/tools/`. It reads the part `product` from the output port, and it sends `product/set-field` and `product/clear-field` through the input port. It draws `ProductPanel` of the catalog.                                       |
-| Run controls         | Component: React              | `RunTool` and `runState` in `src/tools/`. They read the part `constructs` from the output port, and they send the controls of `play` through the input port. They read the part `time` of the stage, and they draw `RunBar` of the catalog.       |
-| Stage                | Component: `renderer-react`   | `useStageLink` in `src/tools/` opens the link to `play`. The stage draws its part `store` with `Renderer` and the views of the product, and it draws `StageFrame` of the catalog.                                                                 |
-| Views of the product | Component: dynamic `import()` | `loadProductViews` in `src/tools/product-views.ts`. It loads the sidecars and the view files that the list `/@wishem/product-views.json` names, for example `views/react/` of `sample-product`.                                                   |
-| Catalog              | Component: React              | `src/components/`. It holds the components of the workbench, such as `AppBar`, `ZeroState`, the parts of the product panel, `Button`, `RunBar`, and `StageFrame`.                                                                                 |
+| Element              | Type                          | Responsibility                                                                                                                                                                                                                                                    |
+| -------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client of the hub    | Component: `connectHub`       | `connectHub()` in `src/hub-client.ts`. It opens the link at `/link` with an output subsystem and an input subsystem, and gives the two ports of each link to the page.                                                                                            |
+| Renderer             | Component: `renderer-react`   | `Renderer` in `renderer-react`. It reads the part `store` of the output port, and it sends the inputs of the views through the input port. It gives each view one prop for each field of the definition, and mounts the view in a marked element.                 |
+| Table of views       | Component: `renderer-react`   | `collectViews` in `renderer-react`. It pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view.                                                                                                         |
+| Sidecars             | Component: JSON files         | `src/views/*.view.json`. Each one holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.                                                                                                              |
+| Views                | Component: React              | `src/views/*.tsx`. Each view has a React component as its default export. The file states no ID.                                                                                                                                                                  |
+| Product panel        | Component: React              | `ProductTool` in `src/tools/`. It reads the part `product` from the output port, and it sends `product/set-field`, `product/clear-field`, `product/add-reference`, and `product/remove-reference` through the input port. It draws `ProductPanel` of the catalog. |
+| Run controls         | Component: React              | `RunTool` and `runState` in `src/tools/`. They read the part `constructs` from the output port, and they send the controls of `play` through the input port. They read the part `time` of the stage, and they draw `RunBar` of the catalog.                       |
+| Stage                | Component: `renderer-react`   | `useStageLink` in `src/tools/` opens the link to `play`. The stage draws its part `store` with `Renderer` and the views of the product, and it draws `StageFrame` of the catalog.                                                                                 |
+| Views of the product | Component: dynamic `import()` | `loadProductViews` in `src/tools/product-views.ts`. It loads the sidecars and the view files that the list `/@wishem/product-views.json` names, for example `views/react/` of `sample-product`.                                                                   |
+| Catalog              | Component: React              | `src/components/`. It holds the components of the workbench, such as `AppBar`, `ZeroState`, the parts of the product panel, `Button`, `RunBar`, and `StageFrame`.                                                                                                 |
 
 The React renderer is the package `renderer-react`. It holds `Renderer`, `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, and the generator. The page keeps `connectHub`, the views, and the sidecars.
 
@@ -237,7 +237,7 @@ node nodejs/wishem/docs/architecture/render.mjs --check
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="entities-model-folder-dark.svg">
-  <img alt="Entity diagram of the model folder. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference refers to zero or one entity." src="entities-model-folder-light.svg">
+  <img alt="Entity diagram of the model folder. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference-list refers to zero or more entities." src="entities-model-folder-light.svg">
 </picture>
 
 The diagram applies to each model folder: the model folder of the workbench and the product model folder have the same entities. The sidecars are source files of `workbench-app`, so the diagram shows no entity for them.
@@ -249,9 +249,9 @@ The keys of a `FieldDefinition`, a `Component`, and a `FieldValue` include the I
 The diagram does not show these fields:
 
 - `ComponentTypeDefinition` has a `label` and a list of `fields`.
-- `FieldDefinition` has a `label` and a `type`. The `type` is `string`, `number`, `boolean`, or `reference`.
+- `FieldDefinition` has a `label` and a `type`. The `type` is `string`, `number`, `boolean`, `reference`, or `reference-list`.
 
-The model has these rules, and the diagram does not show them. The field of a `FieldValue` must be a field of the component type of its `Component`. A value agrees with the type of its field: a string, a finite number, a boolean, or, for a `reference`, the ID of an entity of the model. The entity can be the entity of the value. The line "Refers to" shows this rule: a `FieldValue` of the type `reference` names zero or one `Entity`, and an `Entity` can be named by zero or more `FieldValue` records. An entity has at most one component of each component type. A component can have no value for a field.
+The model has these rules, and the diagram does not show them. The field of a `FieldValue` must be a field of the component type of its `Component`. A value agrees with the type of its field: a string, a finite number, a boolean, the ID of an entity of the model for a `reference`, or a list of IDs of entities of the model for a `reference-list`, with no ID two times. The entity can be the entity of the value. The line "Refers to" shows this rule: a `FieldValue` of the type `reference` or `reference-list` names zero or more `Entity` records, and an `Entity` can be named by zero or more `FieldValue` records. An entity has at most one component of each component type. A component can have no value for a field.
 
 | Entity                    | Purpose                                                                  | Schema                                                                    |
 | ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
@@ -267,19 +267,27 @@ The files of the model folder are `definitions/*.json` for the component types a
 
 - [`wishem/architecture/diagrams`](../../../../openspec/specs/wishem/architecture/diagrams/spec.md): the diagrams of this document.
 - [`wishem/renderer-html/views`](../../../../openspec/specs/wishem/renderer-html/views/spec.md): the view files, the sidecars, and the table of views.
+- [`wishem/renderer-html/view-types`](../../../../openspec/specs/wishem/renderer-html/view-types/spec.md): the generated types of the props of a React view.
 - [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the hub, and the marked element.
+- [`wishem/renderer-html/renderer`](../../../../openspec/specs/wishem/renderer-html/renderer/spec.md): the React renderer package and what it draws from a port.
+- [`wishem/renderer-html/react-page`](../../../../openspec/specs/wishem/renderer-html/react-page/spec.md): the React page and its page server.
 - [`wishem/renderer-pixi/renderer`](../../../../openspec/specs/wishem/renderer-pixi/renderer/spec.md): the PixiJS renderer package and the PixiJS view.
-- [`wishem/renderer-pixi/construct`](../../../../openspec/specs/wishem/renderer-pixi/construct/spec.md): the `start` script of the PixiJS page.
 - [`wishem/renderer-pixi/page`](../../../../openspec/specs/wishem/renderer-pixi/page/spec.md): the PixiJS page, its keys, and its status line.
 - [`wishem/renderer-godot/remote-port`](../../../../openspec/specs/wishem/renderer-godot/remote-port/spec.md): the remote port in GDScript.
 - [`wishem/renderer-godot/renderer`](../../../../openspec/specs/wishem/renderer-godot/renderer/spec.md): the Godot renderer and the Godot view.
 - [`wishem/renderer-godot/application`](../../../../openspec/specs/wishem/renderer-godot/application/spec.md): the Godot application, the runner, and the screenshots.
+- [`wishem/renderers/sample-construct`](../../../../openspec/specs/wishem/renderers/sample-construct/spec.md): the sample construct and its command `construct`.
+- [`wishem/renderers/end-to-end-test`](../../../../openspec/specs/wishem/renderers/end-to-end-test/spec.md): the test of the three renderers on one hub.
 - [`wishem/workbench/start`](../../../../openspec/specs/wishem/workbench/start/spec.md): the `start` script of the workbench.
 - [`wishem/workbench/mount`](../../../../openspec/specs/wishem/workbench/mount/spec.md): the mount of a product in the workbench construct.
 - [`wishem/workbench/construct-list`](../../../../openspec/specs/wishem/workbench/construct-list/spec.md): the model subsystem `constructs` and its inputs.
 - [`wishem/workbench/construct-manager`](../../../../openspec/specs/wishem/workbench/construct-manager/spec.md): the construct manager and the product constructs.
-- [`wishem/sample-product/model`](../../../../openspec/specs/wishem/sample-product/model/spec.md): the model of the sample product and its count behavior.
+- [`wishem/sample-product/model`](../../../../openspec/specs/wishem/sample-product/model/spec.md): the model of the sample product, its count behavior, and its color behavior.
+- [`wishem/core/model`](../../../../openspec/specs/wishem/core/model/spec.md): the data of a model, its IDs, and the rules of a correct model.
 - [`wishem/core/store`](../../../../openspec/specs/wishem/core/store/spec.md): the store.
+- [`wishem/host-nodejs/cli`](../../../../openspec/specs/wishem/host-nodejs/cli/spec.md): the `wishem` command.
+- [`wishem/host-nodejs/model-folder`](../../../../openspec/specs/wishem/host-nodejs/model-folder/spec.md): the model folder, the storage subsystem, and `state.json`.
+- [`wishem/host-nodejs/server`](../../../../openspec/specs/wishem/host-nodejs/server/spec.md): the local server that carries the link as a WebSocket.
 - [`wishem/clock/time`](../../../../openspec/specs/wishem/clock/time/spec.md): the `time` subsystem and the clock.
 - [`wishem/update/update-subsystem`](../../../../openspec/specs/wishem/update/update-subsystem/spec.md): the update subsystem and the native behaviors.
 - [`wishem/hub/construct`](../../../../openspec/specs/wishem/hub/construct/spec.md): the hub, the ports, and the record.

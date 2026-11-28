@@ -35,7 +35,9 @@ export const productChanges = (before: Model, after: Model, storeId = 'store'): 
       const old = before.entities[index]?.components[componentType] ?? {}
       return [
         ...Object.entries(fields).flatMap(([field, value]) =>
-          old[field] === value ? [] : [inputs.setField({ entity: entity.id, componentType, field, value })],
+          Object.hasOwn(old, field) && isEqual(old[field], value) ?
+            []
+          : [inputs.setField({ entity: entity.id, componentType, field, value })],
         ),
         ...Object.keys(old)
           .filter((field) => !Object.hasOwn(fields, field))

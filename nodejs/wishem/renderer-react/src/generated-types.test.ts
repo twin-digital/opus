@@ -7,6 +7,7 @@ interface Values {
   readonly title: string
   readonly done: boolean
   readonly points: number
+  readonly steps: readonly string[]
 }
 
 interface Props extends Readonly<Partial<Values>> {
@@ -20,6 +21,11 @@ export const typeChecks = (props: Props) => {
   void props.wishem.setField('title', 'a')
   void props.wishem.setField('done', true)
   void props.wishem.setField('points', 3)
+
+  void props.wishem.setField('steps', ['e_00000000-0000-4000-8000-000000000000'])
+
+  // @ts-expect-error The field `steps` takes a list of IDs.
+  void props.wishem.setField('steps', 'e_00000000-0000-4000-8000-000000000000')
 
   // @ts-expect-error The field `done` takes a boolean.
   void props.wishem.setField('done', 'yes')

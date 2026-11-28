@@ -317,9 +317,10 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
       expect((await client.submit(hubInputs.rewind(written))).ok).toBe(true)
       await eventually(() => lines.some((line) => line.includes('are equal to the files in definitions again')))
 
-      const compared = vi
-        .mocked(isEqual)
-        .mock.calls.filter(([a]) => a.definitions.length === 0 && a.entities.length > 0)
+      const compared = vi.mocked(isEqual).mock.calls.filter(([a]) => {
+        const model = a as Model
+        return model.definitions.length === 0 && model.entities.length > 0
+      })
       expect(compared).toHaveLength(0)
     })
 
