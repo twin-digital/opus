@@ -317,7 +317,7 @@ Four changesets, one for each row with a bump. No breaking change: no existing i
 
 The selected option: A, a plain `Clear` button at the end of each row. Reason: one control for the four field types, the catalog `Button` with no new design token, and a disabled state that keeps the focus.
 
-A wide row (768 pixels or more) with a value, with no value, saving, and not cleared:
+A row 512 pixels wide or more with a value, with no value, saving, and not cleared:
 
 ```text
 |   count     NUMBER   [0                         ]  ( Clear )                         |
@@ -335,7 +335,7 @@ A row of each other type:
 |   target    REFERENCE [No value                v]  ( Clear )                         |  Clear disabled
 ```
 
-Narrow viewport (390 pixels): the label and the type above, the control and the button on one line.
+A row less than 512 pixels wide (for example, at a viewport of 390 pixels): the label and the type above, the control and the button on one line.
 
 ```text
 | count   NUMBER                     |
@@ -349,7 +349,7 @@ Narrow viewport (390 pixels): the label and the type above, the control and the 
 No design token is added. Each uses roles only.
 
 - **`Button`.** The optional `accessibleName` (`aria-label`). The look does not change, so the style guide gets no new specimen for it.
-- **`FieldRow`.** The plain `Button` `Clear` after the control, in the flex line of the control, before the mono labels `Saving` and `no value`. The text field and the select keep `w-full` and shrink (`min-w-0`), and the button does not shrink. The line of a rejection names the act: `The value is not saved.` or `The value is not cleared.`
+- **`FieldRow`.** The row layout follows the width of its container (`@container` and `@lg:`, which switch at 512 pixels), not the viewport. The plain `Button` `Clear` after the control, in the flex line of the control, before the mono labels `Saving` and `no value`. The text field and the select keep `w-full` and shrink (`min-w-0`), and the button does not shrink. The line of a rejection names the act: `The value is not saved.` or `The value is not cleared.`
 - **`EntityInspector`**, **`ProductPanel`.** They pass `onClear`. Their look changes only by the buttons of the rows.
 
 ### States in the style guide
@@ -520,7 +520,7 @@ Result: terminal 3 prints `applied #.. product/replace-model from product-files`
 $PAGE stop waitfor:Not
 ```
 
-Result: `run: Not running ...`.
+Result: `run: Stopped tick - - [run]`.
 
 ### 8. A reference, a refused removal, a clear, and a removal
 

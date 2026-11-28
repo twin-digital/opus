@@ -483,6 +483,7 @@ describe('attachConstructManager', () => {
       .hub.record()
       .filter((input) => input.type === 'store/clear-field')
     expect(clears).toHaveLength(2)
+    expect((clears[1].payload as { field: string }).field).toBe(COLOR_FIELD)
   })
 
   it('sends one replace-model for a change of a label', async () => {

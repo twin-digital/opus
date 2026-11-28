@@ -245,6 +245,7 @@ export const FieldRow = ({ field, value, options = [], onChange, onClear, initia
     )
   }
 
+  // The layout follows the width of this container (@lg: 512 px), not the viewport.
   return (
     <div className='@container'>
       <div className='grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 px-4 py-2 @lg:grid-cols-[8rem_5rem_minmax(0,1fr)]'>

@@ -192,10 +192,10 @@ test('step 6: a clear of the color while play is paused keeps the count and send
     const model = play.ports['guide-play'].read().store as {
       entities: { components: Record<string, Record<string, unknown>> }[]
     }
-    const fields = model.entities[0]?.components
-    expect(fields?.[COLOR_TYPE]).toEqual({})
-    expect(fields?.[COLOR_TYPE]).not.toHaveProperty(COLOR_FIELD)
-    expect(fields?.[COUNTER_TYPE]?.[COUNT_FIELD]).toBe(pausedCount)
+    const fields = model.entities[0].components
+    expect(fields[COLOR_TYPE]).toEqual({})
+    expect(fields[COLOR_TYPE]).not.toHaveProperty(COLOR_FIELD)
+    expect(fields[COUNTER_TYPE][COUNT_FIELD]).toBe(pausedCount)
     expect(applied.filter((recorded) => recorded.type === 'store/replace-model')).toHaveLength(0)
     expect(await tick()).toBe(pausedTick)
     expect(await count(stage)).toBe(pausedCount)

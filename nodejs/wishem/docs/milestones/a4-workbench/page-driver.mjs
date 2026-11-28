@@ -184,7 +184,10 @@ const formatState = (state) => {
   }
   const lines = [
     `entities: ${state.entities.map((entity) => `${entity.name} ${entity.shortId}${entity.selected ? ' [selected]' : ''}`).join('; ')}`,
-    ...state.rows.map((row) => `${row.group}.${row.field} = ${row.value}${row.saving ? ' [saving]' : ''}${row.empty ? ' [no value]' : ''}`),
+    ...state.rows.map(
+      (row) =>
+        `${row.group}.${row.field} = ${row.value}${row.saving ? ' [saving]' : ''}${row.empty ? ' [no value]' : ''}`,
+    ),
     ...state.alerts.map((alert) => `alert: ${alert}`),
   ]
   if (state.inspector !== undefined) {
