@@ -63,7 +63,8 @@ The owner decided on 2026-11-28 that the lead agent creates and manages the mile
 Lint, type checks, tests, and builds use much memory. They can stop the container.
 
 - The owner raised the target to ten subagents at one time on 2026-11-28. The lead agent raises the limit one step at a time, from six.
-- The limit goes up one step after at least five task reports at the current limit, when the resource log shows memory below 70 % and CPU throttling below 10 % in that period.
+- The limit goes up one step when the current step lasted at least 30 minutes or had at least three task reports of build-and-test work (an implementer, a break-test, or a final review that ran tests), and the resource log shows memory below 70 % and CPU throttling below 10 % in that period. The owner set this minimum on 2026-11-28.
+- The harness of Claude Code also limits the subagents (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`, six by default). Only the owner can change it. A step above that limit waits for the owner.
 - The limit goes back one step when memory is above 80 % or throttling is above 20 % for ten minutes.
 - The lead agent adds a note to **Process notes** at each step.
 - The lead agent starts the resource logger at the start of a session if it does not run: `node nodejs/wishem/docs/flow-scripts/resource-log.mjs`, in the background. The log `~/.local/state/wishem/resources.csv` gives the memory, the CPU, the throttling, and the slots in use of the container, once a minute.
@@ -76,7 +77,7 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
   The script takes the lock of a free slot (`/tmp/wishem-heavy.lock`, then `/tmp/wishem-heavy-2.lock` to `-4.lock`) and runs `timeout 140 <command>`. It holds one lock only, so two commands cannot block each other. The locks are the same files for each worktree. The system releases a lock when the command ends or its agent stops.
 
 - Each call of `heavy.mjs` adds one line to `~/.local/state/wishem/heavy-log.csv`: the slot (or `busy`), the wait before the run, the time of the run, and the exit code. `node nodejs/wishem/docs/flow-scripts/heavy-stats.mjs [<since>]` gives the share of busy calls, the median and the 90th percentile of the wait, and the use of each slot.
-- The lead agent adds one slot when, over at least 20 calls at the current number, the 90th percentile of the wait is more than 30 seconds or more than 20 % of the calls are busy, and the resource log shows memory below 70 % and CPU throttling below 10 %.
+- The lead agent adds one slot when the current number of slots lasted at least 30 minutes or had at least three task reports of build-and-test work, and, over at least 20 calls at the current number, the 90th percentile of the wait is more than 30 seconds or more than 20 % of the calls are busy, and the resource log shows memory below 70 % and CPU throttling below 10 %.
 - If the resource log (`~/.local/state/wishem/resources.csv`) shows memory above 80 % or CPU throttling above 20 % for ten minutes, the lead agent removes one slot.
 - The lead agent changes the number of slots or the limit of subagents, not both in one step, and adds a note to **Process notes** at each step. It also counts the task reports in each hour, to see if a step gives more work done or only more waits.
 
