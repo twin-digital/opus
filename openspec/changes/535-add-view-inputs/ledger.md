@@ -74,10 +74,22 @@ Task 4: fix round 1 dispatched (new implementer, sonnet), base 18b542a6, for S1.
 
 Task 4: fix round 1/5 (1 addressed, 0 open — S1; commits 18b542a..ad53b89; the test "gives the input port of the new link to the views" fails with input={undefined} and passes; workbench-app 255 tests). Re-review (sonnet): no new breakage.
 Task 4: complete (commits 1973b30..ad53b89, review clean)
+Task 5: dispatched (implementer: sonnet), base 4412cb79
+
+Task 5: implementer DONE, commit 93338fe9 (workbench-app 283 unit tests; lint, typecheck pass; no-raw-colors green; test:ui 60 of 60; only components-light.png and components-dark.png changed, and the implementer looked at both). Notes: Vite ws-proxy ECONNRESET lines in the log of the web server of test:ui (also before this task); the test "an edit to the view of the app bar" replaces a different JSX line; the check of an empty title uses trim(), but the text that is sent is not trimmed. Review dispatched (sonnet).
+
+Task 5: review (sonnet): spec compliant; needs fixes. Important A1: AppBar.tsx `void onRename(draft).then(...)` has no path for a rejection; a rejected or thrown onRename keeps the phase `saving` (the field is read-only for ever) and the rejection is unhandled. Items it could not verify, checked by the lead: components-dark.png (the lead looked: the three specimens agree with "UI" on the dark ground); the test:ui runs are in the report; the regex `page-<16 hex>-input` depends on the form of Task 4 (correct now).
+Ruling: the minor A2 (the check of an empty title uses trim(), but the compare and the sent text are not trimmed) goes into the fix round: the title that is sent is trimmed, and the compare uses the trimmed text — cost if wrong: spaces at the ends of a title are removed.
+Task 5: minor (deferred): a commit by blur that is accepted moves the focus back to the title button (the spec says so); a redundant `lowercase` class on the button; the unmount test cannot fail (React 18 emits no error for a setState after unmount).
+Task 5: fix round 1 dispatched (new implementer, sonnet), base 93338fe9.
+
+Task 5: fix round 1/5 (2 addressed, 0 open — A1, A2; commits 93338fe..b65c7b3; 287 tests; test:ui 60, no baseline changed). Re-review (sonnet): no new breakage.
+Task 5: minor (deferred): the catch of AppBar.tsx drops the thrown error with no log.
+Task 5: complete (commits 4412cb7..b65c7b3, review clean)
 
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 5 (the title of the app bar is a control). Then the final review.
+- NEXT STEP: the final review (opus), with the test guide and the check of the architecture document.
 
 ## For the review issue of the milestone A3
 
