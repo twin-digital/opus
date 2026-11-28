@@ -21,6 +21,5 @@ Interfaces: consumes the `ViewWarning`, `viewWarnings`, and `describeWarning` of
 ## Workflow follow-up
 
 - The final reviewer does the steps of "The test guide" in design.md.
-- If #542 merged before the final review, first do the step of design.md, "Order with other changes".
 - Archive the change with the sync of its specs.
 - After the merge, create the break-test issue for `renderer-pixi` (a library package: `pixi-page` has it in `dependencies`).

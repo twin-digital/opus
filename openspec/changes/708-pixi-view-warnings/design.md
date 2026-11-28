@@ -114,7 +114,7 @@ After Task 1, `kind` is `'component-type-not-defined' | 'empty-name'`, `fields` 
 | `@thrashplay/wishem-renderer-pixi` | private              | patch | The renderer warns about a sidecar whose component type has no definition (Task 1). |
 | `@thrashplay/wishem-renderer-pixi` | private              | patch | The renderer warns about two labels that give the same name (Task 2).               |
 
-Two changesets, one for each warning: `.changeset/708-renderer-pixi-type-not-defined.md` and `.changeset/708-renderer-pixi-same-name.md`. No other package changes. `@thrashplay/wishem-pixi-page` uses the renderer, but its sidecar names a defined component type and its definition has one field, so its behavior does not change.
+Two changesets, one for each warning: `.changeset/708-renderer-pixi-type-not-defined.md` and `.changeset/708-renderer-pixi-same-name.md`. No other package changes. `@thrashplay/wishem-pixi-page` uses the renderer, but its sidecar names the `Color` component type, and the definition of that type in the model folder of `sample-product` has one field. Its behavior thus does not change.
 
 ## Risks / Trade-offs
 
@@ -128,9 +128,7 @@ None. The package is private.
 
 ## Order with other changes
 
-- **#542 (three renderers end to end, PR #674, in the final review).** It changes `pixi-page` (it removes `src/construct/model.ts` and changes `src/views/ClearColor.view.json`), `renderer-godot`, `sample-product`, `construct-manager`, and the architecture document. It does not change `renderer-pixi` or the specification `wishem/renderer-pixi/renderer`. The code of the two changes does not overlap. Either order works.
-  - When this change merges first: #542 needs no extra step.
-  - When #542 merges before the final review of this change: the lead agent changes steps 2 and 5 of "The test guide" with `openspec-update-change`. The start is the two commands of #542 (`pnpm --filter @thrashplay/wishem-three-renderers construct`, then `pnpm --filter @thrashplay/wishem-pixi-page start`), and the hand edit of step 5 adds the field to the definition of the `Color` component type of the sample construct. Step 3 needs no change, because its `sed` command replaces each component type ID.
+- **#542 (three renderers end to end, PR #674, merged).** It merged into `main` before the final review of this change, and `main` is merged into the branch. It removed `pixi-page/src/construct/model.ts`: the PixiJS page connects to the sample construct of `three-renderers`, which reads the model folder of `sample-product`. It does not change `renderer-pixi` or the specification `wishem/renderer-pixi/renderer`. "The test guide" uses the commands of #542: step 2 starts the sample construct and the page, and the hand edit of step 5 adds a field to the definition of the `Color` component type in the model folder of `sample-product`. Step 3 edits the sidecar `ClearColor.view.json` of `pixi-page`.
 - **#539 (run controls, in apply).** It changes `clock`, `construct-manager`, `workbench-app`, `sample-product`, and the glossary and concepts. No overlap.
 - **#632 (the source of a model warning, finishing).** It changes `core`, `host-nodejs`, and `workbench-app`. No overlap.
 - **#650 (architecture diagrams, PR #687).** It rewrites `docs/architecture/README.md` and `render.mjs`, and adds `docs-check`. This change does not touch them and adds no package and no import. No order step.
@@ -142,7 +140,7 @@ No package, process, relationship, or import changes. `renderer-pixi` still impo
 
 ## The test guide
 
-The final reviewer does these steps on the branch with real processes, real files, and a real web browser, and reports the real result of each step. Run each command from the root of the worktree. Terminal 1 runs the page. Terminal 2 runs commands. The startup lines of step 2 are the lines of `main` (the README of `pixi-page`). Each `wishem:` warning line is the result after the change. On `main`, the page writes no `wishem:` warning in steps 3 to 5.
+The final reviewer does these steps on the branch with real processes, real files, and a real web browser, and reports the real result of each step. Run each command from the root of the worktree. Terminal 1 runs the sample construct (package `three-renderers`). Terminal 2 runs the page server of `pixi-page`. Terminal 3 runs the other commands. The startup lines of step 2 are the lines of `main` (the README of `pixi-page` and the README of `three-renderers`). Each `wishem:` warning line in the browser console is the result after the change. On `main`, the page writes no `wishem:` warning in steps 3 to 5.
 
 ### 0. Prepare
 
@@ -151,7 +149,7 @@ pnpm install
 node nodejs/wishem/docs/flow-scripts/heavy.mjs pnpm build --filter "@thrashplay/wishem-pixi-page..."
 ```
 
-Result: the build ends with each task successful.
+Result: the build ends with each task successful. Exit code 75 means that the computer is busy. Then run the command again.
 
 ### 1. The tests of the package
 
@@ -166,16 +164,26 @@ Result: each test passes. The output has the tests `gives one warning for a view
 Terminal 1:
 
 ```sh
+pnpm --filter @thrashplay/wishem-three-renderers construct
+```
+
+Result: `wishem: link at ws://127.0.0.1:4750/link`.
+
+Terminal 2:
+
+```sh
 pnpm --filter @thrashplay/wishem-pixi-page start
 ```
 
-Result: `wishem: link at ws://127.0.0.1:4748/link` and `wishem: PixiJS page at http://127.0.0.1:5174/`. Open `http://127.0.0.1:5174/` and the developer tools. Result: the canvas changes color two times each second, in the cycle blue, red, green, amber. The status line is `Connected (link 1). Space: pause or run. Period: one step.` The console has no line that starts with `wishem:`.
+Result: `wishem: PixiJS page at http://127.0.0.1:5174/` and `wishem: the page connects to ws://127.0.0.1:4750/link`.
 
-Press Ctrl+C in terminal 1.
+Open `http://127.0.0.1:5174/` and the developer tools. Result: the canvas changes color two times each second, in the cycle blue, red, green, amber. The status line is `Connected (link 1). Space: pause or run. Period: one step.` The console has no line that starts with `wishem:`.
+
+Keep terminal 1 and terminal 2 running. This step changes no file.
 
 ### 3. A hand edit of the sidecar names a component type that is not defined
 
-Terminal 2:
+Press Ctrl+C in terminal 2. Terminal 3:
 
 ```sh
 sed -i 's/"componentType": "[^"]*"/"componentType": "ct_00000000-0000-4000-8000-000000000001"/' nodejs/wishem/pixi-page/src/views/ClearColor.view.json
@@ -184,12 +192,14 @@ git diff --stat
 
 Result: `git diff --stat` shows one file, `nodejs/wishem/pixi-page/src/views/ClearColor.view.json`, with one line changed.
 
-Terminal 1: run the command of step 2 again. Reload the page.
+Terminal 2: run the command of step 2 again. Reload the page.
 
 Result:
 
 - The console has exactly one line that starts with `wishem:`: `wishem: the sidecar ClearColor.view.json names the component type ct_00000000-0000-4000-8000-000000000001, which no definition has. No view is drawn for it.`
 - The canvas has the black background of PixiJS and does not change color. The status line is `Connected (link 1). Space: pause or run. Period: one step.`
+
+Keep the hand edit for step 4. Step 4 removes it.
 
 ### 4. Inputs do not repeat the warning
 
@@ -197,45 +207,58 @@ Click the page. Press Space. Then press Period two times.
 
 Result: the console gets no new line that starts with `wishem:`.
 
-### 5. A hand edit gives two labels with the same name
-
-Press Ctrl+C in terminal 1. Terminal 2:
+Remove the hand edit of step 3. Press Ctrl+C in terminal 2. Terminal 3:
 
 ```sh
-git checkout nodejs/wishem/pixi-page/src/views/ClearColor.view.json
-sed -i "s/fields: \[{ id: COLOR_FIELD, label: 'Color', type: 'string' }\]/fields: [{ id: COLOR_FIELD, label: 'Color', type: 'string' }, { id: 'fld_5d6e7f80-9a1b-4c2d-8e3f-4a5b6c7d8e9f', label: 'color', type: 'string' }]/" nodejs/wishem/pixi-page/src/construct/model.ts
-git diff --stat
-```
-
-Result: `git diff --stat` shows one file, `nodejs/wishem/pixi-page/src/construct/model.ts`, with one line changed.
-
-Terminal 1: run the command of step 2 again. Reload the page.
-
-Result:
-
-- The console has exactly one line that starts with `wishem:`: `wishem: the sidecar ClearColor.view.json: the fields fld_590c5266-eb3d-4022-bb6c-7856b920c4e1 and fld_5d6e7f80-9a1b-4c2d-8e3f-4a5b6c7d8e9f of the component type ct_768a9edd-1db9-4a37-9190-9ea4af8aeebe give the same name "color". The prop has the value of the first field.`
-- The canvas changes color two times each second, in the cycle of step 2. Press Space, then Period two times: the color stops, and then changes one time at each Period. The console gets no new line that starts with `wishem:`.
-
-### 6. Remove the hand edit
-
-Press Ctrl+C in terminal 1. Terminal 2:
-
-```sh
-git checkout nodejs/wishem/pixi-page/src/construct/model.ts
+git checkout -- nodejs/wishem/pixi-page/src/views/ClearColor.view.json
 git status --short
 ```
 
 Result: `git status --short` prints nothing.
+
+### 5. A hand edit of the model folder gives two labels with the same name
+
+Press Ctrl+C in terminal 1. The sample construct reads its model folder only when it starts. Terminal 3:
+
+```sh
+sed -i 's/"type": "string" }\]/"type": "string" }, { "id": "fld_5d6e7f80-9a1b-4c2d-8e3f-4a5b6c7d8e9f", "label": "Color", "type": "string" }]/' nodejs/wishem/sample-product/model/definitions/ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512.json
+git diff --stat
+```
+
+Result: `git diff --stat` shows one file, `nodejs/wishem/sample-product/model/definitions/ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512.json`, with one line changed. The definition of the `Color` component type has the fields `color` and `Color`.
+
+Terminal 1: run the command of step 2 again. Result: `wishem: link at ws://127.0.0.1:4750/link`. Terminal 2: run the command of step 2 again. Reload the page.
+
+Result:
+
+- The console has exactly one line that starts with `wishem:`: `wishem: the sidecar ClearColor.view.json: the fields fld_694d6cb2-97e8-444e-961e-aa76744837fb and fld_5d6e7f80-9a1b-4c2d-8e3f-4a5b6c7d8e9f of the component type ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512 give the same name "color". The prop has the value of the first field.`
+- The canvas changes color two times each second, in the cycle of step 2. The status line is `Connected (link 1). Space: pause or run. Period: one step.` Press Space, then Period two times: the color stops, and then changes one time at each Period. The console gets no new line that starts with `wishem:`.
+
+Remove the hand edit. Press Ctrl+C in terminal 2 and in terminal 1. Terminal 3:
+
+```sh
+git checkout -- nodejs/wishem/sample-product/model/definitions/ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512.json
+```
+
+### 6. The end state
+
+Terminal 3:
+
+```sh
+git status --short
+```
+
+Result: `git status --short` prints nothing. Terminal 1 and terminal 2 show a shell prompt.
 
 ### The automated tests of the steps
 
 A program can do steps 2 to 5 without a web browser: a hub with the store serves a link, the renderer reads its remote port, and the table of views comes from `collectViews` with the modules of a sidecar file and of a view file. These tests are in `renderer-pixi`, in the describe block `startRenderer: warnings through a link` of `src/renderer.test.ts`:
 
 - Steps 3 and 4: Task 1, step 1.1.
-- Step 5: Task 2, step 2.1.
+- Step 5: Task 2, step 2.1. The test gives the labels `Color` and then `color`. Step 5 gives `color` and then `Color`. The two give one name, `color`, and the first field gives the prop.
 - Step 2 (no warning for a model with no problem) is the current test `does not warn for a model with no field with an empty name`.
 
-A Playwright test of `pixi-page` is not added. It would need a hand edit of the files of `pixi-page`, which #542 changes, and the page adds no code to the path of the warnings.
+A Playwright test of `pixi-page` is not added. It would need a hand edit of the sidecar of `pixi-page` and of the model folder of `sample-product`, and the page adds no code to the path of the warnings.
 
 ## Follow-up
 
