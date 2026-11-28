@@ -165,7 +165,7 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Before each push, run `node nodejs/wishem/docs/flow-scripts/finish-check.mjs` from the root of the worktree. Push only when it prints no FAIL line.
 - A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
-- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. The step "merge, or update the branch and wait for the checks" holds the lock file `/tmp/wishem-merge.lock` (`flock`), so that one pull request at a time is in that step. The wait for the first checks is outside the lock. Reason: each merge moves `main`, the other runs then update their branch and lose their round; three runs lost four rounds each on 2026-11-28. Its last line is `<number> merged=<true|false>`. The exit code is 0 when the pull request is merged and 1 when it is not merged. The lead agent does the steps after the merge (the worktree, the board, the break-test issue) only after exit code 0. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> --pr <pull request number> <file>...` creates the one break-test issue of a change. The script reads the merge commit of the merged pull request itself, builds the range `<sha>~1..<sha>`, and refuses a pull request that is not merged. Reason: on 2026-11-28 the lead agent three times sent the read of a merge commit and its use in one batch and used a guessed commit, and two break-test issues got a wrong range. The form `<change issue> <milestone> <range> <file>...` also works, but the flow uses only the form `--pr`. The script refuses a range that does not match `<sha>..<sha>` or `<sha>~1..<sha>` (a sha has 7 to 40 hex digits), a file that does not exist on the merge commit (or in the tree of the end commit of the range), and a change issue, milestone, or pull request that is not a number. Reason: break-test issue #776 got a path in the place of the range (#799). The option `--dry` prints the title and the body of the issue and creates nothing. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
+- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. The step "merge, or update the branch and wait for the checks" holds the lock file `/tmp/wishem-merge.lock` (`flock`), so that one pull request at a time is in that step. The wait for the first checks is outside the lock. Reason: each merge moves `main`, the other runs then update their branch and lose their round; three runs lost four rounds each on 2026-11-28. Its last line is `<number> merged=<true|false>`. The exit code is 0 when the pull request is merged and 1 when it is not merged. The lead agent does the steps after the merge (the worktree, the board) only after exit code 0. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs --milestone <number> --package <name> --pr <pull request number> [--pr <pull request number> ...] <file>...` creates the one break-test issue of a library package at the completion of a milestone. The script reads the merge commit of each merged pull request itself, lists the range `<sha>~1..<sha>` of each pull request in the issue, and refuses a pull request that is not merged. Reason: on 2026-11-28 the lead agent three times sent the read of a merge commit and its use in one batch and used a guessed commit, and two break-test issues got a wrong range. The flow uses only this form. The script refuses a file that does not exist on the tree of each merge commit or on `main`, and a milestone or pull request that is not a number. Reason: break-test issue #776 got a path in the place of the range (#799). The option `--dry` prints the title and the body of the issue and creates nothing. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
 
 ### The steps that a person does
 
@@ -187,17 +187,17 @@ A test of one requirement does not find a fault that needs two features in a seq
 
 ### Break-tests
 
-The owner decided on 2026-11-27 that a break-test is not a step of a change. A change is merged after its final review. These rules replace the break-test step of the apply workflow:
+The owner decided on 2026-11-28 that a break-test runs once for each library package when a milestone is complete, and not after each change. Reason: on 2026-11-28, 39 of 121 merged pull requests were test pull requests, most of them break-tests of one change, and changes waited for break-tests of their packages.
 
-- After a change is merged, create one issue for the change when it changed the source of one or more library packages. A library package is a package of `nodejs/wishem/` that a different package of `nodejs/wishem/` has in `dependencies`. A package in `devDependencies` only does not count. Reason: the package `docs-check` has each other package in `devDependencies`, and the owner decided on 2026-11-28 that this does not make each package a library package.
-- The owner decided on 2026-11-28 to take one break-test issue for each change, not one for each package, because it closes milestones faster: one run, one pull request, one changeset, and one wait for the checks.
-- The issue has the type `Review`, the title "Break-test: after #`<issue of the change>`", the label `app:wishem`, and the milestone of the change. Add it to the project. Do not assign it to the owner.
-- The scope of the break-test is the source files of each library package that the change added or changed, and the tests that the change added or changed. The issue lists these files by package and gives the range of commits. The break-test runs the mutants of one package at a time.
-- When one or more of these issues are open, one break-test is always in work. Do them in the order in which they were created, the oldest one first. One exception: when a milestone has only break-tests left, its break-tests go first, because the milestone closes then. The owner prefers faster completion of a milestone (2026-11-28).
-- A break-test does not take a slot that other work can use. When no other item can start and fewer subagents than the limit run, start more break-tests, the oldest first, to fill the slots. Do not run two break-tests of the same package at the same time. The owner decided this on 2026-11-28: the limit of one break-test keeps the break-tests from stopping other issues, and it is not a limit on the number of subagents.
+- A change gets no break-test issue and no break-test when it is complete. A change is merged after its final review.
+- A library package is a package of `nodejs/wishem/` that a different package of `nodejs/wishem/` has in `dependencies`. A package in `devDependencies` only does not count. Reason: the package `docs-check` has each other package in `devDependencies`, and the owner decided on 2026-11-28 that this does not make each package a library package.
+- "When a milestone is complete" gives the step that creates the break-test issues.
+- The issue of a package has the type `Review`, the title "Break-test: `<package>` in milestone `<milestone number>`", the label `app:wishem`, and the milestone. Add it to the project. Do not assign it to the owner. Create it with `break-test-issue.mjs`.
+- The scope of the break-test is the source lines of the package that the merged pull requests of the milestone changed, and the tests that these pull requests added or changed for these lines. Do not include a line that an earlier break-test covered. The issue lists the files and gives the range of commits of each pull request.
+- Do one break-test of a package at a time. Break-tests of different packages can run at the same time. A break-test does not take a slot that other work can use: when fewer subagents than the limit run, start the break-tests to fill the slots.
 - A break-test runs in a worktree of its own, from `main`. Its result is a pull request that changes tests only, and that closes the issue. The description of the pull request gives the totals of the two passes.
-- When a break-test finds no gap and changes no test, close its issue with a comment that gives the totals of the two passes. No pull request is necessary. A change that waited for "the merge of break-test #N" can start when that break-test closes with no pull request.
-- When a break-test finds a fault of the source, create an issue of the type `Bug` for the fault. Do not correct the source in the pull request of the break-test.
+- When a break-test finds no gap and changes no test, close its issue with a comment that gives the totals of the two passes. No pull request is necessary.
+- When a break-test finds a fault of the source, create an issue of the type `Bug` for the fault in the milestone. Do not correct the source in the pull request of the break-test.
 
 ### Skills and briefs
 
@@ -223,13 +223,12 @@ A brief of a planner holds each item. A brief of a task reviewer and of a final 
 Keep the lead agent free:
 
 - When the final review of a change is clean, the lead agent starts a finisher subagent (sonnet) in the worktree of the change. The owner decided this on 2026-11-28. The finisher merges `main`, archives the change with the sync of its specs, writes the changesets, runs `finish-check.mjs`, pushes, writes the description of the pull request with the `writing-pull-requests` skill, creates the follow-up issues of "Follow-up" of `design.md`, and marks the pull request ready. Its report lists each "Ruling:" line of the ledger.
-- The lead agent keeps the steps that wait or that change the board: it gives the rulings to the owner, runs `merge-when-green.mjs`, sets the board, creates the break-test issue, and removes the worktree after the merge.
+- The lead agent keeps the steps that wait or that change the board: it gives the rulings to the owner, runs `merge-when-green.mjs`, sets the board, and removes the worktree after the merge.
 - While a long step runs, such as an implementer or a break-test, start the plan of the next change on the board in a new worktree. A plan does not need the merge of the change that it depends on. It needs only the design of that change.
 - While a long step runs and no plan can start, start a follow-up issue that touches a different package.
 - Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer subagents than the limit run, look at the tasks of each open milestone and start one that is not blocked.
 - When two items can start, start the item of the milestone that has the fewest open items. The owner asked on 2026-11-28 for the selection that closes milestones fastest.
 - A task of review findings that blocks no outcome of its milestone goes to the milestone `[WSH] R1 Tech Debt` when it is created.
-- Do not start a break-test of a package while a change that changes that package is in apply. Reason: the break-test #647 ran on a base from before #617, and its tests needed rework after the merge.
 
 ## The scope of a task
 
@@ -255,8 +254,10 @@ The brief of each subagent says: report each thing that is not in the scope of t
 
 ## When a milestone is complete
 
-1. If the milestone has more than three changes, review the full result of the milestone with a subagent that did not write it. Correct each fault that the review finds.
-2. Run a full type check of all Wishem packages, after a build. Run each command from the root of the worktree. Split a command into parts when it takes more than 140 seconds:
+1. After the last change of the milestone is merged, create one break-test issue for each library package whose source the changes of the milestone changed. Use `break-test-issue.mjs --milestone <number> --package <name> --pr <n> [--pr <n> ...] <file>...` with the merged pull requests of the milestone that changed the package. See "Break-tests" for the scope.
+2. Start the break-tests. Break-tests of different packages can run at the same time. Do one break-test of a package at a time. The milestone is not complete until each break-test is done and each issue of the type `Bug` of the milestone is fixed. A fix of a `Bug` in a library package is in the scope of the break-test of that package when that break-test is still open. When it is closed, the fix gets no new break-test.
+3. If the milestone has more than three changes, review the full result of the milestone with a subagent that did not write it. Correct each fault that the review finds.
+4. Run a full type check of all Wishem packages, after a build. Run each command from the root of the worktree. Split a command into parts when it takes more than 140 seconds:
 
    ```bash
    node nodejs/wishem/docs/flow-scripts/heavy.mjs pnpm exec turbo run build --filter './nodejs/wishem/*'
@@ -265,8 +266,8 @@ The brief of each subagent says: report each thing that is not in the scope of t
 
    A failure is an issue of the type `Bug` in the milestone R1 Tech Debt. Reason: the owner decided on 2026-11-28 to check each package once at each milestone completion. `main` had a type error in `renderer-pixi` from #535 that no check of a pull request found (fixed by #663).
 
-3. Write the test guide of the milestone. See "The test guide of a milestone".
-4. Create one issue with the type `Review` in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
+5. Write the test guide of the milestone. See "The test guide of a milestone".
+6. Create one issue with the type `Review` in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
    - A link to the test guide of the milestone.
    - A link to each specification of the milestone.
    - What was built, how it was built, and the reason.
@@ -274,7 +275,7 @@ The brief of each subagent says: report each thing that is not in the scope of t
    - Each change to blueprint text that had the label **Agreed**.
    - The result of the retrospective. See "Retrospective".
    - If the milestone published a build that a person can install, and where it is.
-5. Continue with the next milestone. Do not wait for the review.
+7. Continue with the next milestone. Do not wait for the review.
 
 ### Ports and containers of tests
 
@@ -425,7 +426,7 @@ Rules that keep these places complete:
 To start or to continue a session:
 
 1. Read this file.
-2. Run `node nodejs/wishem/docs/flow-scripts/state.mjs`. It prints the items of the project that are in work or blocked, the open pull requests with their checks, each worktree of this work with the last lines of its ledger, the issues that wait for the owner, the break-test issues in their order, and the processes that stayed alive.
+2. Run `node nodejs/wishem/docs/flow-scripts/state.mjs`. It prints the items of the project that are in work or blocked, the open pull requests with their checks, each worktree of this work with the last lines of its ledger, the issues that wait for the owner, the break-test issues, and the processes that stayed alive.
 3. For each change in work, read its ledger in full.
 4. Read the comments that the owner added to an issue of the type `Question` or `Review` since the last session, and apply each answer.
 5. Continue with each task that is not blocked, to the limit of subagents.

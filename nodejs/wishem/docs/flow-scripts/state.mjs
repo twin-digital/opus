@@ -101,7 +101,7 @@ for (const issue of waiting) {
   console.log(`- #${issue.number} [${issue.type?.name ?? 'no type'}] ${issue.title}`)
 }
 
-section('Break-test issues that are open, the oldest first')
+section('Break-test issues that are open')
 const open =
   json('gh', ['api', `repos/${REPO}/issues?state=open&labels=app:wishem&sort=created&direction=asc&per_page=100`]) ?? []
 for (const issue of open.filter((entry) => entry.title.startsWith('Break-test:'))) {
