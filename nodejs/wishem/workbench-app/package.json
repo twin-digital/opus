@@ -12,7 +12,7 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "preview": "vite preview",
-    "start": "node scripts/start.ts",
+    "start": "exec node scripts/start.ts",
     "style-guide": "vite --open /style-guide.html",
     "test": "opus-test",
     "test:ui": "node scripts/browser-server.ts playwright test",
