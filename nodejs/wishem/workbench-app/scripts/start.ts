@@ -9,13 +9,17 @@ import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { createServer, searchForWorkspaceRoot, type Plugin, type ViteDevServer } from 'vite'
-import { attachConstructManager, type ConstructManager } from '@thrashplay/wishem-construct-manager/node'
+import {
+  attachConstructManager,
+  checkProductCode,
+  childProcessLauncher,
+  type ConstructManager,
+} from '@thrashplay/wishem-construct-manager/node'
 import { createConstructList } from '@thrashplay/wishem-construct-manager'
 import { ModelError, type Model } from '@thrashplay/wishem-core'
 import { startConstruct } from '@thrashplay/wishem-host-nodejs'
 import { formatProblem } from '@thrashplay/wishem-host-nodejs/format'
 import type { Hub } from '@thrashplay/wishem-hub'
-import { checkBehaviors, type NativeBehavior } from '@thrashplay/wishem-update'
 import { modelFolder } from '@thrashplay/wishem-workbench'
 import { generateViewTypes } from './view-types.ts'
 import { viewTypesLines } from './view-types-report.ts'
@@ -64,24 +68,30 @@ const PRODUCT_LINK_PATH = /^\/constructs\/([^/]+)\/link$/
 
 const isPathValue = (value: string) => value.startsWith('.') || value.startsWith('/')
 
-/** Loads the product code. Logs the reason and throws a `StartError` when it cannot be used. */
-const loadProductCode = async (value: string, log: (line: string) => void): Promise<readonly NativeBehavior[]> => {
-  let loaded: { behaviors?: unknown }
+/** The file URL of the product code. A package name that does not resolve gives a `StartError` after its log line. */
+const productCodeUrl = (value: string, log: (line: string) => void): string => {
   try {
-    const target =
-      isPathValue(value) ? pathToFileURL(resolve(process.env.INIT_CWD ?? process.cwd(), value)).href : value
-    loaded = (await import(target)) as { behaviors?: unknown }
+    return isPathValue(value) ?
+        pathToFileURL(resolve(process.env.INIT_CWD ?? process.cwd(), value)).href
+      : import.meta.resolve(value)
   } catch (error) {
     log(`wishem: the product code ${value} cannot be loaded: ${error instanceof Error ? error.message : String(error)}`)
     throw new StartError('the product code cannot be loaded')
   }
-  try {
-    return checkBehaviors(loaded.behaviors)
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error)
-    log(`wishem: the product code has no correct list behaviors: ${reason}`)
+}
+
+/** Checks the product code in a child process. Logs the reason and throws a `StartError` when it cannot be used. */
+const checkCode = async (value: string, url: string, log: (line: string) => void) => {
+  const check = await checkProductCode(url)
+  if (check.ok) {
+    return
+  }
+  if (check.reason === 'behaviors') {
+    log(`wishem: the product code has no correct list behaviors: ${check.message}`)
     throw new StartError('the product code has no correct list behaviors')
   }
+  log(`wishem: the product code ${value} cannot be loaded: ${check.message}`)
+  throw new StartError('the product code cannot be loaded')
 }
 
 interface ProductViewPair {
@@ -296,10 +306,11 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   if (product !== undefined) {
     log(`wishem: product ${product}`)
   }
-  let behaviors: readonly NativeBehavior[] | undefined
+  let codeUrl: string | undefined
   if (productCode !== undefined) {
     log(`wishem: product code ${productCode}`)
-    behaviors = await loadProductCode(productCode, log)
+    codeUrl = productCodeUrl(productCode, log)
+    await checkCode(productCode, codeUrl, log)
   }
   if (productViews !== undefined) {
     if (!existsSync(productViews) || !statSync(productViews).isDirectory()) {
@@ -335,7 +346,14 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
 
   let manager: ConstructManager | undefined
   try {
-    manager = product === undefined ? undefined : attachConstructManager({ hub: construct.hub, behaviors, log })
+    manager =
+      product === undefined ? undefined : (
+        attachConstructManager({
+          hub: construct.hub,
+          launch: childProcessLauncher({ productCode: codeUrl }),
+          log,
+        })
+      )
   } catch (error) {
     await construct.close()
     throw error
