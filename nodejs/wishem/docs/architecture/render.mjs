@@ -723,7 +723,7 @@ const cPixiProcess = el(
   1824,
   'PixiJS process',
   '[Container: Node.js]',
-  'Runs the construct with a clock and serves the page.',
+  'Runs the construct with its update subsystem and clock.',
 )
 const cRendererPixi = el(
   'container',
@@ -739,7 +739,7 @@ const cSample = el(
   2044,
   'sample-product',
   '[Container: TypeScript package]',
-  'Holds the example model folder and the count rule.',
+  'Holds the example model folder and the count behavior.',
 )
 
 const cGodotRunner = el(
