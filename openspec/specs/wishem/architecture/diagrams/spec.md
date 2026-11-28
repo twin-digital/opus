@@ -79,8 +79,8 @@ The architecture document SHALL hold an entity diagram of the model folder, in `
 
 #### Scenario: A field value refers to an entity
 
-- **WHEN** a field of the type `reference` holds the ID of an entity
-- **THEN** the entity diagram shows a relationship from `FieldValue` to `Entity` with the label "Refers to", with the mark "zero or one" at `Entity`, and the mark "zero or more" at `FieldValue`, and the legend explains the mark "zero or one"
+- **WHEN** a field of the type `reference` holds the ID of an entity, or a field of the type `reference-list` holds a list of entity IDs
+- **THEN** the entity diagram shows a relationship from `FieldValue` to `Entity` with the label "Refers to", with the mark "zero or more" at `Entity`, and the mark "zero or more" at `FieldValue`
 
 ### Requirement: Each diagram is written by the render script
 
