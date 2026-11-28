@@ -859,7 +859,7 @@ const stacked = (tone, from, to, x, line) => {
 }
 
 const MODEL_X = 304
-const SKIP_X = 318
+const SKIP_X = 376
 const COMMAND_X = 550
 const LANE_SAMPLE_X = 330
 const LANE_TCP_X = 370
@@ -907,16 +907,16 @@ const containers = {
     stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
     stacked('flow', cPage, cProcess, 265, 'Connects to the hub\nand to each product\nconstruct [WebSocket]'),
     stacked('flow', cProcess, cPcp, 100, 'Starts, stops, and\nreaches the hub\n[child process,\nlink over IPC]'),
-    stacked('flow', cProcess, cPcp, 250, 'Passes the\nproduct links\n[WebSocket]'),
+    stacked('flow', cProcess, cPcp, 225, 'Passes the\nproduct links\n[WebSocket]'),
     rel(
       'flow',
       [right(cProcess, 626), [MODEL_X, 626], [MODEL_X, cModel.y + 30], right(cModel, cModel.y + 30)],
-      'Reads, watches, and writes [file system]',
+      'Reads,\nwatches, and\nwrites\n[file system]',
       [MODEL_X, (cPcp.y + CARD_H + cModel.y) / 2],
     ),
     rel(
       'quiet',
-      [right(cProcess, 608), [SKIP_X, 608], [SKIP_X, cProduct.y + 90], right(cProduct, cProduct.y + 90)],
+      [right(cProcess, 608), [SKIP_X, 608], [SKIP_X, cProduct.y + 66], right(cProduct, cProduct.y + 66)],
       'Reads, watches, and writes [file system]',
       [SKIP_X, (cModel.y + STORE_H + cProduct.y) / 2],
     ),
@@ -946,8 +946,8 @@ const containers = {
       [
         right(cSample, cSample.y + 20),
         [LANE_SAMPLE_X, cSample.y + 20],
-        [LANE_SAMPLE_X, cProduct.y + 66],
-        right(cProduct, cProduct.y + 66),
+        [LANE_SAMPLE_X, cProduct.y + 90],
+        right(cProduct, cProduct.y + 90),
       ],
       'Reads [file system]',
       [LANE_SAMPLE_X, cReactPage.y - UNIT_GAP / 2],
