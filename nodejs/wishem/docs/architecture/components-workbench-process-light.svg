@@ -126,11 +126,11 @@
 <rect x="465" y="816" width="130" height="40" rx="12" fill="#ffffff" stroke="#85859a"/>
 <text x="530" y="833" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#5b5b70" text-anchor="middle">Sends the model</text>
 <text x="530" y="848" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#5b5b70" text-anchor="middle">[port]</text>
-<path d="M750 988 L750 1280" fill="none" stroke="#85859a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="750,1290 744.5,1279 755.5,1279" fill="#85859a" stroke="#85859a" stroke-width="1" stroke-linejoin="round"/>
-<rect x="645.4" y="1119" width="209.2" height="40" rx="12" fill="#ffffff" stroke="#85859a"/>
-<text x="750" y="1136" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#5b5b70" text-anchor="middle">Reads, watches, and writes</text>
-<text x="750" y="1151" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#5b5b70" text-anchor="middle">[file system]</text>
+<path d="M700 988 L700 1280" fill="none" stroke="#85859a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="700,1290 694.5,1279 705.5,1279" fill="#85859a" stroke="#85859a" stroke-width="1" stroke-linejoin="round"/>
+<rect x="595.4" y="1119" width="209.2" height="40" rx="12" fill="#ffffff" stroke="#85859a"/>
+<text x="700" y="1136" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#5b5b70" text-anchor="middle">Reads, watches, and writes</text>
+<text x="700" y="1151" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#5b5b70" text-anchor="middle">[file system]</text>
 <path d="M610 988 L610 1244 Q610 1254 600 1254 L240 1254 Q230 1254 230 1264 L230 1280" fill="none" stroke="#85859a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="230,1290 224.5,1279 235.5,1279" fill="#85859a" stroke="#85859a" stroke-width="1" stroke-linejoin="round"/>
 <rect x="315.4" y="1234" width="209.2" height="40" rx="12" fill="#ffffff" stroke="#85859a"/>

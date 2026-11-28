@@ -29,6 +29,21 @@ const run = (script: string, args: string[]) => {
 }
 
 /** A copy of the manifests and of the architecture folder. `withSvg: false` leaves out the SVG files. */
+/** Returns the text of the card of a package in a package view: the lines below its name, joined with a space. */
+const cardText = (svg: string, name: string) => {
+  const texts = [...svg.matchAll(/<text x="([\d.]+)" y="([\d.]+)"[^>]*font-weight="(\d+)"[^>]*>([^<]*)<\/text>/g)].map(
+    (match) => ({ x: Number(match[1]), y: Number(match[2]), weight: match[3], text: match[4] }),
+  )
+  const title = texts.find((entry) => entry.weight === '600' && entry.text === name)
+  if (title === undefined) {
+    throw new Error(`no card for ${name}`)
+  }
+  return texts
+    .filter((entry) => entry.x === title.x && entry.y > title.y && entry.y < title.y + 100 && entry.weight !== '600')
+    .map((entry) => entry.text)
+    .join(' ')
+}
+
 const makeFixture = ({ withSvg = true } = {}) => {
   const root = mkdtempSync(join(tmpdir(), 'wishem-docs-check-'))
   tmpFolders.push(root)
@@ -103,6 +118,7 @@ describe('the container diagram', () => {
     const lines = svg.match(/(?:Package|Example): [a-z-]+/g) ?? []
     expect(lines.sort()).toEqual([
       'Example: sample-product',
+      'Package: host-nodejs',
       'Package: pixi-page',
       'Package: pixi-page',
       'Package: renderer-godot',
@@ -190,8 +206,9 @@ describe('the arrows of the package dependency view, with the real document', ()
         }
       }
       expect(tested).toBeGreaterThan(0)
-      expect(svg).toContain('Tests with: clock')
-      expect(svg).toContain('Tests with: each other')
+      expect(cardText(svg, 'host-nodejs')).toContain('Tests with: clock')
+      expect(cardText(svg, 'construct-manager')).toContain('Tests with: sample-product')
+      expect(cardText(svg, 'docs-check')).toContain('Tests with: each other')
     })
 
     it(`has no line Uses (${theme})`, () => {
@@ -233,12 +250,15 @@ describe('render.mjs, the arrows of the package dependency view', () => {
   it('puts a development dependency in the line Tests with, and draws no arrow', () => {
     const fixture = makeFixture()
     const manifest = fixture.readManifest('renderer-pixi')
+    manifest.dependencies = Object.fromEntries(
+      Object.entries(manifest.dependencies ?? {}).filter(([name]) => name !== dependency('clock')),
+    )
     manifest.devDependencies = { [dependency('clock')]: 'workspace:*' }
     fixture.writeManifest('renderer-pixi', manifest)
 
     expect(fixture.render().status).toBe(0)
     const svg = fixture.read('packages-light.svg')
-    expect(svg).toContain('Tests with: clock')
+    expect(cardText(svg, 'renderer-pixi')).toContain('Tests with: clock')
     expect(arrowPairs(svg)).not.toContain('renderer-pixi -> clock')
   })
 
@@ -250,7 +270,7 @@ describe('render.mjs, the arrows of the package dependency view', () => {
 
     const result = fixture.render()
     expect(result.status).toBe(0)
-    expect(fixture.read('packages-light.svg')).toContain('Tests with: core')
+    expect(cardText(fixture.read('packages-light.svg'), 'hub')).toContain('Tests with: core')
   })
 })
 

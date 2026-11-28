@@ -761,10 +761,19 @@ const cProduct = el(
   'Holds the model of the mounted product.',
   { h: STORE_H, pkg: 'Example: sample-product' },
 )
+const cCommand = el(
+  'container',
+  COLUMN,
+  cProduct.y + STORE_H + 110,
+  'Wishem command process',
+  '[Container: Node.js]',
+  'Runs one construct, with no page.',
+  { pkg: 'Package: host-nodejs' },
+)
 const cPixiPage = el(
   'container',
   COLUMN,
-  cProduct.y + STORE_H + UNIT_GAP,
+  cCommand.y + CARD_H + UNIT_GAP,
   'PixiJS page',
   '[Container: PixiJS, web browser]',
   'Draws the PixiJS construct and sends the keys.',
@@ -810,7 +819,7 @@ const cGodotProcess = el(
 // The arrow k of the designer: it leaves the right edge of the designer at a height that depends on k, runs to a
 // position that depends on k, and enters the right edge of `target` at `at`. The label sits in the middle of the last line.
 const designerArrow = (k, tone, target, at, line) => {
-  const x = 560 + 40 * k
+  const x = 560 + 34 * k
   const y = 176 - 12 * k
   return rel(tone, [right(cDesigner, y), [x, y], [x, at], right(target, at)], line, [(x + CARD_W + COLUMN) / 2, at])
 }
@@ -823,6 +832,7 @@ const stacked = (tone, from, to, x, line) => {
 }
 
 const SKIP_X = 310
+const COMMAND_X = 550
 const UNITS_BOTTOM = cGodotProcess.y + CARD_H
 const LEGEND_Y = UNITS_BOTTOM + 62
 
@@ -830,7 +840,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has nine containers. The designer starts the three processes and the Godot runner, edits the model folder and the product model folder, and looks at the two pages. The page gets page code over HTTP and connects to the hub over a WebSocket link through the workbench process. The workbench process reads, watches, and writes the two folders. The PixiJS page connects the same way to the PixiJS process. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process.',
+    'Wishem has ten containers. The designer starts the four processes and the Godot runner, edits the model folder and the product model folder, and looks at the two pages. The page gets page code over HTTP and connects to the hub over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The PixiJS page connects the same way to the PixiJS process. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process.',
   width: WIDTH_PX,
   height: LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -840,6 +850,7 @@ const containers = {
     cProcess,
     cModel,
     cProduct,
+    cCommand,
     cPixiPage,
     cPixiProcess,
     cGodotApp,
@@ -851,10 +862,11 @@ const containers = {
     designerArrow(1, 'quiet', cProcess, 590, 'Starts and stops [terminal]'),
     designerArrow(2, 'flow', cModel, 816, 'Edits files [text editor]'),
     designerArrow(3, 'quiet', cProduct, cProduct.y + 40, 'Edits files [text editor]'),
-    designerArrow(4, 'flow', cPixiPage, cPixiPage.y + 40, 'Looks at and presses keys [web browser]'),
-    designerArrow(5, 'quiet', cPixiProcess, cPixiProcess.y + 52, 'Starts and stops [terminal]'),
-    designerArrow(6, 'quiet', cGodotRunner, cGodotRunner.y + 52, 'Starts and looks at the screenshots [terminal]'),
-    designerArrow(7, 'quiet', cGodotProcess, cGodotProcess.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(4, 'quiet', cCommand, cCommand.y + 64, 'Starts and stops [terminal]'),
+    designerArrow(5, 'flow', cPixiPage, cPixiPage.y + 40, 'Looks at and presses keys [web browser]'),
+    designerArrow(6, 'quiet', cPixiProcess, cPixiProcess.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(7, 'quiet', cGodotRunner, cGodotRunner.y + 52, 'Starts and looks at the screenshots [terminal]'),
+    designerArrow(8, 'quiet', cGodotProcess, cGodotProcess.y + 52, 'Starts and stops [terminal]'),
 
     // The workbench process
     stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
@@ -865,6 +877,20 @@ const containers = {
       [right(cProcess, 620), [SKIP_X, 620], [SKIP_X, cProduct.y + 90], right(cProduct, cProduct.y + 90)],
       'Reads, watches, and writes [file system]',
       [SKIP_X, (cModel.y + STORE_H + cProduct.y) / 2],
+    ),
+
+    // The Wishem command process
+    stacked('quiet', cCommand, cProduct, 165, 'Reads, watches, and writes [file system]'),
+    rel(
+      'quiet',
+      [
+        right(cCommand, cCommand.y + 20),
+        [COMMAND_X, cCommand.y + 20],
+        [COMMAND_X, cModel.y + 90],
+        right(cModel, cModel.y + 90),
+      ],
+      'Reads, watches, and writes [file system]',
+      [COMMAND_X, (cProduct.y + STORE_H + cCommand.y) / 2 + 20],
     ),
 
     // The PixiJS process
@@ -1222,8 +1248,8 @@ const componentsWorkbenchProcess = {
       'Sends the model [port]',
       [WP_LANE.storage, WP_MID(3)],
     ),
-    rel('quiet', [bottom(wStorage, 750), top(wModel, 750)], 'Reads, watches, and writes [file system]', [
-      750,
+    rel('quiet', [bottom(wStorage, 700), top(wModel, 700)], 'Reads, watches, and writes [file system]', [
+      700,
       (WP_ROW(4) + CARD_H + WP_FOLDER_Y) / 2,
     ]),
     rel(

@@ -35,7 +35,7 @@ The facts that shape the approach:
 
 ### 1. The container diagram holds runtime units only
 
-The containers on `main` after this change: the page, the workbench process, the model folder, the product model folder, the PixiJS page, the PixiJS process, the Godot process, the Godot runner, and the Godot application. The designer is the one person.
+The containers on `main` after this change: the page, the workbench process, the Wishem command process (`wishem start ./model` of `host-nodejs`), the model folder, the product model folder, the PixiJS page, the PixiJS process, the Godot process, the Godot runner, and the Godot application. The designer is the one person.
 
 The relationships are the runtime relationships of the current diagram, with each "Builds on [import]", "Runs [import]", "Uses [import]", "Serves the link with [import]", "Runs the behaviors with [import]", "Checks the product code with [import]", "Runs the product constructs with [import]", and "Loads the product code [dynamic import]" removed.
 
@@ -436,10 +436,10 @@ The final reviewer does these steps on the branch and reports the real result of
 1. `node -e "const f='nodejs/wishem/renderer-pixi/package.json';const fs=require('node:fs');const p=JSON.parse(fs.readFileSync(f));p.dependencies['@thrashplay/wishem-clock']='workspace:*';fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"`.
 2. `node nodejs/wishem/docs/architecture/render.mjs --check; echo "exit $?"`. Result: `render: packages-light.svg is out of date`, `render: packages-dark.svg is out of date`, `render: run node nodejs/wishem/docs/architecture/render.mjs`, and `exit 1`.
 3. `git status --short`. Result: only ` M nodejs/wishem/renderer-pixi/package.json`. The check wrote no file.
-4. `flock -w 15 /tmp/wishem-heavy.lock timeout 140 pnpm exec turbo run test --filter @thrashplay/wishem-docs-check`. Result: turbo prints `cache miss, executing` for `@thrashplay/wishem-docs-check:test`, the test of the current document fails, and its message holds `packages-light.svg is out of date`. The other tests of the package pass.
+4. `flock -w 15 /tmp/wishem-heavy.lock timeout 140 pnpm exec turbo run test --filter @thrashplay/wishem-docs-check`. Result: turbo prints `cache miss, executing` for `@thrashplay/wishem-docs-check:test`, and three tests of the real document fail: the test of the current document (its message holds `packages-light.svg is out of date`) and the two tests of the arrows of the light file and of the dark file. The other tests of the package pass. `pnpm exec` can rewrite `pnpm-lock.yaml`.
 5. `node nodejs/wishem/docs/architecture/render.mjs`, then `grep -c 'data-from="renderer-pixi" data-to="clock"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `1`.
 6. `node nodejs/wishem/docs/architecture/render.mjs --check; echo "exit $?"`. Result: `exit 0`.
-7. `git checkout -- nodejs/wishem/renderer-pixi/package.json nodejs/wishem/docs/architecture/`. Then `--check` again. Result: `exit 0`.
+7. `git checkout -- nodejs/wishem/renderer-pixi/package.json nodejs/wishem/docs/architecture/ pnpm-lock.yaml`. Then `--check` again. Result: `exit 0`.
 
 ### 4. A dependency to a higher layer
 
@@ -449,7 +449,7 @@ The final reviewer does these steps on the branch and reports the real result of
 
 ### 5. A development dependency to a higher layer
 
-1. `grep -o 'Tests with: sample-product' nodejs/wishem/docs/architecture/packages-light.svg | head -1`. Result: one line. `construct-manager` and `workbench-app` test with `sample-product`, and the script accepts it.
+1. `grep -c 'Tests with:\|>sample-product<' nodejs/wishem/docs/architecture/packages-light.svg`. Result: a number greater than `0`. The card wraps the line: `Tests with:` is in one text element and `sample-product` in the next. `construct-manager` and `workbench-app` test with `sample-product`, and the script accepts it. The test of `docs-check` checks the joined text of the card of `construct-manager`.
 2. `grep -c 'data-to="sample-product"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `0`. A test dependency has no arrow.
 
 ### 6. A new package with no layer
@@ -472,7 +472,7 @@ The final reviewer does these steps on the branch and reports the real result of
 ### 9. The container diagram holds runtime units only
 
 1. `grep -c 'TypeScript package\|\[import\]' nodejs/wishem/docs/architecture/containers-light.svg`. Result: `0`.
-2. `grep -o 'Package: [a-z-]*' nodejs/wishem/docs/architecture/containers-light.svg | sort | uniq -c`. Result: `workbench-app` two times, `pixi-page` two times, `renderer-godot` three times, and `workbench` one time.
+2. `grep -o 'Package: [a-z-]*' nodejs/wishem/docs/architecture/containers-light.svg | sort | uniq -c`. Result: `workbench-app` two times, `pixi-page` two times, `renderer-godot` three times, `workbench` one time, and `host-nodejs` one time.
 
 ### 10. The component diagram of the workbench process
 
