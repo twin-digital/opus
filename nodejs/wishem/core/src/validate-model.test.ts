@@ -670,5 +670,16 @@ describe('validateModel', () => {
         expect(copy).not.toBe(list)
       }
     })
+    it('gives a new array for an empty list', () => {
+      const list: string[] = []
+      const definitions = [{ id: CT, label: 'Deck', fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] }]
+      const result = validateModel({ definitions, entities: [entity({ [CT]: { [FLD5]: list } })] })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const copy = result.model.entities[0]?.components[CT]?.[FLD5]
+        expect(copy).toEqual([])
+        expect(copy).not.toBe(list)
+      }
+    })
   })
 })
