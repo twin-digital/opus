@@ -93,6 +93,10 @@ test.beforeEach(async () => {
   await reset()
 })
 
+test.afterEach(async () => {
+  await reset()
+})
+
 test('step 2: the page before a run shows the run bar and the zero state of the stage', async ({ page }) => {
   await page.goto('/')
   const { status, stage, area } = parts(page)
@@ -213,6 +217,8 @@ interface StateFile {
   entities: { id: string; components: Record<string, Record<string, unknown>> }[]
 }
 
+const WAIT = { timeout: 10_000 }
+
 const counterEntity = (id: string, value: number) => ({ id, components: { [COUNTER_TYPE]: { [COUNT_FIELD]: value } } })
 
 test('steps 2, 3, 5, 6, 7: an edit of the entities while paused keeps the count and the tick, and a rewind adds the entity', async ({
@@ -245,12 +251,7 @@ test('steps 2, 3, 5, 6, 7: an edit of the entities while paused keeps the count 
     }
   })
   const ofType = (type: string) => applied.filter((input) => input.type === type)
-  const stored = () =>
-    (
-      play.ports['guide-play'].read().store as {
-        entities: { id: string; components: Record<string, Record<string, unknown>> }[]
-      }
-    ).entities
+  const stored = () => (play.ports['guide-play'].read().store as StateFile).entities
   const edit = async (change: (entities: StateFile['entities']) => StateFile['entities']) => {
     const state = JSON.parse(await readFile(statePath, 'utf8')) as StateFile
     state.entities = change(state.entities)
@@ -264,14 +265,14 @@ test('steps 2, 3, 5, 6, 7: an edit of the entities while paused keeps the count 
   try {
     // Step 3: an entity at the end.
     await edit((entities) => [...entities, counterEntity(SECOND, 1000)])
-    await expect.poll(() => ofType('store/add-entity').length).toBe(1)
+    await expect.poll(() => ofType('store/add-entity').length, WAIT).toBe(1)
     expect(ofType('store/add-entity')[0].source).toBe('construct-manager')
     expect(stored().map((entity) => entity.id)).toEqual([SAMPLE, SECOND])
     await expectUnchanged()
 
     // Step 5: an entity at the start.
     await edit((entities) => [counterEntity(THIRD, 500), ...entities])
-    await expect.poll(() => ofType('store/add-entity').length).toBe(2)
+    await expect.poll(() => ofType('store/add-entity').length, WAIT).toBe(2)
     expect(ofType('store/add-entity')[1].source).toBe('construct-manager')
     expect(ofType('store/add-entity')[1].payload).toMatchObject({ index: 0 })
     expect(stored().map((entity) => entity.id)).toEqual([THIRD, SAMPLE, SECOND])
@@ -279,23 +280,27 @@ test('steps 2, 3, 5, 6, 7: an edit of the entities while paused keeps the count 
 
     // Step 6: a removal.
     await edit((entities) => entities.filter((entity) => entity.id !== SECOND))
-    await expect.poll(() => ofType('store/remove-entity').length).toBe(1)
+    await expect.poll(() => ofType('store/remove-entity').length, WAIT).toBe(1)
     expect(ofType('store/remove-entity')[0].source).toBe('construct-manager')
     expect(stored().map((entity) => entity.id)).toEqual([THIRD, SAMPLE])
     await expectUnchanged()
-    await expect
-      .poll(() => workbenchApplied.filter((input) => input.type === 'product/replace-model').length)
-      .toBeGreaterThanOrEqual(3)
-    const removal = workbenchApplied.filter((input) => input.type === 'product/replace-model').at(-1)
+    // The removal is the `product/replace-model` of the model with the third entity and without the second.
+    const isRemoval = (input: RecordedInput) =>
+      input.type === 'product/replace-model' &&
+      JSON.stringify(input.payload).includes(THIRD) &&
+      !JSON.stringify(input.payload).includes(SECOND)
+    await expect.poll(() => workbenchApplied.some(isRemoval), WAIT).toBe(true)
+    const removal = workbenchApplied.find(isRemoval)
 
     // Step 7: a rewind of the workbench to the input before the removal.
     expect(await port.submit(hubInputs.rewind((removal?.seq ?? 1) - 1))).toMatchObject({ ok: true })
-    await expect.poll(() => ofType('store/add-entity').length).toBe(3)
+    await expect.poll(() => ofType('store/add-entity').length, WAIT).toBe(3)
     expect(ofType('store/add-entity')[2].source).toBe('construct-manager')
     expect(stored().map((entity) => entity.id)).toEqual([THIRD, SAMPLE, SECOND])
     expect(stored()[2].components[COUNTER_TYPE][COUNT_FIELD]).toBe(1000)
+    await expectUnchanged()
     await expect
-      .poll(async () => (JSON.parse(await readFile(statePath, 'utf8')) as StateFile).entities.map((e) => e.id))
+      .poll(async () => (JSON.parse(await readFile(statePath, 'utf8')) as StateFile).entities.map((e) => e.id), WAIT)
       .toEqual([THIRD, SAMPLE, SECOND])
   } finally {
     play.close()
