@@ -92,7 +92,7 @@ The option `--product <folder>` of the `start` script of the workbench page SHAL
 #### Scenario: The page with a mounted product
 
 - **WHEN** the workbench runs with a mounted product, and a web browser opens the address of the page
-- **THEN** the page shows the app bar and the zero state, as with no product
+- **THEN** the page shows the app bar and the product panel with the entities of the product
 
 #### Scenario: A product that is not correct
 
