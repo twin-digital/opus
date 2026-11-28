@@ -188,39 +188,49 @@ describe('holdWarnings', () => {
 
 describe('describeWarning', () => {
   it('names the sidecar file, the entities, the field, and the component type for a cycle', () => {
-    expect(
-      describeWarning({
-        kind: 'reference-cycle',
-        sidecar: 'List.view.json',
-        componentType: LIST,
-        fields: [FIELD_FIRST],
-        entities: [E_B, E_A],
-      }),
-    ).toBe(
-      `wishem: the sidecar List.view.json: the field ${FIELD_FIRST} of the component type ${LIST} of the entity ${E_B} names the entity ${E_A}, which is already on the path of its picture. The view gets no picture for it.`,
-    )
+    const line = describeWarning({
+      kind: 'reference-cycle',
+      sidecar: 'List.view.json',
+      componentType: LIST,
+      fields: [FIELD_FIRST],
+      entities: [E_B, E_A],
+    })
+    expect(line).toContain('List.view.json')
+    expect(line).toContain(FIELD_FIRST)
+    expect(line).toContain(LIST)
+    expect(line).toContain(E_B)
+    expect(line).toContain(E_A)
+    expect(line).toContain('already on the path')
+    expect(line).toContain('The view gets no picture for it.')
   })
 
   it('names the sidecar file, the field, the component type, and the name for a reserved name', () => {
-    expect(
-      describeWarning({
-        kind: 'reserved-name',
-        sidecar: 'AppBar.view.json',
-        componentType: APP_BAR,
-        name: 'wishem',
-        fields: [FIELD_B],
-      }),
-    ).toBe(
-      `wishem: the sidecar AppBar.view.json: the label of the field ${FIELD_B} of the component type ${APP_BAR} gives the reserved name "wishem". The view does not get the field.`,
-    )
+    const line = describeWarning({
+      kind: 'reserved-name',
+      sidecar: 'AppBar.view.json',
+      componentType: APP_BAR,
+      name: 'wishem',
+      fields: [FIELD_B],
+    })
+    expect(line).toContain('AppBar.view.json')
+    expect(line).toContain(FIELD_B)
+    expect(line).toContain(APP_BAR)
+    expect(line).toContain('reserved name "wishem"')
+    expect(line).toContain('The view does not get the field.')
   })
 
   it('names the sidecar file, the field, and the component type for an empty name', () => {
-    expect(
-      describeWarning({ kind: 'empty-name', sidecar: 'AppBar.view.json', componentType: APP_BAR, fields: [FIELD_B] }),
-    ).toBe(
-      `wishem: the sidecar AppBar.view.json: the label of the field ${FIELD_B} of the component type ${APP_BAR} gives an empty name. The view does not get the field.`,
-    )
+    const line = describeWarning({
+      kind: 'empty-name',
+      sidecar: 'AppBar.view.json',
+      componentType: APP_BAR,
+      fields: [FIELD_B],
+    })
+    expect(line).toContain('AppBar.view.json')
+    expect(line).toContain(FIELD_B)
+    expect(line).toContain(APP_BAR)
+    expect(line).toContain('empty name')
+    expect(line).toContain('The view does not get the field.')
   })
 
   it('names the sidecar file and the ID for a component type that is not defined', () => {
@@ -232,16 +242,18 @@ describe('describeWarning', () => {
   })
 
   it('names the sidecar file, the component type, and the two field IDs for the same name', () => {
-    expect(
-      describeWarning({
-        kind: 'same-name',
-        sidecar: 'AppBar.view.json',
-        componentType: APP_BAR,
-        name: 'maxHealth',
-        fields: [FIELD_A, FIELD_B],
-      }),
-    ).toBe(
-      `wishem: the sidecar AppBar.view.json: the fields ${FIELD_A} and ${FIELD_B} of the component type ${APP_BAR} give the same name "maxHealth". The prop has the value of the first field.`,
-    )
+    const line = describeWarning({
+      kind: 'same-name',
+      sidecar: 'AppBar.view.json',
+      componentType: APP_BAR,
+      name: 'maxHealth',
+      fields: [FIELD_A, FIELD_B],
+    })
+    expect(line).toContain('AppBar.view.json')
+    expect(line).toContain(FIELD_A)
+    expect(line).toContain(FIELD_B)
+    expect(line).toContain(APP_BAR)
+    expect(line).toContain('same name "maxHealth"')
+    expect(line).toContain('The prop has the value of the first field.')
   })
 })

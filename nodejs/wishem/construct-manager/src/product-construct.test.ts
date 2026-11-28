@@ -5,12 +5,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TIME_ID, timeInputs, type ClockTimer, type TimePart } from '@thrashplay/wishem-clock'
-import { COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY, wrapStore } from '@thrashplay/wishem-sample-product'
+import { COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY, behaviors } from '@thrashplay/wishem-sample-product'
 import { createStore, type FieldValue, type Model } from '@thrashplay/wishem-core'
 import { readModelFolder, serveHub } from '@thrashplay/wishem-host-nodejs'
 import { createHub, hubInputs, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { HubServer } from '@thrashplay/wishem-host-nodejs'
-import type { Hub, ModelSubsystem, RemoteLink } from '@thrashplay/wishem-hub'
+import type { Hub, RemoteLink } from '@thrashplay/wishem-hub'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { startProductConstruct } from './product-construct.js'
 import type { ProductConstruct, ProductConstructOptions } from './product-construct.js'
@@ -84,7 +84,7 @@ describe('startProductConstruct', () => {
     const construct = await startProductConstruct({
       id: 'play',
       model,
-      wrapStore,
+      behaviors,
       running: true,
       timer: clock.timer,
       now: clock.now,
@@ -149,9 +149,9 @@ describe('startProductConstruct', () => {
     expect(timeOf(construct.hub).ticks).toBe(5)
   })
 
-  it('keeps the count with no wrapStore', async () => {
+  it('keeps the count with no behaviors', async () => {
     const clock = await setup()
-    const construct = await start(clock, { wrapStore: undefined })
+    const construct = await start(clock, { behaviors: undefined })
     for (let i = 0; i < 5; i++) {
       clock.fire(50)
     }
@@ -193,13 +193,36 @@ describe('startProductConstruct', () => {
     expect(timeOf(construct.hub).ticks).toBe(0)
   })
 
-  it('rejects when wrapStore throws, and holds no timer', async () => {
+  it('rejects when two behaviors have one ID, and holds no timer', async () => {
     const clock = await setup()
-    const failing = (): ModelSubsystem<Model> => {
-      throw new Error('the rules failed')
-    }
-    await expect(start(clock, { wrapStore: failing })).rejects.toThrow('the rules failed')
+    await expect(start(clock, { behaviors: [behaviors[0], behaviors[0]] })).rejects.toThrow(
+      'Two behaviors have the id "sample-product/count".',
+    )
     expect(clock.active).toBe(0)
+  })
+
+  it('gives the part time that advances, and a count larger than 0, with the behaviors', async () => {
+    const clock = await setup()
+    const construct = await start(clock)
+    clock.fire(50)
+    expect(countOf(construct.hub)).toBeGreaterThan(0)
+    expect(timeOf(construct.hub).ticks).toBe(1)
+  })
+
+  it('refuses time/advance with invalid for a behavior that throws, and names it', async () => {
+    const clock = await setup()
+    const broken = {
+      id: 'test/broken',
+      componentType: COUNTER_TYPE,
+      update: (): never => {
+        throw new Error('it broke')
+      },
+    }
+    const construct = await start(clock, { behaviors: [broken] })
+    const port = await open(construct, { id: 'client', kind: 'input' })
+    const result = await port.submit(timeInputs.advance(50))
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(JSON.stringify(result)).toContain('test/broken')
   })
 
   it('rejects when the clock fails to start, and releases the port', async () => {
