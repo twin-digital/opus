@@ -67,15 +67,18 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 - The limit goes back one step when memory is above 80 % or throttling is above 20 % for ten minutes.
 - The lead agent adds a note to **Process notes** at each step.
 - The lead agent starts the resource logger at the start of a session if it does not run: `node nodejs/wishem/docs/flow-scripts/resource-log.mjs`, in the background. The log `~/.local/state/wishem/resources.csv` gives the memory, the CPU, the throttling, and the slots in use of the container, once a minute.
-- At most two lint, type check, test, or build commands run at one time. The owner set this limit on 2026-11-28 (#686), after the memory of the container became 26 GiB. Two locks, one for each slot, make this sure. Each agent, and this includes the lead agent, runs each such command from the root of its worktree in this form:
+- Lint, type check, test, and build commands run in slots. One lock for each slot makes sure that each slot runs one command at a time. The file `~/.local/state/wishem/heavy-slots` holds the number of slots (default 2, at most 4). The owner set two slots on 2026-11-28 (#686), and asked for a target of four, reached one step at a time. Each agent, and this includes the lead agent, runs each such command from the root of its worktree in this form:
 
   ```bash
   node nodejs/wishem/docs/flow-scripts/heavy.mjs <command>
   ```
 
-  The script takes the lock of a free slot (`/tmp/wishem-heavy.lock` or `/tmp/wishem-heavy-2.lock`) and runs `timeout 140 <command>`. It holds one lock only, so two commands cannot block each other. The locks are the same files for each worktree. The system releases a lock when the command ends or its agent stops.
+  The script takes the lock of a free slot (`/tmp/wishem-heavy.lock`, then `/tmp/wishem-heavy-2.lock` to `-4.lock`) and runs `timeout 140 <command>`. It holds one lock only, so two commands cannot block each other. The locks are the same files for each worktree. The system releases a lock when the command ends or its agent stops.
 
-- If the resource log (`~/.local/state/wishem/resources.csv`) shows memory above 80 % or CPU throttling above 20 % for ten minutes, the lead agent goes back to one slot and adds a note to **Process notes**.
+- Each call of `heavy.mjs` adds one line to `~/.local/state/wishem/heavy-log.csv`: the slot (or `busy`), the wait before the run, the time of the run, and the exit code. `node nodejs/wishem/docs/flow-scripts/heavy-stats.mjs [<since>]` gives the share of busy calls, the median and the 90th percentile of the wait, and the use of each slot.
+- The lead agent adds one slot when, over at least 20 calls at the current number, the 90th percentile of the wait is more than 30 seconds or more than 20 % of the calls are busy, and the resource log shows memory below 70 % and CPU throttling below 10 %.
+- If the resource log (`~/.local/state/wishem/resources.csv`) shows memory above 80 % or CPU throttling above 20 % for ten minutes, the lead agent removes one slot.
+- The lead agent changes the number of slots or the limit of subagents, not both in one step, and adds a note to **Process notes** at each step. It also counts the task reports in each hour, to see if a step gives more work done or only more waits.
 
 - The system moves a foreground command of a subagent to the background after approximately 180 seconds, and the subagent then loses the result. Thus each command, with its wait for the lock, ends in less than 150 seconds. Divide a longer job into parts, for example one package for each command.
 - The script stops the wait for a slot after 15 seconds, with exit code 75 and no run of the command. The agent then tries the same command again, at most 40 times. Each other exit code is the exit code of the command: do not run the command again for it.
@@ -161,7 +164,7 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Before each push, run `node nodejs/wishem/docs/flow-scripts/finish-check.mjs` from the root of the worktree. Push only when it prints no FAIL line.
 - A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
-- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs` creates the issue of a break-test. `heavy.mjs <command>` runs a heavy command in a slot (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
+- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs` creates the issue of a break-test. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
 
 ### The steps that a person does
 
