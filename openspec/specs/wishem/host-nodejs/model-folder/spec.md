@@ -60,7 +60,7 @@ When `state.json` or a definition file is not valid JSON, the folder SHALL give 
 
 ### Requirement: A problem names its file
 
-When the model data from a folder is not correct, each problem that comes from one file SHALL name that file.
+When the model data from a folder is not correct, each problem that comes from one file SHALL name that file. When the model data from a folder is correct, each warning that comes from one file SHALL name that file.
 
 #### Scenario: A field type that is not known
 
@@ -71,6 +71,11 @@ When the model data from a folder is not correct, each problem that comes from o
 
 - **WHEN** an entity in `state.json` uses a component type that no definition file declares
 - **THEN** the problem names `state.json`
+
+#### Scenario: Two definition files with the same label
+
+- **WHEN** the definition files `definitions/a.json` and `definitions/b.json` of the model folder have the label `AppBar` and different IDs
+- **THEN** the terminal shows the line `wishem: warning in definitions/b.json: ` and the text of the warning, and the model is correct
 
 ### Requirement: The store follows the model files
 
@@ -292,7 +297,7 @@ The storage subsystem of the store `product` SHALL attach the input subsystem `p
 
 ### Requirement: Each line about the product model names the product
 
-Each problem of a file of the product folder SHALL name the absolute path of that file. Each other line of the storage subsystem of the product SHALL start with `wishem: product: `. The lines of the storage subsystem of the store `store` SHALL not change.
+Each problem and each warning of a file of the product folder SHALL name the absolute path of that file. Each other line of the storage subsystem of the product SHALL start with `wishem: product: `. The lines of the storage subsystem of the store `store` SHALL not change.
 
 #### Scenario: A file of the product that is saved in part
 
@@ -308,3 +313,8 @@ Each problem of a file of the product folder SHALL name the absolute path of tha
 
 - **WHEN** the definitions of the store `product` differ from the files of the product folder, and the construct stops
 - **THEN** the terminal shows `wishem: product: the process stops, and the model folder does not hold the last changes of the store`
+
+#### Scenario: A warning of a definition file of the product
+
+- **WHEN** the construct runs, and a person adds the file `definitions/b.json` to the product folder `/tmp/a4-product` with the label of the component type in `definitions/a.json` and a different ID
+- **THEN** the terminal shows a line that starts with `wishem: warning in /tmp/a4-product/definitions/b.json: `, and no line that starts with `wishem: product: warning`

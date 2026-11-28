@@ -33,7 +33,7 @@ Each ID has a prefix for its kind, an underscore, and a UUID in lowercase. The p
 }
 ```
 
-Two component types with the same label cause a warning. The model stays correct.
+Two component types with the same label cause a warning. The model stays correct. The path of the warning is `definitions`, the index of the later of the two component types, and `label`.
 
 ## Validation
 
