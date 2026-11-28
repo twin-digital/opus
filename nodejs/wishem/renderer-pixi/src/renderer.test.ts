@@ -37,6 +37,14 @@ interface TestView extends PixiView<ViewProps, Sprite> {
   update: ReturnType<typeof vi.fn<(display: Sprite, props: ViewProps, viewport: Viewport) => void>>
 }
 
+/** The color of a test view as a string. Throws when the value is not a string. */
+const colorOf = (value: ViewProps['color']): string => {
+  if (typeof value !== 'string') {
+    throw new Error(`Expected a string color, got ${String(value)}`)
+  }
+  return value
+}
+
 /** A view that makes a sprite and sets its tint, width, and height. A component with no color is hidden. */
 const makeView = (): TestView => ({
   create: vi.fn(() => new Sprite(Texture.WHITE)),
@@ -45,7 +53,7 @@ const makeView = (): TestView => ({
     display.height = viewport.height
     display.visible = props.color !== undefined
     if (props.color !== undefined) {
-      display.tint = props.color
+      display.tint = colorOf(props.color)
     }
   }),
 })
@@ -441,7 +449,7 @@ describe('startRenderer: a view that fails', () => {
       if (props.color === RED) {
         throw BOOM
       }
-      display.tint = props.color ?? '#000000'
+      display.tint = props.color === undefined ? '#000000' : colorOf(props.color)
     })
     const { editor, screen } = makeHub(modelOf(entity(E1, RED)))
     const stage = new Container()
