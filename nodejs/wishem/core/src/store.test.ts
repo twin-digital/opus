@@ -60,7 +60,7 @@ const frozenDeep = (value: unknown): boolean =>
   typeof value !== 'object' || value === null || (Object.isFrozen(value) && Object.values(value).every(frozenDeep))
 
 describe('createStore', () => {
-  it('is a model subsystem with the ID store and five input types', () => {
+  it('is a model subsystem with the ID store and seven input types', () => {
     const store = createStore()
     expect(store.id).toBe('store')
     expect(store.inputs).toEqual([
@@ -69,6 +69,8 @@ describe('createStore', () => {
       'store/remove-entity',
       'store/set-field',
       'store/clear-field',
+      'store/add-reference',
+      'store/remove-reference',
     ])
   })
 
@@ -789,5 +791,170 @@ describe('clear-field', () => {
     expect(error.problems).toHaveLength(1)
     expect(error.problems[0]?.path).toEqual(['payload', key])
     expect(error.problems[0]?.message).toContain(key)
+  })
+})
+
+describe('add-reference', () => {
+  const add = (reference: string, field = FLD5) => ({ entity: ENT, componentType: CT, field, reference })
+  const cardsOf = (part: Model) => part.entities[0]?.components[CT]?.[FLD5]
+
+  it('adds the ID at the end, and each other entity is the same object', () => {
+    const store = createStore({ model: listModel([ENT2]) })
+    const next = send(store, store.initial, 'store/add-reference', add(ENT3))
+    expect(cardsOf(next)).toEqual([ENT2, ENT3])
+    expect(next.entities[1]).toBe(store.initial.entities[1])
+    expect(next.entities[2]).toBe(store.initial.entities[2])
+    expect(frozenDeep(next)).toBe(true)
+  })
+
+  it('sets a list with the one ID when the component has no value', () => {
+    const store = createStore({ model: listModel() })
+    expect(cardsOf(send(store, store.initial, 'store/add-reference', add(ENT2)))).toEqual([ENT2])
+  })
+
+  it('sets a list with the one ID when the component omits the field', () => {
+    const store = createStore({
+      model: {
+        ...listModel(),
+        entities: listModel().entities.map((e) => (e.id === ENT ? { ...e, components: { [CT]: {} } } : e)),
+      },
+    })
+    const next = send(store, store.initial, 'store/add-reference', add(ENT2))
+    expect(cardsOf(next)).toEqual([ENT2])
+  })
+
+  it('accepts an ID that the list holds and gives the same part', () => {
+    const store = createStore({ model: listModel([ENT2]) })
+    expect(send(store, store.initial, 'store/add-reference', add(ENT2))).toBe(store.initial)
+  })
+
+  it('refuses a field of a different type with a problem that names the field and the type', () => {
+    const store = createStore({ model: typedModel() })
+    const error = refusal(() => send(store, store.initial, 'store/add-reference', add(ENT2, FLD)))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.path).toEqual(['payload', 'field'])
+    expect(error.problems[0]?.message).toContain('text')
+    expect(error.problems[0]?.message).toContain('reference-list')
+  })
+
+  it('refuses an ID that no entity has and names the ID', () => {
+    const store = createStore({ model: listModel([ENT2]) })
+    const error = refusal(() => send(store, store.initial, 'store/add-reference', add(MISSING)))
+    expect(error.problems[0]?.path).toEqual(['payload', 'reference'])
+    expect(error.problems[0]?.message).toContain(MISSING)
+  })
+
+  it('refuses the entity of the list when the entity does not exist', () => {
+    const store = createStore({ model: listModel() })
+    const error = refusal(() => send(store, store.initial, 'store/add-reference', { ...add(ENT2), entity: MISSING }))
+    expect(error.problems[0]?.path).toEqual(['payload', 'entity'])
+  })
+
+  it('refuses a component type that is not defined', () => {
+    const store = createStore({ model: listModel() })
+    const error = refusal(() => send(store, store.initial, 'store/add-reference', { ...add(ENT2), componentType: CT2 }))
+    expect(error.problems[0]?.path).toEqual(['payload', 'componentType'])
+  })
+
+  it('refuses a field that the component type does not have', () => {
+    const store = createStore({ model: listModel() })
+    const error = refusal(() => send(store, store.initial, 'store/add-reference', add(ENT2, FLD2)))
+    expect(error.problems[0]?.path).toEqual(['payload', 'field'])
+  })
+
+  it.each([
+    ['no reference key', { entity: ENT, componentType: CT, field: FLD5 }, 'reference'],
+    ['a reference that is not a string', { entity: ENT, componentType: CT, field: FLD5, reference: 5 }, 'reference'],
+    ['an entity that is not a string', { entity: 5, componentType: CT, field: FLD5, reference: ENT2 }, 'entity'],
+    ['a field that is not a string', { entity: ENT, componentType: CT, field: 5, reference: ENT2 }, 'field'],
+  ])('refuses a payload with %s', (_name, payload, key) => {
+    const store = createStore({ model: listModel() })
+    const error = refusal(() => send(store, store.initial, 'store/add-reference', payload))
+    expect(error.problems.map((problem) => problem.path)).toContainEqual(['payload', key])
+  })
+
+  it('refuses a payload that is not an object', () => {
+    const store = createStore({ model: listModel() })
+    const error = refusal(() => send(store, store.initial, 'store/add-reference', 'x'))
+    expect(error.problems[0]?.path).toEqual(['payload'])
+  })
+
+  it('applies for a store with the ID product and not for the ID store', () => {
+    const store = createStore({ id: 'product', model: listModel() })
+    const input = storeInputs('product').addReference(add(ENT2))
+    expect(input.type).toBe('product/add-reference')
+    expect(cardsOf(send(store, store.initial, input.type, input.payload))).toEqual([ENT2])
+    expect(store.inputs).toContain('product/add-reference')
+    expect(() => send(store, store.initial, 'store/add-reference', add(ENT2))).toThrow(InputRefusedError)
+  })
+})
+
+describe('remove-reference', () => {
+  const remove = (reference: string, field = FLD5) => ({ entity: ENT, componentType: CT, field, reference })
+  const cardsOf = (part: Model) => part.entities[0]?.components[CT]?.[FLD5]
+
+  it('removes the ID and keeps the order of the others', () => {
+    const store = createStore({ model: listModel([ENT2, ENT3, ENT]) })
+    const next = send(store, store.initial, 'store/remove-reference', remove(ENT3))
+    expect(cardsOf(next)).toEqual([ENT2, ENT])
+    expect(next.entities[1]).toBe(store.initial.entities[1])
+  })
+
+  it('leaves [] after the removal of the last item', () => {
+    const store = createStore({ model: listModel([ENT2]) })
+    expect(cardsOf(send(store, store.initial, 'store/remove-reference', remove(ENT2)))).toEqual([])
+  })
+
+  it('accepts an ID that the list does not hold and gives the same part', () => {
+    const store = createStore({ model: listModel([ENT2]) })
+    expect(send(store, store.initial, 'store/remove-reference', remove(ENT3))).toBe(store.initial)
+  })
+
+  it('accepts a field with no value and gives the same part', () => {
+    const store = createStore({ model: listModel() })
+    expect(send(store, store.initial, 'store/remove-reference', remove(ENT3))).toBe(store.initial)
+  })
+
+  it('accepts an ID that no entity has when the list does not hold it', () => {
+    const store = createStore({ model: listModel([ENT2]) })
+    expect(send(store, store.initial, 'store/remove-reference', remove(MISSING))).toBe(store.initial)
+  })
+
+  it('refuses a field of a different type, also when nothing is to remove', () => {
+    const store = createStore({ model: typedModel() })
+    const error = refusal(() => send(store, store.initial, 'store/remove-reference', remove(ENT2, FLD)))
+    expect(error.problems[0]?.path).toEqual(['payload', 'field'])
+    expect(error.problems[0]?.message).toContain('reference-list')
+  })
+
+  it('refuses a payload with no reference key', () => {
+    const store = createStore({ model: listModel() })
+    const error = refusal(() =>
+      send(store, store.initial, 'store/remove-reference', { entity: ENT, componentType: CT, field: FLD5 }),
+    )
+    expect(error.problems[0]?.path).toEqual(['payload', 'reference'])
+  })
+
+  it('refuses an entity that does not exist', () => {
+    const store = createStore({ model: listModel() })
+    const error = refusal(() =>
+      send(store, store.initial, 'store/remove-reference', { ...remove(ENT2), entity: MISSING }),
+    )
+    expect(error.problems[0]?.path).toEqual(['payload', 'entity'])
+  })
+
+  it('makes the removal of the entity possible after the removal of its reference', () => {
+    const store = createStore({ model: listModel([ENT2, ENT3]) })
+    const removed = send(store, store.initial, 'store/remove-reference', remove(ENT2))
+    const next = send(store, removed, 'store/remove-entity', { entity: ENT2 })
+    expect(next.entities.map((entity) => entity.id)).toEqual([ENT, ENT3])
+    expect(cardsOf(next)).toEqual([ENT3])
+  })
+
+  it('applies for a store with the ID product', () => {
+    const store = createStore({ id: 'product', model: listModel([ENT2]) })
+    const input = storeInputs('product').removeReference(remove(ENT2))
+    expect(input.type).toBe('product/remove-reference')
+    expect(cardsOf(send(store, store.initial, input.type, input.payload))).toEqual([])
   })
 })

@@ -205,6 +205,36 @@ describe('clear-field in a hub', () => {
   })
 })
 
+describe('add-reference in a hub', () => {
+  const listModel: Model = {
+    definitions: [{ id: CT, label: 'Deck', fields: [{ id: FLD, label: 'cards', type: 'reference-list' }] }],
+    entities: [
+      { id: ENT, components: {} },
+      { id: ENT2, components: {} },
+    ],
+  }
+  const startList = () => {
+    const hub = createHub({ subsystems: [createStore({ model: listModel })] })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+    return { hub, form }
+  }
+
+  it('records an accepted add-reference and no refused one', async () => {
+    const { hub, form } = startList()
+    const payload = { entity: ENT, componentType: CT, field: FLD, reference: ENT2 }
+    const accepted = await form.submit(storeInputs().addReference(payload))
+    const refused = await form.submit(
+      storeInputs().addReference({ ...payload, reference: 'e_00000000-0000-4000-8000-000000000000' }),
+    )
+    expect(accepted).toEqual({ ok: true, seq: 1 })
+    expect(refused).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.record()).toHaveLength(1)
+    expect(hub.record()[0]?.type).toBe('store/add-reference')
+    expect((hub.read().store as Model).entities[0]?.components[CT]?.[FLD]).toEqual([ENT2])
+  })
+})
+
 describe('the record of a hub', () => {
   it('gives the same model in a second hub that gets the inputs in order', async () => {
     const first = start()
