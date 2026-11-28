@@ -93,7 +93,16 @@ Task 5: fix round 1 dispatched (new implementer, sonnet), base 38661342.
 Task 5: fix round 1/5 (3 addressed, 0 open — F1, F2, M-relay; commits 3866134..9e10af8; 74 tests; test:godot 116 passed). Re-review (sonnet): no new breakage; no data of stdin is lost (the runner writes only after a socket connects).
 Task 5: minor (deferred): the test of an idle relay has a limit of 700 ms against the kill time of 1000 ms (can be fragile on a loaded computer).
 Task 5: complete (commits 4876f3a..9e10af8, review clean)
+Task 6: dispatched (implementer: sonnet), base 24171096
+
+Task 6: the first implementer was stopped by the lead (it used a Monitor and waited for a background run of the fault of 6.2, against the rule of no background work). The lead restored link_client.gd (the fault of 6.2), removed a Godot container that stayed, and kept the uncommitted work (README.md, package.json, pnpm-lock.yaml, pnpm-workspace.yaml, tests/). No report file. Task 6: new implementer dispatched (sonnet), base 24171096 with the uncommitted work.
+
+Task 6: implementer DONE_WITH_CONCERNS, commit 91431f32 (node --test "tests/_.test.ts" passes, about 10 s; test:godot 116; lint, typecheck, test pass, 74). Fault 1 of 6.2 (renderer skips update) fails at step 3; fault 2 (no new link) fails at step 6; both files restored; no container stays. Concerns: no RED before the code (the code of Tasks 1 to 5 existed; the faults are the red evidence); a first loop of retries counted exit code 1 as a busy lock, so fault 1 ran several times; `node --test tests/` finds no file, so test:ui and the README use "tests/_.test.ts"; ObjectDB leak warnings at the exit of test:godot. Review dispatched (sonnet).
+
+Task 6: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify, checked by the lead: the faults of 6.2 are in the report (step 3 and step 6); main.gd prints the line "not reachable" also after a loss (step 5 of the real run passed on it); the RED evidence is the two faults (the code of Tasks 1 to 5 existed).
+Task 6: minor (deferred): the finally of the test skips construct.close() when run.close() throws (use allSettled); a redundant alias `port`; no timeout of the whole test (each wait is bounded); the README gives test:ui with no glob; the ObjectDB leak warnings at the exit of test:godot (output not pristine).
+Task 6: complete (commits 2417109..91431f3, review clean)
 
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 6 (the screenshot test). Then Task 7 (LINK.md and the documents; carry the gaps of Decision 14, of the report of Task 2 (8 to 14), and `seq()` of link_client.gd from Task 5). Tasks 4 to 7 wait for the merge of #540.
+- NEXT STEP: Task 7 (LINK.md and the documents; carry the gaps of Decision 14, of the report of Task 2 (8 to 14), and `seq()` of link_client.gd from Task 5). Tasks 4 to 7 wait for the merge of #540.
