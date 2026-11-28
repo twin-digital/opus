@@ -686,7 +686,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has eleven containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The PixiJS process serves the link with the host-nodejs package and builds on the clock and core packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the two processes, edits the model folder, and looks at the two pages.',
+    'Wishem has eleven containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The PixiJS process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the two processes, edits the model folder, and looks at the two pages.',
   width: WIDTH_PX + GUTTER + 56,
   height: 1960,
   items: [
@@ -742,7 +742,7 @@ const containers = {
       'quiet',
       [right(cProcess, 590), [916, 590], [916, 1336], right(cRenderer, 1336)],
       'Builds on [import]',
-      [772, 1336],
+      [873, 1336],
     ),
     rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1036]),
 
@@ -768,6 +768,7 @@ const containers = {
     rel('quiet', [top(cPixiPage, 150), [150, 1040], [410, 1040], bottom(cHub, 410)], 'Builds on [import]', [300, 1040]),
     rel('quiet', [top(cPixiPage, 300), [300, 1136], left(cClock, 1136)], 'Builds on [import]', [300, 1250]),
     rel('quiet', [top(cPixiProcess, 700), [700, 1136], right(cClock, 1136)], 'Builds on [import]', [700, 1260]),
+    rel('quiet', [top(cPixiProcess, 780), [780, 960], right(cHub, 960)], 'Builds on [import]', [780, 1050]),
     rel('quiet', [top(cPixiProcess, 830), bottom(cCore, 830)], 'Builds on [import]', [830, 1000]),
     rel(
       'quiet',

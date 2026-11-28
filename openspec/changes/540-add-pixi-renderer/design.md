@@ -617,10 +617,11 @@ flowchart TB
   pixiprocess -- "Serves the link with [import]" --> host
   pixiprocess -- "Builds on [import]" --> clock
   pixiprocess -- "Builds on [import]" --> core
+  pixiprocess -- "Builds on [import]" --> hub
   clock -- "Builds on [import]" --> hub
 ```
 
-`renderer-pixi` imports only types from `core` and `hub`, so the diagram shows no relationship from it. The PixiJS page imports `timeInputs` of `clock`, `connectLink` of `hub`, and `startRenderer` of `renderer-pixi`. The PixiJS process imports `serveHub` of `host-nodejs`, `createTime` and `startClock` of `clock`, and `createStore` of `core`. The system context diagram does not change: the designer is the one person, and Wishem connects to no external system.
+`renderer-pixi` imports only types from `core` and `hub`, so the diagram shows no relationship from it. The PixiJS page imports `timeInputs` of `clock`, `connectLink` of `hub`, and `startRenderer` of `renderer-pixi`. The PixiJS process imports `serveHub` of `host-nodejs`, `createTime` and `startClock` of `clock`, and `createStore` of `core`, and `createHub` and `InputRefusedError` of `hub`. The system context diagram does not change: the designer is the one person, and Wishem connects to no external system.
 
 ## Failure Modes
 

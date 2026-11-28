@@ -36,10 +36,10 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` runs the PixiJS construct and its page server in one Node.js process
 - **THEN** the container diagram shows the PixiJS process as a Node.js container, relationships from the designer to the PixiJS process and to the PixiJS page, and relationships from the PixiJS page to the PixiJS process with the labels "Gets page code [HTTP]" and "Connects to the hub [WebSocket link]"
 
-#### Scenario: The PixiJS process builds on host-nodejs, the clock, and core
+#### Scenario: The PixiJS process builds on host-nodejs, the clock, core, and hub
 
-- **WHEN** the PixiJS process imports `serveHub` of `@thrashplay/wishem-host-nodejs`, and values of `@thrashplay/wishem-clock` and `@thrashplay/wishem-core`
-- **THEN** the container diagram shows the container `clock` as a TypeScript package, a relationship from the PixiJS process to `host-nodejs` with the label "Serves the link with [import]", relationships from the PixiJS process to `clock` and to `core`, and a relationship from `clock` to `hub`, each with the label "Builds on [import]"
+- **WHEN** the PixiJS process imports `serveHub` of `@thrashplay/wishem-host-nodejs`, and values of `@thrashplay/wishem-clock`, `@thrashplay/wishem-core`, and `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows the container `clock` as a TypeScript package, a relationship from the PixiJS process to `host-nodejs` with the label "Serves the link with [import]", relationships from the PixiJS process to `clock`, to `core`, and to `hub`, and a relationship from `clock` to `hub`, each with the label "Builds on [import]"
 
 #### Scenario: The PixiJS page builds on the PixiJS renderer, the hub, and the clock
 
