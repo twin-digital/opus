@@ -54,6 +54,21 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows the container `clock` as a TypeScript package, and a relationship from `clock` to `hub` with the label "Builds on [import]"
 
+#### Scenario: The PixiJS process runs the PixiJS construct and serves the PixiJS page
+
+- **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` runs the PixiJS construct and its page server in one Node.js process
+- **THEN** the container diagram shows the PixiJS process as a Node.js container, relationships from the designer to the PixiJS process and to the PixiJS page, and relationships from the PixiJS page to the PixiJS process with the labels "Gets page code [HTTP]" and "Connects to the hub [WebSocket link]"
+
+#### Scenario: The PixiJS process builds on host-nodejs, the clock, core, and hub
+
+- **WHEN** the PixiJS process imports `serveHub` of `@thrashplay/wishem-host-nodejs`, and values of `@thrashplay/wishem-clock`, `@thrashplay/wishem-core`, and `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows the container `clock` as a TypeScript package, a relationship from the PixiJS process to `host-nodejs` with the label "Serves the link with [import]", relationships from the PixiJS process to `clock`, to `core`, and to `hub`, and a relationship from `clock` to `hub`, each with the label "Builds on [import]"
+
+#### Scenario: The PixiJS page builds on the PixiJS renderer, the hub, and the clock
+
+- **WHEN** the PixiJS page imports values of `@thrashplay/wishem-renderer-pixi`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`
+- **THEN** the container diagram shows the PixiJS page as a container in a web browser, the container `renderer-pixi` as a TypeScript package, and a relationship from the PixiJS page to each of the three packages with the label "Builds on [import]"
+
 #### Scenario: A change alters the protocol between two containers
 
 - **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket

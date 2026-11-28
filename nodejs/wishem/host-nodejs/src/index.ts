@@ -9,3 +9,5 @@ export {
   startConstruct,
 } from './start-construct.js'
 export type { Construct, ConstructOptions } from './start-construct.js'
+export { serveHub } from './serve-hub.js'
+export type { HubServer, ServeHubOptions } from './serve-hub.js'

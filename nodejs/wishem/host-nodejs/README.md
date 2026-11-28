@@ -39,6 +39,28 @@ The server checks the `Origin` header of each link request. It accepts a request
 
 Each other request gets status 404 and a JSON body with an `error` message.
 
+## Serve the link of a hub
+
+`serveHub` serves the link of a hub that your program made. It needs no model folder and no storage subsystem.
+
+```ts
+import { createStore } from '@thrashplay/wishem-core'
+import { createHub } from '@thrashplay/wishem-hub'
+import { serveHub } from '@thrashplay/wishem-host-nodejs'
+
+const hub = createHub({ subsystems: [createStore({ model })] })
+const server = await serveHub(hub, { port: 0 })
+hub.start()
+console.log(server.linkUrl) // ws://127.0.0.1:41377/link
+await server.close() // stops the hub, closes each link, releases the port
+```
+
+- The server listens only on `127.0.0.1`. Use port 0 to let the system select a port. There is no default port.
+- The server obeys the rules of [The link](#the-link): the path `/link`, the `Origin` check, and status 404 for each other request.
+- `serveHub` does not start the hub. Start it after `serveHub` resolves.
+- If the listen fails (for example, `EADDRINUSE`), `serveHub` rejects with the error and holds no socket.
+- `close()` stops the hub when it runs. It gives the same promise on each call.
+
 ## The model folder
 
 ```
