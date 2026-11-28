@@ -971,3 +971,65 @@ describe('remove-reference', () => {
     expect(cardsOf(send(store, store.initial, input.type, input.payload))).toEqual([])
   })
 })
+
+describe('a list of references of the caller', () => {
+  const cardsOf = (model: Model, index = 0): unknown => model.entities[index]?.components[CT]?.[FLD5]
+  const apply = (store: ModelSubsystem<Model>, type: string, payload: unknown): Model => {
+    seq += 1
+    return store.apply(store.initial, { seq, source: 'test', type, payload }, { read: () => ({}) })
+  }
+
+  it('stays unfrozen after createStore, and the store model has the same IDs', () => {
+    const list = [ENT2, ENT3]
+    const store = createStore({ model: listModel(list) })
+    expect(Object.isFrozen(list)).toBe(false)
+    expect(() => list.push(ENT)).not.toThrow()
+    expect(cardsOf(store.initial)).toEqual([ENT2, ENT3])
+  })
+
+  it('stays unfrozen after replace-model', () => {
+    const list = [ENT2, ENT3]
+    const store = createStore({ model: listModel() })
+    const next = apply(store, 'store/replace-model', { model: listModel(list) })
+    expect(Object.isFrozen(list)).toBe(false)
+    expect(cardsOf(next)).toEqual([ENT2, ENT3])
+    expect(cardsOf(next)).not.toBe(list)
+  })
+
+  it('stays unfrozen after set-field', () => {
+    const list = [ENT3, ENT2]
+    const store = createStore({ model: listModel() })
+    const next = apply(store, 'store/set-field', { entity: ENT, componentType: CT, field: FLD5, value: list })
+    expect(Object.isFrozen(list)).toBe(false)
+    expect(cardsOf(next)).toEqual([ENT3, ENT2])
+    expect(cardsOf(next)).not.toBe(list)
+  })
+
+  it('stays unfrozen after add-entity', () => {
+    const list = [ENT2]
+    const store = createStore({ model: listModel() })
+    const entity: Entity = { id: 'e_cccccccc-dddd-4eee-8fff-000000000000', components: { [CT]: { [FLD5]: list } } }
+    const next = apply(store, 'store/add-entity', { entity })
+    expect(Object.isFrozen(list)).toBe(false)
+    expect(cardsOf(next, 3)).toEqual([ENT2])
+    expect(cardsOf(next, 3)).not.toBe(list)
+  })
+
+  it('add-reference and remove-reference give a new array and keep the earlier one', () => {
+    const store = createStore({ model: listModel([ENT2]) })
+    const before = cardsOf(store.initial)
+    const added = apply(store, 'store/add-reference', { entity: ENT, componentType: CT, field: FLD5, reference: ENT3 })
+    expect(cardsOf(added)).toEqual([ENT2, ENT3])
+    expect(cardsOf(added)).not.toBe(before)
+    expect(before).toEqual([ENT2])
+    const removed = apply(store, 'store/remove-reference', {
+      entity: ENT,
+      componentType: CT,
+      field: FLD5,
+      reference: ENT2,
+    })
+    expect(cardsOf(removed)).toEqual([])
+    expect(cardsOf(removed)).not.toBe(before)
+    expect(before).toEqual([ENT2])
+  })
+})

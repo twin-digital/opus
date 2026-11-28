@@ -657,4 +657,18 @@ describe('validateModel', () => {
       expect(result.ok && result.warnings).toEqual([])
     })
   })
+  describe('a list of references shares no array with the input', () => {
+    it('gives a new array with the same IDs in the same order', () => {
+      const list = [ENT2, ENT]
+      const definitions = [{ id: CT, label: 'Deck', fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] }]
+      const entities = [entity({ [CT]: { [FLD5]: list } }), entity({}, ENT2)]
+      const result = validateModel({ definitions, entities })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const copy = result.model.entities[0]?.components[CT]?.[FLD5]
+        expect(copy).toEqual([ENT2, ENT])
+        expect(copy).not.toBe(list)
+      }
+    })
+  })
 })
