@@ -9,6 +9,8 @@ import { createUpdate } from '@thrashplay/wishem-update'
 import type { NativeBehavior } from '@thrashplay/wishem-update'
 import { CONSTRUCT_MANAGER_ID } from './ids.js'
 
+const DEFAULT_STEP_MS = 50
+
 export interface ProductConstructOptions {
   /** The ID in the construct list. */
   id: string
@@ -43,7 +45,7 @@ export interface ProductConstruct {
 export const startProductConstruct = async (options: ProductConstructOptions): Promise<ProductConstruct> => {
   const update = createUpdate({ store: createStore({ model: options.model }), behaviors: options.behaviors ?? [] })
   const hub = createHub({
-    subsystems: [createTime({ running: options.running }), update],
+    subsystems: [createTime({ running: options.running, stepMs: options.stepMs ?? DEFAULT_STEP_MS }), update],
     rewindSources: [CONSTRUCT_MANAGER_ID],
     ...(options.onError === undefined ? {} : { onError: options.onError }),
   })

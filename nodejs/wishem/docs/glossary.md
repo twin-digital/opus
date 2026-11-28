@@ -94,7 +94,7 @@ Terms in each group are in alphabetical order.
 
 **Tick** (**Agreed**): The input `time/advance`. A listener sees a tick as the hub event for an applied input. The type `Tick` (**Proposed**) of the package `update` holds the facts of one tick that a behavior gets: `ms`, `ticks`, and `now`.
 
-**Time** (**Proposed**): The `time` subsystem. It is a model subsystem. Its state is the time of the construct, the count of ticks, and `running`. It declares the input types `time/advance` and `time/set-running`.
+**Time** (**Proposed**): The `time` subsystem. It is a model subsystem. Its state is the time of the construct, the count of ticks, `running`, and optionally `stepMs`, the step length of the clock in milliseconds. It declares the input types `time/advance` and `time/set-running`.
 
 ## Directives
 

@@ -101,7 +101,7 @@ The construct manager attaches the input port `construct-manager` and the output
 
 A product construct (`startProductConstruct`) holds:
 
-- a hub with the parts `time` and `store`, and the update subsystem, which runs the `behaviors`
+- a hub with the parts `time` and `store`, and the update subsystem, which runs the `behaviors`. The part `time` holds `stepMs`, the step length of the clock (default 50 milliseconds)
 - a link server on a port that the system selects (`linkUrl`, for example `ws://127.0.0.1:41377/link`)
 - a clock on the port `clock`
 

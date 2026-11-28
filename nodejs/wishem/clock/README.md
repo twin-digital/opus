@@ -6,7 +6,7 @@ A construct that needs no time includes none of these parts.
 
 ## The two subsystems
 
-- **Time subsystem.** `createTime()` makes a model subsystem with the ID `time`. Its part holds `now` (the time of the construct in milliseconds), `ticks` (the count of ticks), and `running`.
+- **Time subsystem.** `createTime()` makes a model subsystem with the ID `time`. Its part holds `now` (the time of the construct in milliseconds), `ticks` (the count of ticks), and `running`. The option `stepMs` of `createTime` is the step length in milliseconds. With `stepMs`, the part also holds `stepMs`, and each later part keeps it. With no `stepMs`, the part has no key `stepMs`. `createTime` throws a `RangeError` when `stepMs` is not a finite number larger than 0.
 - **Clock.** `startClock(port)` starts a timer on the port of an input subsystem. The clock holds no state of the construct. It sends ticks to the hub.
 
 A construct can include the time subsystem with no clock. A test, an agent, or a replay then advances the construct with the ticks that it sends.
