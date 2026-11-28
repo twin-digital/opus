@@ -136,3 +136,33 @@ await construct.close() // stops the clock, the hub, and the server
 ```
 
 If the port is in use, `startPixiConstruct` rejects with the error (`EADDRINUSE`). No hub and no clock run. `close()` gives the same promise on each call.
+
+## The screenshot test
+
+The test starts the real command and opens the page in a web browser. It proves the path of a tick through the link: from the clock in the Node.js process to the picture in the page, and from a key in the page to the hub.
+
+The browser runs in the pinned Playwright image in Docker, so the test needs Docker. When `docker info` fails, the command ends with exit code 1 and a message about Docker. The pull request checks run the same test.
+
+| Command                                                     | Effect                              |
+| ----------------------------------------------------------- | ----------------------------------- |
+| `pnpm --filter @thrashplay/wishem-pixi-page test:ui`        | Runs the test against the baselines |
+| `pnpm --filter @thrashplay/wishem-pixi-page test:ui:update` | Writes the baselines again          |
+
+The test uses two processes:
+
+1. The command `node scripts/start.ts --port 4181 --hub-port 0 --paused` runs on the computer of the test runner. It holds the construct, the hub, and the page server. Each run starts a new construct at tick 0.
+2. Chromium runs in the Docker container. It opens `http://127.0.0.1:4181/`. `exposeNetwork: '<loopback>'` carries the loopback traffic of the browser to the computer of the test runner. The page connects through the proxy `/link` of the page server to the hub.
+
+The test does these steps:
+
+1. It opens the page and waits for `data-ready` on the canvas and for the status "Connected (link 1)".
+2. It compares the canvas with `tick-0.png` (blue).
+3. It presses the period key. The canvas must match `tick-1.png` (red), and must differ from tick 0.
+4. It waits 1500 milliseconds. The canvas must still match `tick-1.png`, because the time is paused.
+5. It presses the space key. The canvas must change.
+
+A fault in the link, the proxy, the input subsystem, or the renderer makes step 3 fail.
+
+### Update the baselines
+
+The baselines are in `tests/__screenshots__/`. Run `test:ui:update` after a planned change to the picture. Look at `tick-0.png` and `tick-1.png`, and commit them with the change. The pinned image is the only browser, so a baseline from a different computer is the same.
