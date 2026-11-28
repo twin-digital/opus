@@ -132,6 +132,11 @@ describe('parseHubMessage', () => {
     expect(parseHubMessage(json(result))).toEqual({ kind: 'message', message: result })
   })
 
+  it('reads a refused with a supported version of 0 and of 2^53 - 1', () => {
+    const message = { ...refused, supported: [0, Number.MAX_SAFE_INTEGER] }
+    expect(parseHubMessage(json(message))).toEqual({ kind: 'message', message })
+  })
+
   it('reads a welcome with each status and a refused with each reason', () => {
     for (const status of ['created', 'running']) {
       expect(parseHubMessage(json({ ...welcome, status }))).toEqual({
@@ -192,6 +197,27 @@ describe('parseHubMessage', () => {
     [
       'a result with a result and an error that is null',
       json({ t: 'result', request: 1, result: { ok: true, seq: 4 }, error: null }),
+    ],
+    [
+      'a result with a rejection with no reason',
+      json({ t: 'result', request: 1, result: { ok: false, problems: [] } }),
+    ],
+    [
+      'a result with a rejection with a reason that is not known',
+      json({ t: 'result', request: 1, result: { ok: false, reason: 'other', problems: [] } }),
+    ],
+    [
+      'a result with a rejection with no problems',
+      json({ t: 'result', request: 1, result: { ok: false, reason: 'invalid' } }),
+    ],
+    [
+      'a result with a rejection with problems that are not a list',
+      json({ t: 'result', request: 1, result: { ok: false, reason: 'invalid', problems: {} } }),
+    ],
+    ['a result with an acceptance with no seq', json({ t: 'result', request: 1, result: { ok: true } })],
+    [
+      'a result with an acceptance with a seq of 1.5',
+      json({ t: 'result', request: 1, result: { ok: true, seq: 1.5 } }),
     ],
     ['a result with a request of 1.5', json({ ...result, request: 1.5 })],
     ['a result with a negative request', json({ ...result, request: -1 })],
