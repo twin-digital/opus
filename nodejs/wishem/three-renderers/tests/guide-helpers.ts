@@ -4,6 +4,7 @@ import type { ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
+import { godotLabel } from '@thrashplay/wishem-renderer-godot'
 import { PNG } from 'pngjs'
 
 export const PACKAGE_DIR = join(import.meta.dirname, '..')
@@ -158,9 +159,9 @@ export const waitForColor = (renderer: Renderer, color: string, ms: number) =>
     ms,
   )
 
-/** The names of the containers of Godot that exist, running or not. */
-export const godotContainers = () =>
-  execFileSync('docker', ['ps', '-a', '--filter', 'name=wishem-godot', '--format', '{{.Names}}'], {
+/** The names of the containers of the Godot runs with this screenshot folder (default: the folder of `scripts/godot.ts`) that exist, running or not. */
+export const godotContainers = (shotsDir?: string) =>
+  execFileSync('docker', ['ps', '-a', '--filter', `label=${godotLabel(shotsDir)}`, '--format', '{{.Names}}'], {
     encoding: 'utf8',
   })
     .split('\n')
