@@ -50,6 +50,15 @@ Task 1: review (sonnet): spec compliant, quality Approved, no Critical or Import
 Task 1: minor (deferred): a test_*.gd file with no test function passes when other files have tests; the version of Godot is in docker.ts and in the Dockerfile with no test that ties them; imageTag uses slice(dir.length + 1) and join (a trailing slash or Windows separators change the hash); `docker cp` copies a local godot/.godot/ cache into the container; a SIGINT can leave the container; no test of createDockerCli; the noise of audio, libdbus, and libpulse under Xvfb (`--audio-driver Dummy`).
 Task 1: complete (commits f9c1cf1..7f3c12a, review clean)
 
+Task 2: dispatched (implementer: sonnet), base 0092a39f
+
+Task 2: implementer DONE_WITH_CONCERNS, commit ebb14942 (test:godot 57 passed, 0 failed; lint, typecheck, test pass, 9 Vitest tests; two deliberate faults in link_client.gd made the wait, down-count, and same-object tests fail, then reverted). Concerns: run.gd (Task 1) does not count a test file with a parse error as a failure; tested only against a fake WebSocketPeer (a real round trip is in Task 6); bad options go to an `error` member, not push_error; a close of a port closes the whole link client; seven new gaps of LINK.md, 8 to 14 in the report (the exact ID form, malformed result/event/applied/welcome, the retry after refused, the Origin header of a native client) — for Task 7; the fixture script needs `node --conditions=source`. Review dispatched (sonnet).
+
+Task 2: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify: the real WebSocketPeer (the 4 MiB inbound_buffer_size, STATE_CLOSING, was_string_packet) — the real round trip is in Tasks 5 and 6; the 57 tests from the report. No gap for this task.
+Task 2: minor (deferred): _send_submit ignores the result of send_text (a failed send leaves the submission pending until the link ends); no timeout of `welcome` and no keepalive (gap 6; carry to Task 5); the check of the phase in _send_submit repeats `_link.ended`; the runner run.gd counts neither a file that does not load nor a file with no test as a failure (a fault of Task 1: carry to the final review); the report counts 15 tests of link_messages, the review counts 14.
+For Task 7: the gaps of LINK.md are 1 to 7 of Decision 14 and 8 to 14 of the report of Task 2.
+Task 2: complete (commits 0092a39..ebb1494, review clean)
+
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 2 (the remote port in GDScript). Then Task 3. Tasks 4 to 7 wait for the merge of #540.
+- NEXT STEP: Task 3 (the Godot renderer and the ClearColor view). Tasks 4 to 7 wait for the merge of #540.
