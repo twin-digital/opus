@@ -171,6 +171,26 @@ const exploding: NativeBehavior = {
   update: (fields) => fields,
 }
 
+const REPORT_LIMIT = 500
+
+/** Stops the hub after `REPORT_LIMIT` reports, so that a loop of reports fails the test and does not hang it. */
+const limitReports = (hub: Hub) => {
+  const guard = { exceeded: false }
+  let count = 0
+  hub.attach({ id: 'report-limit', kind: 'output' }).subscribe((event) => {
+    if (
+      event.type === 'applied' &&
+      event.input.type === 'constructs/report' &&
+      ++count > REPORT_LIMIT &&
+      !guard.exceeded
+    ) {
+      guard.exceeded = true
+      hub.stop()
+    }
+  })
+  return guard
+}
+
 type TestOptions = Partial<ConstructManagerOptions> & Pick<InProcessLauncherOptions, 'behaviors' | 'stepMs'>
 
 describe('attachConstructManager', () => {
@@ -181,6 +201,7 @@ describe('attachConstructManager', () => {
   let lines: string[]
   let sockets: WebSocket[]
   let links: RemoteLink[]
+  let guard: { exceeded: boolean }
 
   const attachManager = ({ behaviors: list = behaviors, stepMs, ...rest }: TestOptions) =>
     attachConstructManager({
@@ -204,6 +225,7 @@ describe('attachConstructManager', () => {
       subsystems: [createStore(), createStore({ id: 'product', model: productModel }), createConstructList()],
     })
     hub.start()
+    guard = limitReports(hub)
     tester = hub.attach({ id: 'tester', kind: 'input' })
     manager = attachManager(options)
   }
@@ -218,6 +240,7 @@ describe('attachConstructManager', () => {
       subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
     })
     hub.start()
+    guard = limitReports(hub)
     tester = hub.attach({ id: 'tester', kind: 'input' })
     await prepare()
     manager = attachManager(options())
@@ -231,6 +254,9 @@ describe('attachConstructManager', () => {
       socket.close()
     }
     await manager.close()
+    if (guard.exceeded) {
+      throw new Error(`The manager sent more than ${REPORT_LIMIT} reports.`)
+    }
     hub.stop()
   })
 
@@ -452,6 +478,7 @@ describe('attachConstructManager', () => {
       subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
     })
     hub.start()
+    guard = limitReports(hub)
     tester = hub.attach({ id: 'tester', kind: 'input' })
     const inner = inProcessLauncher({ behaviors, timer: clock.timer, now: clock.now })
     let endNow: (message: string) => void = () => undefined
@@ -510,6 +537,7 @@ describe('attachConstructManager', () => {
       subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
     })
     hub.start()
+    guard = limitReports(hub)
     tester = hub.attach({ id: 'tester', kind: 'input' })
     const inner = inProcessLauncher({ behaviors, timer: clock.timer, now: clock.now })
     const ends: ((message: string) => void)[] = []
