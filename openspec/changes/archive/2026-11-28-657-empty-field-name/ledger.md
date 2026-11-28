@@ -14,3 +14,9 @@ Ruling: the change has one task, so its one review is the final review of the fu
 ## Tasks
 
 Task 1: dispatched (implementer: sonnet), base 2734a8a3
+
+Task 1: implementer DONE, commit 2ccae00f (7 failed before the code; lint, typecheck, test pass, 203). The task review is the final review (opus).
+Final review (opus): with fixes; spec compliant. Test guide steps 0 to 4 PASS (the real workbench and the Docker browser; the model copy in .superpowers/). renderer-react lint, typecheck, test pass (164). Important I1: nodejs/wishem/docs/architecture/README.md:145 says the console warning names one of four problems; this change adds `empty-name`. Minor: Renderer.test.tsx:870 has no `title` field as the scenario; no test of a reference field with an empty name (hold.ts:36); the doc comment at field-names.ts:23 is long. Observations: #663 (PixiJS), #542 (Godot), #664 (workbench-app README).
+Ruling: the fix wave takes I1 — cost if wrong: one line.
+Final review: fix wave dispatched (one implementer, sonnet), base 2ccae00f.
+Final review: fix wave implemented, commit 5acde4ae (README.md:145 names five problems with empty-name). Re-review by the lead agent (one line): addressed.
