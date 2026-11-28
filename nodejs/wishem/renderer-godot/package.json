@@ -29,6 +29,7 @@
   "scripts": {
     "build": "build",
     "clean": "clean",
+    "godot": "node scripts/godot.ts run",
     "godot:image": "node scripts/godot.ts image",
     "lint": "lint",
     "lint:fix": "lint_fix",

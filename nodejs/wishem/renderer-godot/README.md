@@ -17,6 +17,7 @@ No command installs Godot on your computer. Each command that needs Godot uses t
 | Script        | Command                       | Docker | Purpose                                                 |
 | ------------- | ----------------------------- | ------ | ------------------------------------------------------- |
 | `start`       | `node scripts/start.ts`       | No     | Start the construct in a Node.js process.               |
+| `godot`       | `node scripts/godot.ts run`   | Yes    | Run the Godot application in a container.               |
 | `godot:image` | `node scripts/godot.ts image` | Yes    | Build the image when it is missing.                     |
 | `test`        | `opus-test`                   | No     | Run the Vitest tests of `src/`.                         |
 | `test:godot`  | `node scripts/godot.ts test`  | Yes    | Run the GDScript tests in the image.                    |
@@ -184,3 +185,47 @@ pnpm --filter @thrashplay/wishem-renderer-godot start [--port <number>] [--pause
 - On `SIGINT` or `SIGTERM`, the command stops the clock and the hub. Each link gets `stopping`. The command ends with exit code 0.
 
 `startGodotConstruct({ port, paused })` gives the same construct to a program.
+
+## The Godot application
+
+The Godot application opens a link to the construct and draws it. `godot/main.gd` is the main scene. It opens one link with one output subsystem with the prefix `godot-screen`, and it sends no input.
+
+### The command
+
+```
+pnpm --filter @thrashplay/wishem-renderer-godot godot [--hub-port <number>]
+```
+
+- The command runs the application in a container with a viewport of 640 by 360 pixels.
+- `--hub-port` gives the port of the construct. The default is 4749.
+- Start the construct with `pnpm --filter @thrashplay/wishem-renderer-godot start --paused` in a second terminal.
+- On `SIGINT` or `SIGTERM`, the command removes the container and ends with exit code 0.
+- `runGodot(options)` gives the same run to a program.
+
+### The lines
+
+| Line                                                                 | When                                    |
+| -------------------------------------------------------------------- | --------------------------------------- |
+| `wishem-godot: connecting to <url>`                                  | The application starts.                 |
+| `wishem-godot: connected (link <n>)`                                 | After each `welcome`. `n` starts at 1.  |
+| `wishem-godot: the hub is not reachable. Godot tries again.`         | One time for each loss of the link.     |
+| `wishem-godot: shot <n> seq <seq> color <#rrggbb> file <local path>` | After each picture that has a new part. |
+
+### The screenshots
+
+- After a `welcome` and after each new part `store`, the application writes the image of the viewport to a PNG file with a number that goes up by 1.
+- The command copies each file to `shots/` of the package. It empties `shots/` at its start.
+- `<#rrggbb>` is the pixel at the center of the image.
+- An event that leaves the part `store` the same gives no screenshot.
+
+### The runner carries the bytes of the link
+
+The Docker daemon can be on a different computer (`DOCKER_HOST`). A container cannot reach `127.0.0.1` of the computer of the command. So the runner carries the bytes of the link:
+
+1. The runner runs `docker exec -i <container> node /srv/relay.mjs <hub port>`.
+2. The relay in the container listens on `127.0.0.1:<hub port>` and accepts one connection.
+3. The relay sends the bytes of the connection to its standard output, and writes its standard input to the connection.
+4. The runner connects to `127.0.0.1:<hub port>` on its own computer and carries the bytes in both directions.
+5. When one side ends, the runner ends the other side and starts the next relay.
+
+The limit: one connection at a time. For a short time between two connections, no relay listens, and the application tries again. The runner needs no published port and no change to the construct.

@@ -3,6 +3,7 @@ config_version=5
 [application]
 config/name="Wishem Godot renderer"
 run/main_scene="res://main.tscn"
+run/flush_stdout_on_print=true
 
 [display]
 window/size/viewport_width=640

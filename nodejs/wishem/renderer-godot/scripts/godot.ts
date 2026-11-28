@@ -1,8 +1,10 @@
 import { createInterface } from 'node:readline'
+import { parseArgs } from 'node:util'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { hasScriptError } from '../src/runner/script-error.ts'
 import { createDockerCli, ensureImage, type DockerCli } from '../src/runner/docker.ts'
+import { runGodot } from '../src/runner/run-godot.ts'
 
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), '..')
 const dockerDir = join(packageDir, 'docker')
@@ -66,6 +68,28 @@ const runGdscriptTests = async (docker: DockerCli, tag: string): Promise<number>
   }
 }
 
+/** Runs the application until `SIGINT` or `SIGTERM`, or until Godot ends. Gives the exit code. */
+const runApplication = async (args: string[]): Promise<number> => {
+  const { values } = parseArgs({ args, options: { 'hub-port': { type: 'string' } } })
+  const port = values['hub-port'] === undefined ? undefined : Number(values['hub-port'])
+  if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) {
+    throw new Error('--hub-port must be a number from 1 to 65535')
+  }
+  const run = await runGodot(port === undefined ? {} : { hubPort: port })
+  const stopped = new Promise<number>((resolve) => {
+    const stop = () => {
+      void run.close().then(() => {
+        resolve(0)
+      })
+    }
+    process.once('SIGINT', stop)
+    process.once('SIGTERM', stop)
+  })
+  const code = await Promise.race([stopped, run.exited])
+  await run.close()
+  return code
+}
+
 const command = process.argv[2]
 
 try {
@@ -74,8 +98,10 @@ try {
     ensureImage(docker, dockerDir, log)
   } else if (command === 'test') {
     process.exitCode = await runGdscriptTests(docker, ensureImage(docker, dockerDir, log))
+  } else if (command === 'run') {
+    process.exitCode = await runApplication(process.argv.slice(3))
   } else {
-    fail(`Unknown command: ${command}. Use image or test.`)
+    fail(`Unknown command: ${command}. Use image, test, or run.`)
   }
 } catch (error) {
   fail(error)
