@@ -69,6 +69,8 @@ N is the number of the link since the page loaded. It starts at 1.
 
 When the construct stops, the page keeps the last color. The page tries again after 500 milliseconds, then after a delay that doubles each time, at most 5 seconds. When the construct starts again, the status line shows the next link number, and the page draws the new construct. The page does not reload.
 
+When the browser restores the page from the back/forward cache, the page reloads itself and opens a new link.
+
 The page server runs with `server.ws: false`. The Vite client does not open its WebSocket, so it does not reload the page when the server comes back. A reload would hide the new link. The page has no hot reload. After a change to a view file, reload the page by hand.
 
 ## Add a PixiJS view

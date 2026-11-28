@@ -1,6 +1,7 @@
 import { Application } from 'pixi.js'
 import { connectLink } from '@thrashplay/wishem-hub'
 import { startPage } from './page.js'
+import { reloadOnRestore } from './reload-on-restore.js'
 import { statusText } from './status.js'
 
 const WIDTH = 640
@@ -50,6 +51,9 @@ const run = async (): Promise<void> => {
     onStatus: (status) => {
       statusLine.textContent = statusText(status)
     },
+  })
+  reloadOnRestore(window, () => {
+    location.reload()
   })
   app.canvas.setAttribute('data-ready', 'true')
 }
