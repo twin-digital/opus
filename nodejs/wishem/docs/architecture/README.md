@@ -151,14 +151,14 @@ The React renderer is the package `renderer-react`. It holds `Renderer`, `collec
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="packages-dark.svg">
-  <img alt="Package dependency view of Wishem. Five layers hold 14 packages. Layer 1 is at the bottom and layer 5 is at the top. Each card lists the packages that its package uses and the packages that it tests with. A package uses only packages in its own layer or in a lower layer." src="packages-light.svg">
+  <img alt="Package dependency view of Wishem. Five layers hold 14 packages. Layer 1 is at the bottom and layer 5 is at the top. Each of 38 arrows goes down from a package to a package that it uses at run time. A package uses only packages in its own layer or in a lower layer. The line Tests with on a card names the packages that its package has only in devDependencies." src="packages-light.svg">
 </picture>
 
-The view is not a C4 diagram. `render.mjs` makes it from the `package.json` files of the packages in `nodejs/wishem/`. Each card names one package. The line `Uses:` lists each package of Wishem in `dependencies` or `peerDependencies`. The line `Tests with:` lists each package of Wishem that is only in `devDependencies`.
+The view is not a C4 diagram. `render.mjs` makes it from the `package.json` files of the packages in `nodejs/wishem/`. Each card names one package. Each arrow goes from a package to a package of Wishem that it uses at run time: one in `dependencies` or `peerDependencies`. Each arrow goes down. The line `Tests with:` on a card lists each package of Wishem that is only in `devDependencies`. A test dependency has no arrow.
 
 The layers are data in `render.mjs`. A package uses only packages in its own layer or in a lower layer. A package can test with a package in any layer.
 
-The script fails when a package has no layer or is in two layers, when a runtime dependency goes to a higher layer, when the table below has no row for a package, or when a package is not a development dependency of `docs-check`. This command fails when a file is out of date. The tests of `@thrashplay/wishem-docs-check` run it in CI.
+The script fails when a package has no layer or is in two layers, when a runtime dependency goes to a higher layer, when the table below has no row for a package, when the runtime dependencies of one layer make a cycle, when an arrow crosses a card or a layer label, shares a line with another arrow, or does not go down, or when a package is not a development dependency of `docs-check`. This command fails when a file is out of date. The merge checks of each pull request and the tests of `@thrashplay/wishem-docs-check` run it.
 
 ```
 node nodejs/wishem/docs/architecture/render.mjs --check

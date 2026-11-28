@@ -115,8 +115,68 @@ describe('the container diagram', () => {
   })
 })
 
-describe('render.mjs, the cards of the package dependency view', () => {
-  it('names the files that a new runtime dependency makes out of date, and writes a card without --check', () => {
+const arrowPairs = (svg: string) =>
+  [...svg.matchAll(/<g class="uses" data-from="([^"]+)" data-to="([^"]+)">/g)]
+    .map((match) => `${match[1]} -> ${match[2]}`)
+    .sort()
+
+const runtimePairs = (manifests: Manifest[]) =>
+  manifests
+    .flatMap((manifest) => {
+      const from = manifest.name.replace('@thrashplay/wishem-', '')
+      return [
+        ...new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})]),
+      ]
+        .filter((name) => name.startsWith('@thrashplay/wishem-'))
+        .map((name) => `${from} -> ${name.replace('@thrashplay/wishem-', '')}`)
+    })
+    .sort()
+
+const realManifests = () =>
+  readdirSync(wishemFolder, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(wishemFolder, entry.name, 'package.json')))
+    .map((entry) => JSON.parse(readFileSync(join(wishemFolder, entry.name, 'package.json'), 'utf8')) as Manifest)
+
+describe('the arrows of the package dependency view, with the real document', () => {
+  const manifests = realManifests()
+
+  for (const theme of ['light', 'dark']) {
+    const svg = readFileSync(join(architectureFolder, `packages-${theme}.svg`), 'utf8')
+
+    it(`has one arrow for each runtime dependency, and no other arrow (${theme})`, () => {
+      const pairs = arrowPairs(svg)
+      expect(pairs.length).toBeGreaterThan(0)
+      expect(pairs).toEqual(runtimePairs(manifests))
+    })
+
+    it(`has no arrow for a test dependency, and names it in the line Tests with (${theme})`, () => {
+      const runtime = new Set(runtimePairs(manifests))
+      const pairs = new Set(arrowPairs(svg))
+      expect(pairs.size).toBeGreaterThan(0)
+      let tested = 0
+      for (const manifest of manifests) {
+        const from = manifest.name.replace('@thrashplay/wishem-', '')
+        for (const name of Object.keys(manifest.devDependencies ?? {})) {
+          const to = name.replace('@thrashplay/wishem-', '')
+          if (name.startsWith('@thrashplay/wishem-') && !runtime.has(`${from} -> ${to}`)) {
+            tested++
+            expect(pairs.has(`${from} -> ${to}`)).toBe(false)
+          }
+        }
+      }
+      expect(tested).toBeGreaterThan(0)
+      expect(svg).toContain('Tests with: clock')
+      expect(svg).toContain('Tests with: each other')
+    })
+
+    it(`has no line Uses (${theme})`, () => {
+      expect(svg).not.toContain('Uses:')
+    })
+  }
+})
+
+describe('render.mjs, the arrows of the package dependency view', () => {
+  it('names the files that a new runtime dependency makes out of date, and writes an arrow without --check', () => {
     const fixture = makeFixture()
     const manifest = fixture.readManifest('renderer-pixi')
     manifest.dependencies = { ...manifest.dependencies, [dependency('clock')]: 'workspace:*' }
@@ -130,21 +190,22 @@ describe('render.mjs, the cards of the package dependency view', () => {
 
     const write = fixture.render()
     expect(write.status).toBe(0)
-    expect(fixture.read('packages-light.svg')).toContain('Uses: clock, core, hub')
+    expect(arrowPairs(fixture.read('packages-light.svg'))).toContain('renderer-pixi -> clock')
+    expect(fixture.read('packages-light.svg')).toContain('<g class="uses" data-from="renderer-pixi" data-to="clock">')
     expect(fixture.render(['--check']).status).toBe(0)
   })
 
-  it('puts a peer dependency in the line Uses', () => {
+  it('draws an arrow for a peer dependency', () => {
     const fixture = makeFixture()
     const manifest = fixture.readManifest('renderer-pixi')
     manifest.peerDependencies = { [dependency('update')]: 'workspace:*' }
     fixture.writeManifest('renderer-pixi', manifest)
 
     expect(fixture.render().status).toBe(0)
-    expect(fixture.read('packages-light.svg')).toContain('Uses: core, hub, update')
+    expect(arrowPairs(fixture.read('packages-light.svg'))).toContain('renderer-pixi -> update')
   })
 
-  it('puts a development dependency in the line Tests with', () => {
+  it('puts a development dependency in the line Tests with, and draws no arrow', () => {
     const fixture = makeFixture()
     const manifest = fixture.readManifest('renderer-pixi')
     manifest.devDependencies = { [dependency('clock')]: 'workspace:*' }
@@ -153,7 +214,7 @@ describe('render.mjs, the cards of the package dependency view', () => {
     expect(fixture.render().status).toBe(0)
     const svg = fixture.read('packages-light.svg')
     expect(svg).toContain('Tests with: clock')
-    expect(svg).toContain('Uses: core, hub')
+    expect(arrowPairs(svg)).not.toContain('renderer-pixi -> clock')
   })
 
   it('accepts a development dependency to a higher layer', () => {
@@ -238,5 +299,56 @@ describe('render.mjs, the checks', () => {
     manifest.name = dependency('clocks')
     fixture.writeManifest('clock', manifest)
     expectFailure(fixture, 'render: the folder clock holds the package @thrashplay/wishem-clocks')
+  })
+
+  it('fails for a cycle in one layer', () => {
+    const fixture = makeFixture({ withSvg: false })
+    const manifest = fixture.readManifest('core')
+    manifest.dependencies = { ...manifest.dependencies, [dependency('update')]: 'workspace:*' }
+    fixture.writeManifest('core', manifest)
+    expectFailure(fixture, 'render: the packages of the layer "Model and subsystems" use one another in a cycle')
+  })
+})
+
+describe('render.mjs, the checks of the routes', () => {
+  const expectRouteFailure = (from: string, to: string, line: RegExp) => {
+    const fixture = makeFixture({ withSvg: false })
+    const script = patchedScript(fixture.root, from, to)
+    const result = fixture.render([], script)
+    expect(result.status).not.toBe(0)
+    expect(result.output).toMatch(line)
+    expect(fixture.files()).toEqual(['README.md'])
+  }
+
+  it('fails when two arrows share a line', () => {
+    expectRouteFailure(
+      'const trackIndex = (',
+      'const trackIndex = () => ({ index: 0, insert: false })\nconst unusedTrackIndex = (',
+      /The arrows \S+ -> \S+ and \S+ -> \S+ share a line/,
+    )
+  })
+
+  it('fails when an arrow crosses a card', () => {
+    expectRouteFailure(
+      'const cardRects = (cards) => cards',
+      'const cardRects = (cards) => cards.map((card) => ({ ...card, w: card.w + 90 }))\nconst unusedCardRects = (cards) => cards',
+      /The arrow \S+ -> \S+ crosses the card \S+/,
+    )
+  })
+
+  it('fails when an arrow crosses the label of a band', () => {
+    expectRouteFailure(
+      'const labelBox = (item) =>',
+      'const labelBox = () => ({ x: 0, y: 0, w: 9999, h: 9999 })\nconst unusedLabelBox = (item) =>',
+      /The arrow \S+ -> \S+ crosses the label of the layer "[^"]+"/,
+    )
+  })
+
+  it('fails when an arrow does not go down', () => {
+    expectRouteFailure(
+      'const arrowEnds = (edge) => [edge.from, edge.to]',
+      'const arrowEnds = (edge) => [edge.to, edge.from]',
+      /The arrow \S+ -> \S+ does not go down/,
+    )
   })
 })

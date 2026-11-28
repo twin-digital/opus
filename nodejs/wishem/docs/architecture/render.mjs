@@ -356,7 +356,7 @@ const arrow = (c, item) => {
   const ux = (tip[0] - fromX) / length
   const uy = (tip[1] - fromY) / length
   const out = [
-    `<path d="${roundedPath(points, [tip[0] - ux * (HEAD_LENGTH - 1), tip[1] - uy * (HEAD_LENGTH - 1)])}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `<path d="${roundedPath(points, [tip[0] - ux * (HEAD_LENGTH - 1), tip[1] - uy * (HEAD_LENGTH - 1)])}" fill="none" stroke="${stroke}" stroke-width="${num(item.width ?? 2.5)}" stroke-linecap="round" stroke-linejoin="round"/>`,
     `<polygon points="${arrowHead(tip, ux, uy)}" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round"/>`,
   ]
   checkLength(item)
@@ -384,6 +384,15 @@ const arrow = (c, item) => {
         }),
       )
     })
+  }
+  if (item.uses !== undefined) {
+    const { from, to } = item.uses
+    return [
+      `<g class="uses" data-from="${escapeXml(from)}" data-to="${escapeXml(to)}">`,
+      `<title>${escapeXml(from)} uses ${escapeXml(to)}</title>`,
+      ...out,
+      '</g>',
+    ].join('\n')
   }
   return out.join('\n')
 }
@@ -510,6 +519,12 @@ const sample = (c, kind, x, cy) => {
       `<polygon points="${arrowHead([x + SAMPLE_W, cy], 1, 0)}" fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round"/>`,
     ].join('\n')
   }
+  if (kind === 'band') {
+    return rect(box, 5, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5"`)
+  }
+  if (kind === 'card') {
+    return rect(box, 5, `fill="${c.surface}" stroke="${c.border}"`)
+  }
   if (kind === 'boundary') {
     return rect(box, 5, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5" stroke-dasharray="4 3"`)
   }
@@ -556,25 +571,31 @@ const legend = (c, item) => {
 // Package dependency view: bands and cards
 // ---------------------------------------------------------------------------
 
-const BAND = { x: 24, w: 832, head: 40, pad: 16, gap: 12, spacing: 16 }
-const CARDS_PER_ROW = 4
-const CARD_PAD = 10
+const BAND = { x: 24, w: 832, top: 64, pad: 14, spacing: 14 }
+const GRID = { columns: 3, left: 124, cardW: 176, gutter: 64 }
+const ROUTE = { portGap: 12, stagger: 3, trackGap: 7, trackClear: 6, channelPad: 28, laneGap: 7, portClear: 6, edge: 8 }
+const LABEL = { x: 16, w: 100, line: 16, top: 24 }
+const LABEL_LINES_MAX = 6
+const CARD_PAD = 8
 const CARD_TOP = 14
 const CARD_LINES_MAX = 8
+const CARD_MIN_H = 56
 
-/** A band: the tinted area of one layer. `label` names the layer. */
+/** A band: the tinted area of one layer. `labelLines` name the layer, in the column left of the cards. */
 const band = (c, item) =>
   [
     rect(item, 14, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5"`),
-    text(c, {
-      x: item.x + 16,
-      y: item.y + 26,
-      line: item.label,
-      size: SIZE.detail,
-      weight: 600,
-      color: c.fgMuted,
-      maxWidth: item.w - 32,
-    }),
+    ...item.labelLines.map((line, index) =>
+      text(c, {
+        x: item.x + LABEL.x,
+        y: item.y + LABEL.top + index * LABEL.line,
+        line,
+        size: SIZE.detail,
+        weight: 600,
+        color: c.fgMuted,
+        maxWidth: LABEL.w,
+      }),
+    ),
   ].join('\n')
 
 /** A package card: the name, then the lines of the lists of packages. */
@@ -1127,6 +1148,24 @@ const readTableRows = () => {
   return rows
 }
 
+/** The rank of each package of one layer: 1 plus the highest rank of the packages of the layer that it uses. */
+const rankLayer = (names, byName) => {
+  const rank = new Map()
+  let pending = names
+  while (pending.length > 0) {
+    const inLayer = (name) => byName.get(name).uses.filter((use) => names.includes(use))
+    const ready = pending.filter((name) => inLayer(name).every((use) => rank.has(use)))
+    if (ready.length === 0) {
+      return undefined
+    }
+    for (const name of ready) {
+      rank.set(name, 1 + Math.max(0, ...inLayer(name).map((use) => rank.get(use))))
+    }
+    pending = pending.filter((name) => !rank.has(name))
+  }
+  return rank
+}
+
 /** Finds each disagreement between the packages, the layers, and the table of the packages. */
 const checkPackages = (packages) => {
   const problems = []
@@ -1169,65 +1208,395 @@ const checkPackages = (packages) => {
       problems.push(`render: ${pkg.folder} is not a development dependency of ${CHECK_PACKAGE}`)
     }
   }
+  const byName = new Map(packages.map((pkg) => [pkg.folder, pkg]))
+  packageLayers.forEach((layer, index) => {
+    const members = packages.filter((pkg) => layerOf.get(pkg.folder) === index).map((pkg) => pkg.folder)
+    if (rankLayer(members, byName) === undefined) {
+      problems.push(`render: the packages of the layer "${layer.name}" use one another in a cycle`)
+    }
+  })
   return { problems, layerOf }
 }
 
-/** The lines of a card below its name: the packages that it uses, and the packages that it tests with. */
+/** The lines of a card below its name: the packages that it tests with. */
 const cardLines = (pkg, packages) => {
-  const inner = CARD_W_PACKAGE - 2 * CARD_PAD
-  const uses = pkg.uses.length === 0 ? 'Uses: no package of Wishem' : `Uses: ${pkg.uses.join(', ')}`
-  const lines = wrap(uses, inner, CARD_LINES_MAX)
-  if (pkg.tests.length > 0) {
-    const others = packages.filter((other) => other !== pkg)
-    const all = others.every((other) => pkg.tests.includes(other.folder))
-    lines.push(
-      ...wrap(all ? 'Tests with: each other package' : `Tests with: ${pkg.tests.join(', ')}`, inner, CARD_LINES_MAX),
-    )
+  const inner = GRID.cardW - 2 * CARD_PAD
+  if (pkg.tests.length === 0) {
+    return []
   }
-  return lines
+  const others = packages.filter((other) => other !== pkg)
+  const all = others.every((other) => pkg.tests.includes(other.folder))
+  return wrap(all ? 'Tests with: each other package' : `Tests with: ${pkg.tests.join(', ')}`, inner, CARD_LINES_MAX)
 }
 
-const CARD_W_PACKAGE = (BAND.w - 2 * BAND.pad - (CARDS_PER_ROW - 1) * BAND.gap) / CARDS_PER_ROW
+/** The lines of the label of a layer band. */
+const bandLabel = (layerIndex) =>
+  wrap(`Layer ${String(layerIndex + 1)}: ${packageLayers[layerIndex].name}`, LABEL.w - 6, LABEL_LINES_MAX)
 
-/** The package dependency view: one band for each layer, the highest layer at the top. */
-const packagesDiagram = (packages, layerOf) => {
-  const cards = packages.map((pkg) => ({ pkg, lines: cardLines(pkg, packages) }))
-  const cardH = CARD_TOP + LEAD.name + Math.max(...cards.map((card) => card.lines.length)) * LEAD.description + 12
-  const items = []
-  let y = 64
-  for (let index = packageLayers.length - 1; index >= 0; index--) {
-    const members = cards.filter((card) => layerOf.get(card.pkg.folder) === index)
-    const rows = Math.ceil(members.length / CARDS_PER_ROW)
-    const h = BAND.head + rows * cardH + (rows - 1) * BAND.gap + BAND.pad
-    items.push({
-      kind: 'band',
-      x: BAND.x,
-      y,
-      w: BAND.w,
-      h,
-      label: `Layer ${String(index + 1)}: ${packageLayers[index].name}`,
-    })
-    members.forEach((card, position) => {
-      items.push({
-        kind: 'card',
-        x: BAND.x + BAND.pad + (position % CARDS_PER_ROW) * (CARD_W_PACKAGE + BAND.gap),
-        y: y + BAND.head + Math.floor(position / CARDS_PER_ROW) * (cardH + BAND.gap),
-        w: CARD_W_PACKAGE,
-        h: cardH,
-        name: card.pkg.folder,
-        lines: card.lines,
-      })
-    })
-    y += h + BAND.spacing
+// ---------------------------------------------------------------------------
+// Package dependency view: the grid, the ports, the lanes, the tracks, and the checks of the routes
+// ---------------------------------------------------------------------------
+
+const colX = (column) => BAND.x + GRID.left + column * (GRID.cardW + GRID.gutter)
+
+/** The rows of the cards from the highest to the lowest: one row for each chunk of three packages of one rank. */
+const arrangeRows = (packages, layerOf) => {
+  const byName = new Map(packages.map((pkg) => [pkg.folder, pkg]))
+  const column = new Map()
+  const rows = []
+  packageLayers.forEach((layer, index) => {
+    const members = packages.filter((pkg) => layerOf.get(pkg.folder) === index).map((pkg) => pkg.folder)
+    const rank = rankLayer(members, byName)
+    for (let level = 1; level <= Math.max(0, ...rank.values()); level++) {
+      const mean = (name) => {
+        const used = byName
+          .get(name)
+          .uses.map((other) => column.get(other))
+          .filter((value) => value !== undefined)
+        return used.length === 0 ? 1 : used.reduce((sum, value) => sum + value, 0) / used.length
+      }
+      const group = members
+        .filter((name) => rank.get(name) === level)
+        .sort((a, b) => mean(a) - mean(b) || a.localeCompare(b))
+      for (let start = 0; start < group.length; start += GRID.columns) {
+        const free = Array.from({ length: GRID.columns }, (_, value) => value)
+        for (const name of group.slice(start, start + GRID.columns)) {
+          const target = mean(name)
+          free.sort((a, b) => Math.abs(a - target) - Math.abs(b - target) || a - b)
+          column.set(name, free.shift())
+        }
+        rows.push({ layer: index, names: group.slice(start, start + GRID.columns) })
+      }
+    }
+  })
+  return { rows: rows.reverse(), column }
+}
+
+// The two ends of a route. A route goes from the first (above) to the second (below).
+const arrowEnds = (edge) => [edge.from, edge.to]
+
+const cardRects = (cards) => cards
+
+/** The box of the label of a band, with a margin. */
+const labelBox = (item) => ({
+  x: item.x + LABEL.x - 3,
+  y: item.y + LABEL.top - 14,
+  w: LABEL.w + 6,
+  h: item.labelLines.length * LABEL.line + 6,
+})
+
+const hitsBox = ([[ax, ay], [bx, by]], box, margin = 0.5) =>
+  Math.min(ax, bx) < box.x + box.w - margin &&
+  Math.max(ax, bx) > box.x + margin &&
+  Math.min(ay, by) < box.y + box.h - margin &&
+  Math.max(ay, by) > box.y + margin
+
+const segmentsOf = (points) => points.slice(1).map((point, index) => [points[index], point])
+
+const near = (a, b) => Math.abs(a - b) < 0.5
+const overlap = (a1, a2, b1, b2) =>
+  Math.min(Math.max(a1, a2), Math.max(b1, b2)) - Math.max(Math.min(a1, a2), Math.min(b1, b2)) > 0.5
+
+/** True when two straight segments lie on one line and overlap. */
+const shareLine = ([[ax, ay], [bx, by]], [[cx, cy], [dx, dy]]) => {
+  if (near(ay, by) && near(cy, dy) && near(ay, cy)) {
+    return overlap(ax, bx, cx, dx)
   }
+  if (near(ax, bx) && near(cx, dx) && near(ax, cx)) {
+    return overlap(ay, by, cy, dy)
+  }
+  return false
+}
+
+/** Fails the run when a route goes up, crosses a card or a label, or shares a line with another route. */
+const checkRoutes = (routes, cards, bands) => {
+  for (const route of routes) {
+    const name = `${route.edge.from} -> ${route.edge.to}`
+    const { points } = route
+    if (points[points.length - 1][1] <= points[0][1]) {
+      throw new Error(`The arrow ${name} does not go down`)
+    }
+    for (const segment of segmentsOf(points)) {
+      for (const card of cardRects(cards)) {
+        if (hitsBox(segment, card)) {
+          throw new Error(`The arrow ${name} crosses the card ${card.name}`)
+        }
+      }
+      for (const item of bands) {
+        if (hitsBox(segment, labelBox(item), 0)) {
+          throw new Error(`The arrow ${name} crosses the label of the layer "${item.layerName}"`)
+        }
+      }
+    }
+  }
+  routes.forEach((first, index) => {
+    for (const second of routes.slice(index + 1)) {
+      if (segmentsOf(first.points).some((a) => segmentsOf(second.points).some((b) => shareLine(a, b)))) {
+        throw new Error(
+          `The arrows ${first.edge.from} -> ${first.edge.to} and ${second.edge.from} -> ${second.edge.to} share a line`,
+        )
+      }
+    }
+  })
+}
+
+const covers = (segment, x) => x > segment.min + 0.5 && x < segment.max - 0.5
+const crossings = (upper, lower) => Number(covers(lower, upper.down)) + Number(covers(upper, lower.up))
+const clashes = (a, b) => a.min < b.max + ROUTE.trackClear && b.min < a.max + ROUTE.trackClear
+
+/** Selects the track of a segment: an index in `tracks`, and whether a new track goes in at that index. */
+const trackIndex = (tracks, segment) => {
+  let best
+  const consider = (index, insert, above, below) => {
+    const cost =
+      above.flat().reduce((sum, other) => sum + crossings(other, segment), 0) +
+      below.flat().reduce((sum, other) => sum + crossings(segment, other), 0) +
+      (insert ? 0.5 : 0)
+    if (best === undefined || cost < best.cost) {
+      best = { cost, index, insert }
+    }
+  }
+  tracks.forEach((track, index) => {
+    if (!track.some((other) => clashes(other, segment))) {
+      consider(index, false, tracks.slice(0, index), tracks.slice(index + 1))
+    }
+  })
+  for (let index = 0; index <= tracks.length; index++) {
+    consider(index, true, tracks.slice(0, index), tracks.slice(index))
+  }
+  return best
+}
+
+/** Puts the segments of one channel in tracks. The longest segment goes first. */
+const placeTracks = (segments) => {
+  const tracks = []
+  const sorted = [...segments].sort((a, b) => b.max - b.min - (a.max - a.min) || a.name.localeCompare(b.name))
+  for (const segment of sorted) {
+    const { index, insert } = trackIndex(tracks, segment)
+    if (insert) {
+      tracks.splice(index, 0, [segment])
+    } else if (tracks[index] === undefined) {
+      tracks.push([segment])
+    } else {
+      tracks[index].push(segment)
+    }
+  }
+  return tracks
+}
+
+/** The height of the space under a row that holds `count` tracks. */
+const channelHeight = (count) => (count === 0 ? BAND.pad : 2 * ROUTE.channelPad + (count - 1) * ROUTE.trackGap)
+
+/** The ports of each card: evenly spaced on the edge, in the order of the card at the other end. */
+const assignPorts = (packages, routes, column) => {
+  const centerX = (name) => colX(column.get(name)) + GRID.cardW / 2
+  for (const pkg of packages) {
+    const name = pkg.folder
+    for (const [side, mine, other] of [
+      ['out', 'src', 'dst'],
+      ['in', 'dst', 'src'],
+    ]) {
+      const own = routes
+        .filter((route) => route[mine] === name)
+        .sort(
+          (x, y) => (x.lane ?? centerX(x[other])) - (y.lane ?? centerX(y[other])) || x[other].localeCompare(y[other]),
+        )
+      if ((own.length + 1) * ROUTE.portGap > GRID.cardW) {
+        throw new Error(`The card of ${name} has no room for ${String(own.length)} ports`)
+      }
+      own.forEach((route, index) => {
+        route[side] =
+          colX(column.get(name)) +
+          (GRID.cardW * (index + 1)) / (own.length + 1) +
+          (side === 'out' ? -ROUTE.stagger : ROUTE.stagger)
+      })
+    }
+  }
+}
+
+/** The lane of each route that passes a row: a vertical line in a gutter, in the margin, or in a free column. */
+const assignLanes = (routes, rows, column) => {
+  const slots = []
+  for (let index = 0; index < GRID.columns; index++) {
+    for (let x = colX(index) + ROUTE.laneGap; x <= colX(index) + GRID.cardW - ROUTE.laneGap; x += ROUTE.laneGap) {
+      slots.push({ x, column: index, used: [] })
+    }
+    const start = colX(index) + GRID.cardW
+    const limit = index === GRID.columns - 1 ? BAND.x + BAND.w - ROUTE.edge : colX(index + 1) - ROUTE.laneGap
+    for (let x = start + ROUTE.laneGap; x <= limit; x += ROUTE.laneGap) {
+      slots.push({ x, column: undefined, used: [] })
+    }
+  }
+  const occupied = rows.map((row) => new Set(row.names.map((name) => column.get(name))))
+  const everyPort = routes.flatMap((route) => [route.out, route.in])
+  const long = routes
+    .filter((route) => route.b - route.a >= 2)
+    .sort((x, y) => y.b - y.a - (x.b - x.a) || x.src.localeCompare(y.src) || x.dst.localeCompare(y.dst))
+  for (const route of long) {
+    const between = occupied.slice(route.a + 1, route.b)
+    const free = slots
+      .filter((slot) => slot.used.every(([from, to]) => to < route.a || from > route.b - 1))
+      .filter((slot) => slot.column === undefined || between.every((used) => !used.has(slot.column)))
+      .filter((slot) => everyPort.every((port) => Math.abs(port - slot.x) >= ROUTE.portClear))
+      .sort(
+        (p, q) =>
+          Math.abs(p.x - route.out) +
+            Math.abs(p.x - route.in) -
+            (Math.abs(q.x - route.out) + Math.abs(q.x - route.in)) || p.x - q.x,
+      )
+    if (free.length === 0) {
+      throw new Error(`The arrow ${route.edge.from} -> ${route.edge.to} has no free lane`)
+    }
+    free[0].used.push([route.a, route.b - 1])
+    route.lane = free[0].x
+  }
+}
+
+/** The package dependency view: one band for each layer (the highest at the top), the cards, and the arrows. */
+const packagesDiagram = (packages, layerOf) => {
+  const { rows: ordered, column } = arrangeRows(packages, layerOf)
+  const rows = ordered.map((row) => ({ ...row }))
+  const rowOf = new Map(rows.flatMap((row, index) => row.names.map((name) => [name, index])))
+  const lines = new Map(packages.map((pkg) => [pkg.folder, cardLines(pkg, packages)]))
+  for (const row of rows) {
+    row.h = Math.max(
+      CARD_MIN_H,
+      ...row.names.map((name) => CARD_TOP + LEAD.name + lines.get(name).length * LEAD.description + 12),
+    )
+  }
+  const routes = packages
+    .flatMap((pkg) => pkg.uses.map((use) => ({ edge: { from: pkg.folder, to: use } })))
+    .map((route) => {
+      const [src, dst] = arrowEnds(route.edge)
+      return { ...route, src, dst, a: rowOf.get(src), b: rowOf.get(dst) }
+    })
+  assignPorts(packages, routes, column)
+  assignLanes(routes, rows, column)
+  assignPorts(packages, routes, column)
+  assignLanes(routes, rows, column)
+
+  // Tracks: each segment of a route in a channel has its own line.
+  const channels = Array.from({ length: Math.max(0, rows.length - 1) }, () => [])
+  for (const route of routes) {
+    const add = (channel, up, down, key) => {
+      if (Math.abs(up - down) >= 0.5) {
+        const segment = {
+          key,
+          name: `${route.edge.from} -> ${route.edge.to}`,
+          up,
+          down,
+          min: Math.min(up, down),
+          max: Math.max(up, down),
+        }
+        channels[channel].push(segment)
+        route[key] = segment
+      }
+    }
+    if (route.b - route.a === 1) {
+      add(route.a, route.out, route.in, 'first')
+    } else if (route.b - route.a >= 2) {
+      add(route.a, route.out, route.lane, 'first')
+      add(route.b - 1, route.lane, route.in, 'last')
+    }
+  }
+  const tracks = channels.map((segments) => placeTracks(segments))
+  const trackCount = tracks.map((list, index) =>
+    Math.max(list.length, routes.some((route) => route.a === index && route.b === index + 1) ? 1 : 0),
+  )
+
+  // Heights: the tracks of the channel below a row sit under that row.
+  const bands = []
+  const rowBottom = []
+  let y = BAND.top
+  let current
+  rows.forEach((row, index) => {
+    if (current === undefined || current.layer !== row.layer) {
+      current = { layer: row.layer, y }
+      bands.push(current)
+      y += BAND.pad
+    }
+    row.y = y
+    y += row.h
+    rowBottom.push(y)
+    const last = index === rows.length - 1
+    y += last ? BAND.pad : channelHeight(trackCount[index])
+    if (last || rows[index + 1].layer !== row.layer) {
+      current.labelLines = bandLabel(current.layer)
+      y = Math.max(y, current.y + LABEL.top + (current.labelLines.length - 1) * LABEL.line + 14)
+      current.bottom = y
+      y += BAND.spacing
+    }
+  })
+  const bandItems = bands.map((entry) => ({
+    kind: 'band',
+    x: BAND.x,
+    y: entry.y,
+    w: BAND.w,
+    h: entry.bottom - entry.y,
+    labelLines: entry.labelLines,
+    layerName: packageLayers[entry.layer].name,
+  }))
+  const cards = rows.flatMap((row) =>
+    row.names.map((name) => ({
+      kind: 'card',
+      x: colX(column.get(name)),
+      y: row.y,
+      w: GRID.cardW,
+      h: row.h,
+      name,
+      lines: lines.get(name),
+    })),
+  )
+
+  // Routes: the points of each arrow.
+  const trackY = (channel, segment) =>
+    rowBottom[channel] +
+    ROUTE.channelPad +
+    tracks[channel].findIndex((track) => track.includes(segment)) * ROUTE.trackGap
+  const items = routes.map((route) => {
+    const from = [route.out, rowBottom[route.a]]
+    const to = [route.in, rows[route.b].y]
+    let points
+    if (route.b <= route.a) {
+      points = [from, to]
+    } else if (route.b - route.a === 1) {
+      points =
+        route.first === undefined ?
+          [from, [route.out, to[1]]]
+        : [from, [route.out, trackY(route.a, route.first)], [route.in, trackY(route.a, route.first)], to]
+    } else {
+      const first = trackY(route.a, route.first)
+      const last = trackY(route.b - 1, route.last)
+      points = [from, [route.out, first], [route.lane, first], [route.lane, last], [route.in, last], to]
+    }
+    route.points = points
+    return { kind: 'arrow', tone: 'quiet', width: 1.75, points, uses: { from: route.edge.from, to: route.edge.to } }
+  })
+  checkRoutes(routes, cards, bandItems)
+
   const names = packageLayers.map((layer, index) => `layer ${String(index + 1)} (${layer.name})`).join(', ')
   return {
     name: 'packages',
     title: 'Package dependency view: Wishem',
-    description: `The view shows ${String(packages.length)} packages in ${String(packageLayers.length)} layers: ${names}. Layer 1 is at the bottom and layer ${String(packageLayers.length)} is at the top. Each card lists the packages that its package uses and the packages that it tests with. A package uses only packages in its own layer or in a lower layer.`,
+    description: `The view shows ${String(packages.length)} packages in ${String(packageLayers.length)} layers: ${names}. Layer 1 is at the bottom and layer ${String(packageLayers.length)} is at the top. Each of the ${String(routes.length)} arrows goes down from a package to a package that it uses at run time, in dependencies or peerDependencies. A package uses only packages in its own layer or in a lower layer. The line Tests with on a card names the packages that its package has only in devDependencies.`,
     width: WIDTH_PX,
-    height: y - BAND.spacing + 24,
-    items,
+    height: y + LEGEND_H + 24,
+    items: [
+      ...bandItems,
+      ...cards,
+      ...items,
+      {
+        kind: 'legend',
+        x: BAND.x,
+        y,
+        w: BAND.w,
+        entries: [
+          ['band', 'Layer'],
+          ['card', 'Package'],
+          ['quiet', 'Uses at run time [dependencies, peerDependencies]'],
+        ],
+      },
+    ],
   }
 }
 
