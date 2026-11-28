@@ -91,7 +91,7 @@ The page shows the color of the state after the target. Use `ws://127.0.0.1:5174
 The construct is a hub with two model subsystems and one input subsystem.
 
 - `time`: the part `time` holds `now`, `ticks`, and `running`.
-- `store`: the store with the color rule. It holds one entity with a `Clear color` component.
+- `store`: the update subsystem (`createUpdate` of `@thrashplay/wishem-update`) with the store and the color behavior. It holds one entity with a `Clear color` component.
 - `clock`: an input subsystem. It sends one `time/advance` for each 500 milliseconds of real time while `running` is `true`.
 
 The hub is always in a Node.js process. This is the decision of the owner for the MVP. A renderer reaches the hub only through the link. `startPixiConstruct` serves the link at `ws://127.0.0.1:4748/link`. Use port 0 in a test to let the system select a port.
@@ -110,11 +110,13 @@ console.log(CONSTRUCT_MODEL.entities[0].components[CLEAR_COLOR_TYPE][COLOR_FIELD
 
 `COLORS` holds four different colors: `#1d4ed8`, `#b91c1c`, `#15803d`, and `#a16207`.
 
-### The color rule
+### The color behavior
 
-`withColorRule` wraps the store. The result is a model subsystem with the ID `store`. It applies each input of the store. It also applies `time/advance`. For each tick, it sets the `Color` field to `COLORS[ticks % 4]`. It reads `ticks` from the part `time`, which is earlier in the order of the subsystems. If the joined state has no part `time`, it refuses the tick.
+`colorBehavior` is a native behavior with the ID `pixi-page/color` and the component type `Clear color`. For each tick, it sets the `Color` field to `COLORS[ticks % 4]`. It is a pure function of the fields and the tick.
 
-The rule is a model subsystem because the record holds only the inputs. A replay or a rewind gives the same colors. A view only gets the fields of its component, and the clock changes only the part `time`.
+`createPixiHub` gives the hub `createTime` and `createUpdate({ store, behaviors: [colorBehavior] })`. The update subsystem has the ID `store`. It applies `time/advance`, runs the behavior, and writes the new fields through the store. It reads `ticks` from the part `time`, which is earlier in the order of the subsystems. If the joined state has no part `time`, it refuses the tick.
+
+The record holds only the inputs of the clock. A replay or a rewind gives the same colors.
 
 ### The clock
 

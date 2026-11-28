@@ -63,7 +63,8 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/wishem-renderer-godot](./nodejs/wishem/renderer-godot): The Godot renderer of Wishem: a Godot project that draws a construct through the link, and the runner that runs it in Docker.
 - [@thrashplay/wishem-renderer-pixi](./nodejs/wishem/renderer-pixi): The PixiJS renderer of Wishem. Draws PixiJS views from the joined state that a port gives. Runs with no Node.js API.
 - [@thrashplay/wishem-renderer-react](./nodejs/wishem/renderer-react): The React renderer of Wishem. Draws React views from a port of the hub, and writes the prop types of the views.
-- [@thrashplay/wishem-sample-product](./nodejs/wishem/sample-product): The sample product of Wishem: a model with a color and a count, and the rule that makes the clock advance the count. Runs with no Node.js API.
+- [@thrashplay/wishem-sample-product](./nodejs/wishem/sample-product): The sample product of Wishem: a model with a color and a count, and the behavior that makes the clock advance the count. Runs with no Node.js API.
+- [@thrashplay/wishem-update](./nodejs/wishem/update): The update subsystem of a Wishem construct: runs the native behaviors of a product in each tick. Runs with no Node.js API.
 - [@thrashplay/wishem-workbench](./nodejs/wishem/workbench): The base workbench of Wishem. Holds the first model and a command to start it.
 - [@thrashplay/wishem-workbench-app](./nodejs/wishem/workbench-app): The Wishem workbench application: design tokens, components, and the style guide.
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.

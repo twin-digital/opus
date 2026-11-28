@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    // The first condition selects `src/`. The others are the defaults of Vite for a browser.
+    // After "source": the client conditions of Vite
     conditions: ['source', 'module', 'browser', 'development|production'],
   },
   test: {

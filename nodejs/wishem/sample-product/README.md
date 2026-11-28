@@ -1,6 +1,6 @@
 # @thrashplay/wishem-sample-product
 
-The sample product of Wishem. It is a small authored model with a color and a count, and a rule that makes each tick of the clock add 1 to the count. The workbench, the construct manager, and the renderers use it as the one product to mount, run, and draw.
+The sample product of Wishem. It is a small authored model with a color and a count, and a behavior that makes each tick of the clock add 1 to the count. The workbench, the construct manager, and the renderers use it as the one product to mount, run, and draw.
 
 The package is private. The root entry uses no Node.js API.
 
@@ -24,15 +24,15 @@ The path of the model folder is `nodejs/wishem/sample-product/model`. To start i
 pnpm --filter @thrashplay/wishem-workbench exec wishem start "$PWD/nodejs/wishem/sample-product/model"
 ```
 
-## The count rule
+## The count behavior
 
-`withCountRule(store)` wraps a store and returns a model subsystem with the ID of the store. It applies each input of the store as the store does. It also applies `time/advance`: for each tick, it adds 1 to each `count` of a `Counter` component whose value is a number. Other values stay. The rule never refuses a tick.
+`countBehavior` is a native behavior with the ID `sample-product/count` and the component type `Counter`. The update subsystem runs it at each tick. It adds 1 to `count` when the value is a number. Other values stay. The behavior never refuses a tick.
+
+`behaviors` is the list `[countBehavior]`. A product construct gets the code of the product from this export.
 
 The count depends only on the recorded ticks. A replay or a rewind gives the same count.
 
-Put the `time` subsystem before the wrapped store in the list of subsystems.
-
-`wrapStore` is the same function under the name that a product construct uses. The construct manager calls `wrapStore(createStore({ model }))` to get the store of a product construct. A product module must export a function with this name.
+Put the `time` subsystem before the update subsystem in the list of subsystems.
 
 ## Example
 
@@ -40,9 +40,10 @@ Put the `time` subsystem before the wrapped store in the list of subsystems.
 import { createStore } from '@thrashplay/wishem-core'
 import { createHub } from '@thrashplay/wishem-hub'
 import { createTime, timeInputs } from '@thrashplay/wishem-clock'
-import { withCountRule } from '@thrashplay/wishem-sample-product'
+import { createUpdate } from '@thrashplay/wishem-update'
+import { behaviors } from '@thrashplay/wishem-sample-product'
 
-const hub = createHub({ subsystems: [createTime(), withCountRule(createStore({ model }))] })
+const hub = createHub({ subsystems: [createTime(), createUpdate({ store: createStore({ model }), behaviors })] })
 hub.start()
 const controls = hub.attach({ id: 'controls', kind: 'input' })
 await controls.submit(timeInputs.advance(100))

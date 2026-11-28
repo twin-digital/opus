@@ -40,7 +40,7 @@ This renderer uses the sidecars of the kind `react`. It ignores a sidecar of a d
 
 A view gets one prop for each field of the component type. `fieldName` makes the name of the prop from the label of the field. `propNames` gives the props of a definition.
 
-These cases are a problem: a label that gives an empty name, a name that starts with a digit, a reserved name, or the same name as another field. The names `wishem` and `key` are reserved (`RESERVED_PROP_NAMES`). A field with an empty name or a reserved name gives no prop. `viewWarnings` reports the same name of two fields, an empty name, and a reserved name. The generator reports each of the four problems as an error.
+These cases are a problem: a label that gives an empty name, a name that starts with a digit, a reserved name, or the same name as another field. The names `wishem` and `key` are reserved (`RESERVED_PROP_NAMES`). A field with an empty name or a reserved name gives no prop. `viewWarnings` reports the same name of two fields, an empty name, and a reserved name: three of the four problems of a name. It also reports a sidecar whose component type has no definition. The generator reports each of the four problems as an error.
 
 ## Nested views
 
@@ -104,7 +104,7 @@ const result = await generateViewTypes({
 viewTypesLines(result).forEach((line) => console.log(line))
 ```
 
-The option `command` is the text in the header of each generated file: `// To write this file again: <command>`. The option `check` changes no file and marks each file that is not current. `viewTypesLines` gives one line for each warning, each error, and each file that was written, changed, removed, or is not current.
+The option `command` is the text in the header of each generated file: `// To write this file again: <command>`. The option `check` changes no file and marks each file that is not current. `viewTypesLines` gives one line for each warning, each error, and each file that is written, changed, removed, or not current.
 
 ## Example
 
