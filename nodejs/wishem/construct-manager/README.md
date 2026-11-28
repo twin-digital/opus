@@ -15,13 +15,14 @@ The package is private. The root entry uses no Node.js API. The entry `node` (`@
 - `link`, `time`: only with the status `running`.
 - `message`, `lastSend`: optional.
 
-The ID of a construct has the form of the ID of a subsystem, for example `play`. The list has four inputs. `constructInputs` makes them. An input that changes nothing returns the same part. The list refuses each input that is not correct with the reason `invalid` and a problem with a path.
+The ID of a construct has the form of the ID of a subsystem, for example `play`. The list has five inputs. `constructInputs` makes them. An input that changes nothing returns the same part. The list refuses each input that is not correct with the reason `invalid` and a problem with a path.
 
 | Input               | Effect                                                                                                                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `constructs/start`  | Sets `want` to `running`. A new or stopped entry gets the status `pending` and the `startSeq` of the input.                 |
 | `constructs/stop`   | Sets `want` to `stopped`. The entry stays. The construct must be in the list.                                               |
 | `constructs/send`   | Changes no part. The construct must be wanted to run and have the status `running`.                                         |
+| `constructs/rewind` | Changes no part. The construct must be wanted to run and have the status `running`. `ticks` is an integer of 1 or more.     |
 | `constructs/report` | Sets the reported fields. Only the source `construct-manager` can send it. `stopped` and `failed` remove `link` and `time`. |
 
 ```ts
@@ -106,6 +107,16 @@ A product construct (`startProductConstruct`) holds:
 - a clock on the port `clock`
 
 Only the source `construct-manager` can rewind the hub of a product construct. The construct manager rewinds it when a client sends the input `hub/rewind` with `constructs/send`.
+
+### Step back
+
+The input `constructs/rewind` has the payload `{ construct, ticks }`. The construct manager keeps a history of the ticks of each live product construct. It rewinds the product construct to the state before the tick that is `ticks` ticks back. When the history is shorter, it rewinds to the state before the first tick. An empty history gives the result `invalid` with the problem `The construct has no tick to step back.` at `payload.ticks`. The result is the `lastSend` of the entry, under the sequence number of the `constructs/rewind`.
+
+A step back keeps the `running` value that the product construct had before it. It keeps the changes of the product model that the construct manager sent after the target. The construct manager sends the rewind and these inputs in one turn, so no tick comes between them. A rewind or a replay of the workbench does not step the construct back again.
+
+```ts
+await client.submit(constructInputs.rewind({ construct: 'play', ticks: 1 }))
+```
 
 The construct manager gives each product construct the changes of the model `product` as inputs. It reports `running`, `stopped`, or `failed` for each construct with `constructs/report`. A `failed` construct stays `failed` until a client sends `constructs/stop` and then `constructs/start`.
 

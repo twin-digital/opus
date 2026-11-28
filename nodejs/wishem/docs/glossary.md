@@ -92,6 +92,8 @@ Terms in each group are in alphabetical order.
 
 **Step** (**Proposed**): One `time/advance` input that is sent while the clock is paused.
 
+**Step back** (**Proposed**): The input `constructs/rewind` with a construct and a count of ticks. The construct manager rewinds the product construct to the state before the tick that is that many ticks back. The product construct keeps its `running` value and the changes of the authored state that were made after that tick.
+
 **Tick** (**Agreed**): The input `time/advance`. A listener sees a tick as the hub event for an applied input. The type `Tick` (**Proposed**) of the package `update` holds the facts of one tick that a behavior gets: `ms`, `ticks`, and `now`.
 
 **Time** (**Proposed**): The `time` subsystem. It is a model subsystem. Its state is the time of the construct, the count of ticks, `running`, and optionally `stepMs`, the step length of the clock in milliseconds. It declares the input types `time/advance` and `time/set-running`.
@@ -138,7 +140,7 @@ Terms in each group are in alphabetical order.
 
 **Construct**: One hub and all its subsystems. A construct runs in one process or in more than one. Each running copy of a product is one construct, and the workbench runs as its own construct. The hub code is the same for each construct. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Construct list** (**Proposed**): The model subsystem `constructs` of the workbench construct. It holds one entry for each product construct that must run: the wanted state, the sequence number of the start that wrote it, the status that the construct manager reported last, and the address of the link. A client changes it with the inputs `constructs/start`, `constructs/stop`, and `constructs/send`. Only the construct manager reports a status.
+**Construct list** (**Proposed**): The model subsystem `constructs` of the workbench construct. It holds one entry for each product construct that must run: the wanted state, the sequence number of the start that wrote it, the status that the construct manager reported last, and the address of the link. A client changes it with the inputs `constructs/start`, `constructs/stop`, `constructs/send`, and `constructs/rewind`. Only the construct manager reports a status.
 
 **Construct manager** (**Proposed**): The I/O part of the workbench construct that reads the construct list, starts each product construct in the process of the workbench, and gives it the product model. It sends each later change of the product model as inputs, passes inputs from a client to a product construct, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem. Only the construct manager can rewind a product construct.
 

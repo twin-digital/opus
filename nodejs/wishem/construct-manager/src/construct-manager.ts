@@ -1,9 +1,17 @@
 import type { ClockTimer, TimePart } from '@thrashplay/wishem-clock'
 import type { Model } from '@thrashplay/wishem-core'
 import { PRODUCT_ID } from '@thrashplay/wishem-host-nodejs'
+import { hubInputs } from '@thrashplay/wishem-hub'
 import type { Hub, Input, JoinedState, Port, RecordedInput, SubmitResult } from '@thrashplay/wishem-hub'
 import { constructInputs } from './construct-list.js'
-import type { ConstructEntry, ConstructList, PassResult, ReportPayload, TimeState } from './construct-list.js'
+import type {
+  ConstructEntry,
+  ConstructList,
+  PassResult,
+  ReportPayload,
+  RewindPayload,
+  TimeState,
+} from './construct-list.js'
 import { CONSTRUCT_MANAGER_ID, CONSTRUCT_MANAGER_READER_ID, CONSTRUCTS_ID } from './ids.js'
 import type { NativeBehavior } from '@thrashplay/wishem-update'
 import { productChanges } from './product-changes.js'
@@ -38,9 +46,20 @@ interface Live {
   readonly startSeq: number
   /** The product model that the construct manager last gave to the construct. */
   given: Model
+  /** One item for each applied `time/advance`: its sequence number and the product model given at that time. */
+  readonly ticks: TickItem[]
+}
+
+interface TickItem {
+  readonly seq: number
+  readonly given: Model
 }
 
 const SEND = `${CONSTRUCTS_ID}/send`
+const REWIND = `${CONSTRUCTS_ID}/rewind`
+
+/** The record limit of the hub. */
+const MAX_TICKS = 100000
 
 const logToTerminal = (line: string): void => {
   console.log(line)
@@ -116,6 +135,41 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     await report({ ...liveReport(payload.construct, item), lastSend: { seq: recorded.seq, result } })
   }
 
+  const stepBack = async (recorded: RecordedInput): Promise<void> => {
+    const payload = recorded.payload as RewindPayload
+    const item = live.get(payload.construct)
+    if (!item) {
+      return
+    }
+    const first = item.ticks.length === 0 ? undefined : item.ticks[Math.max(0, item.ticks.length - payload.ticks)]
+    if (!first) {
+      const result: PassResult = {
+        ok: false,
+        reason: 'invalid',
+        problems: [{ message: 'The construct has no tick to step back.', path: ['payload', 'ticks'] }],
+      }
+      await report({ ...liveReport(payload.construct, item), lastSend: { seq: recorded.seq, result } })
+      return
+    }
+    const inputs: Input[] = [
+      hubInputs.rewind(first.seq - 1),
+      ...productChanges(first.given, item.given),
+      ...(timeStateOf(item.construct) === 'paused' ? [{ type: 'time/set-running', payload: { running: false } }] : []),
+    ]
+    // No await between the calls: the hub queues them in order, and no tick comes between them.
+    const pending = inputs.map((next) => item.input.submit(next).catch((error: unknown) => messageOf(error)))
+    const [rewound, ...rest] = await Promise.all(pending)
+    for (const result of rest) {
+      if (typeof result === 'string' || !result.ok) {
+        log(
+          `wishem: construct ${payload.construct}: a change after the step back was refused: ${typeof result === 'string' ? result : problemsOf(result)}`,
+        )
+      }
+    }
+    const result: PassResult = typeof rewound === 'string' ? { ok: false, reason: 'error', message: rewound } : rewound
+    await report({ ...liveReport(payload.construct, item), lastSend: { seq: recorded.seq, result } })
+  }
+
   const stopConstruct = async (id: string, item: Live): Promise<void> => {
     live.delete(id)
     running.delete(id)
@@ -151,6 +205,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
         reader: construct.hub.attach({ id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' }),
         startSeq: entry.startSeq,
         given: product,
+        ticks: [],
       }
     } catch (error) {
       await construct?.close().catch(() => undefined)
@@ -160,7 +215,19 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
       return
     }
     item.reader.subscribe((event) => {
-      if (event.type === 'applied' && (event.input.type === 'time/set-running' || event.input.type === 'hub/rewind')) {
+      if (event.type !== 'applied') {
+        return
+      }
+      if (event.input.type === 'time/advance') {
+        item.ticks.push({ seq: event.input.seq, given: item.given })
+        if (item.ticks.length > MAX_TICKS) {
+          item.ticks.shift()
+        }
+      } else if (event.input.type === 'hub/rewind') {
+        const { seq } = event.input.payload as { seq: number }
+        item.ticks.splice(0, item.ticks.length, ...item.ticks.filter((tick) => tick.seq <= seq))
+      }
+      if (event.input.type === 'time/set-running' || event.input.type === 'hub/rewind') {
         enqueue(undefined)
       }
     })
@@ -214,6 +281,9 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     }
     if (recorded?.type === SEND) {
       await pass(recorded)
+    }
+    if (recorded?.type === REWIND) {
+      await stepBack(recorded)
     }
     await reconcile()
     await reportTruth()
