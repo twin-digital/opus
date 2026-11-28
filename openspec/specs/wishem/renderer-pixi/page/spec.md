@@ -120,6 +120,20 @@ When the page stops, it SHALL close its link and open no new one, remove the key
 - **WHEN** the page stopped and the person presses the period key
 - **THEN** no input is sent and no error occurs
 
+### Requirement: A page that the browser restores loads again
+
+A browser can keep a page that the person left and show it again without a load. When the page gets a `pageshow` event whose `persisted` is `true`, the page SHALL load itself again, so that it opens a new link. A `pageshow` event whose `persisted` is `false` SHALL have no effect.
+
+#### Scenario: The person goes back to the page
+
+- **WHEN** the person leaves the page, and the browser restores the page with a `pageshow` event whose `persisted` is `true`
+- **THEN** the page loads itself again
+
+#### Scenario: The first load
+
+- **WHEN** the page gets a `pageshow` event whose `persisted` is `false`
+- **THEN** the page does not load itself again
+
 ### Requirement: A screenshot test proves that the picture follows the construct through the link
 
 A screenshot test SHALL start the sample construct, paused, and the real command of the page server, and open the page in the pinned web browser with no window. It SHALL take a screenshot of the canvas before a step, after one step, and after a wait while paused. The first two screenshots SHALL be different, and each SHALL agree with a committed baseline. The third screenshot SHALL be equal to the second. After the space key, a later screenshot SHALL be different from the second.

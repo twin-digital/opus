@@ -180,6 +180,92 @@ describe('startPixi', () => {
     expect(await upgradeStatus(new URL('link', started.pageUrl).href, 'https://example.com')).toBe(403)
   })
 
+  /** Opens a WebSocket to /link of the page and waits until it ends. */
+  const openThroughPage = (started: PixiStart) =>
+    new Promise<void>((resolve) => {
+      const socket = new NodeWebSocket(new URL('link', started.pageUrl.replace('http:', 'ws:')).href, {
+        headers: { Origin: new URL(started.pageUrl).origin },
+      })
+      socket.addEventListener('close', () => {
+        resolve()
+      })
+      socket.addEventListener('error', () => undefined)
+    })
+
+  it('prints one short line, and no Vite trace, when no construct answers the link', { timeout: 30000 }, async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      const hubPort = await freePort()
+      const { started, lines } = await begin(hubPort)
+      const line = `wishem: no construct at ws://127.0.0.1:${String(hubPort)}/link; the page connects again`
+
+      await openThroughPage(started)
+      await openThroughPage(started)
+
+      expect(lines.filter((text) => text.includes('no construct'))).toEqual([line])
+      expect(errors.mock.calls.flat().join('\n')).not.toContain('ws proxy')
+    } finally {
+      errors.mockRestore()
+    }
+  })
+
+  it(
+    'answers a plain HTTP request to /link with status 502 when no construct answers',
+    { timeout: 30000 },
+    async () => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      try {
+        const { started } = await begin(await freePort())
+
+        const response = await fetch(new URL('link', started.pageUrl))
+
+        expect(response.status).toBe(502)
+        expect(await response.text()).toContain('wishem: no construct at')
+        expect(errors.mock.calls.flat().join('\n')).not.toContain('proxy error')
+      } finally {
+        errors.mockRestore()
+      }
+    },
+  )
+
+  it('prints nothing when the page resets an open link', { timeout: 30000 }, async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      const construct = await beginConstruct()
+      const { started, lines } = await begin(portOf(construct.linkUrl))
+
+      await new Promise<void>((resolve, reject) => {
+        const socket = connect(portOf(started.pageUrl), '127.0.0.1')
+        socket.once('error', reject)
+        socket.once('connect', () => {
+          socket.write(
+            [
+              'GET /link HTTP/1.1',
+              `Host: 127.0.0.1:${String(portOf(started.pageUrl))}`,
+              `Origin: ${new URL(started.pageUrl).origin}`,
+              'Connection: Upgrade',
+              'Upgrade: websocket',
+              'Sec-WebSocket-Version: 13',
+              'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+              '',
+              '',
+            ].join('\r\n'),
+          )
+        })
+        socket.once('data', () => {
+          socket.resetAndDestroy()
+          resolve()
+        })
+      })
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      expect(lines.filter((text) => text.includes('closed'))).toEqual([])
+      expect(errors.mock.calls.flat().join('\n')).not.toContain('ws proxy')
+    } finally {
+      errors.mockRestore()
+    }
+  })
+
   it('leaves the construct running after close, and frees the port of the page', { timeout: 30000 }, async () => {
     const construct = await beginConstruct()
     const { started } = await begin(portOf(construct.linkUrl))

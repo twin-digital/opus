@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createServer } from 'vite'
+import { quietLinkErrors } from './proxy-errors.ts'
 
 export interface PixiStartOptions {
   /** The port of the page. Default 5174. Use 0 to let the system select a port. */
@@ -55,7 +56,14 @@ export const startPixi = async (options: PixiStartOptions = {}): Promise<PixiSta
         port,
         strictPort: true,
         ws: false,
-        proxy: { '^/link$': { target: `http://${HUB_ADDRESS}:${String(hubPort)}`, ws: true, changeOrigin: false } },
+        proxy: {
+          '^/link$': {
+            target: `http://${HUB_ADDRESS}:${String(hubPort)}`,
+            ws: true,
+            changeOrigin: false,
+            configure: quietLinkErrors(linkUrl, log),
+          },
+        },
       },
     })
     await server.listen()
