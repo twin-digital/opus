@@ -27,10 +27,11 @@ const describeValue = (value: unknown): string =>
   : typeof value === 'number' ? String(value)
   : JSON.stringify(value)
 
-/** A reference agrees when it is a string. Its form and its entity are checked later. */
+/** A reference agrees when it is a string, and a reference list when it is a list. Their items are checked later. */
 const agrees = (type: FieldType, value: unknown): boolean =>
   type === 'number' ? typeof value === 'number' && Number.isFinite(value)
   : type === 'boolean' ? typeof value === 'boolean'
+  : type === 'reference-list' ? Array.isArray(value)
   : typeof value === 'string'
 
 /** Validates data of an unknown shape against the rules of the `wishem/core/model` specification. */
@@ -205,6 +206,27 @@ export const validateModel = (data: unknown): ValidationResult => {
             [...componentPath, fieldId],
             `${thing} has the value ${describeValue(value)} for the field "${field.label}" of "${type.label}", but the type of the field is "${field.type}"`,
           )
+        } else if (field.type === 'reference-list') {
+          const valuePath = [...componentPath, fieldId]
+          const valueThing = `${thing} has the field "${field.label}" of "${type.label}", which`
+          const seen = new Set<string>()
+          const before = problems.length
+          ;(value as unknown[]).forEach((item, itemIndex) => {
+            const itemPath = [...valuePath, itemIndex]
+            const itemThing = `${valueThing} has an item at the index ${itemIndex} that`
+            if (!checkId(item, 'e', itemThing, itemPath)) {
+              return
+            }
+            if (seen.has(item)) {
+              error(itemPath, `${itemThing} repeats the ID "${item}" of an earlier item`)
+            } else {
+              seen.add(item)
+              references.push({ id: item, path: itemPath, thing: itemThing })
+            }
+          })
+          if (problems.length === before) {
+            component[fieldId] = value as FieldValue
+          }
         } else {
           const valuePath = [...componentPath, fieldId]
           const valueThing = `${thing} has the field "${field.label}" of "${type.label}", which`

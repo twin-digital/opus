@@ -1,5 +1,5 @@
 import type { ComponentTypeDefinition, FieldValue, Id } from '@thrashplay/wishem-core'
-import { FieldRow, type ChangeOutcome, type ReferenceOption } from './FieldRow.js'
+import { FieldRow, type ChangeOutcome, type ListChange, type ReferenceOption } from './FieldRow.js'
 import { ZeroState } from './ZeroState.js'
 
 export interface InspectedComponent {
@@ -7,11 +7,14 @@ export interface InspectedComponent {
   values: Readonly<Record<Id, FieldValue>>
 }
 
+/** A change of a field: a new value, or a change of a list. */
+export type FieldChange = { operation: 'set-field'; value: FieldValue } | ListChange
+
 export interface EntityInspectorProps {
   /** With no value: the zero state "Select an entity to change it." */
   entity?: { id: Id; name: string; components: readonly InspectedComponent[] }
   options: readonly ReferenceOption[]
-  onChange?: (componentType: Id, field: Id, value: FieldValue) => Promise<ChangeOutcome>
+  onChange?: (componentType: Id, field: Id, change: FieldChange) => Promise<ChangeOutcome>
   onClear?: (componentType: Id, field: Id) => Promise<ChangeOutcome>
 }
 
@@ -39,7 +42,8 @@ export const EntityInspector = ({ entity, options, onChange, onClear }: EntityIn
               field={field}
               value={values[field.id]}
               options={options}
-              onChange={onChange && ((value) => onChange(definition.id, field.id, value))}
+              onChange={onChange && ((value) => onChange(definition.id, field.id, { operation: 'set-field', value }))}
+              onListChange={onChange && ((change) => onChange(definition.id, field.id, change))}
               onClear={onClear && (() => onClear(definition.id, field.id))}
             />
           ))}

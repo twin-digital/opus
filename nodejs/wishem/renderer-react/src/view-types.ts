@@ -33,10 +33,16 @@ const SIDECAR_SUFFIX = '.view.json'
 const GENERATED_SUFFIX = '.view.gen.ts'
 
 /** The TypeScript type of the value of a field. */
-const valueType = (type: FieldType): string => (type === 'reference' ? 'string' : type)
+const valueType = (type: FieldType): string =>
+  type === 'reference' ? 'string'
+  : type === 'reference-list' ? 'readonly string[]'
+  : type
 
-/** The TypeScript type of a prop. A reference gives the picture of its entity. */
-const propType = (type: FieldType): string => (type === 'reference' ? 'ReactNode' : `${type} | undefined`)
+/** The TypeScript type of a prop. A reference gives the picture of its entity, and a reference list gives the pictures in order. */
+const propType = (type: FieldType): string =>
+  type === 'reference' ? 'ReactNode'
+  : type === 'reference-list' ? 'readonly ReactNode[] | undefined'
+  : `${type} | undefined`
 
 /** The text of a generated file. No definition gives `Props` with only `wishem`, and `Values` with no member. */
 export const renderViewTypes = (
@@ -45,7 +51,7 @@ export const renderViewTypes = (
   command: string,
   definition?: ComponentTypeDefinition,
 ): string => {
-  const hasReference = definition?.fields.some(({ type }) => type === 'reference') === true
+  const hasReference = definition?.fields.some(({ type }) => type === 'reference' || type === 'reference-list') === true
   const header =
     `// Generated from ${sidecarFile} and the definition of its component type. Do not edit.\n` +
     `// To write this file again: ${command}\n\n` +
@@ -66,6 +72,8 @@ export const renderViewTypes = (
     const comment =
       field.type === 'reference' ?
         `  /** The picture of the entity that the field ${quote(field.label)} (${field.id}) names. */\n`
+      : field.type === 'reference-list' ?
+        `  /** The pictures of the entities that the field ${quote(field.label)} (${field.id}) names, in the order of the list. */\n`
       : doc(field.label, field.id)
     return `${comment}  readonly ${name}: ${propType(field.type)}\n`
   })

@@ -48,6 +48,23 @@ describe('productChanges', () => {
     expect(productChanges(base(), after)).toEqual([setField(E_2, CT_A, F_A, 'z')])
   })
 
+  it('gives no set-field for a list that is equal in a new array, and one for a changed list', () => {
+    const list = (items: string[]): Model => {
+      const model = clone(base())
+      model.entities[0].components[CT_A][F_A] = items
+      return model
+    }
+    const before = list([E_2, E_3])
+    expect(productChanges(before, list([E_2, E_3]))).toEqual([])
+    expect(productChanges(before, list([E_3, E_2]))).toEqual([
+      { type: 'store/set-field', payload: { entity: E_1, componentType: CT_A, field: F_A, value: [E_3, E_2] } },
+    ])
+    expect(productChanges(before, list([E_2, E_3, E_1]))).toHaveLength(1)
+    const mixed = list([E_2, E_3])
+    mixed.entities[1].components[CT_A][F_A] = 'z'
+    expect(productChanges(before, mixed)).toEqual([setField(E_2, CT_A, F_A, 'z')])
+  })
+
   it('gives set-field inputs in the order of the entities, the components, and the fields', () => {
     const after = clone(base())
     after.entities[0].components[CT_A][F_A] = 'p'

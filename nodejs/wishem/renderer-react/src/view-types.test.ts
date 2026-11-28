@@ -119,6 +119,45 @@ describe('renderViewTypes', () => {
       expect(renderViewTypes('Header.view.json', APP_BAR, COMMAND)).not.toContain("from 'react'")
     })
 
+    describe('a reference-list field', () => {
+      const STEPS = 'fld_7a8b9c0d-1e2f-4a3b-8c4d-6e7f80910213'
+      const steps = (): ComponentTypeDefinition => ({
+        id: APP_BAR,
+        label: 'Steps',
+        fields: [{ id: STEPS, label: 'Steps', type: 'reference-list' }],
+      })
+
+      it('gives a list of ReactNode in Props and a list of strings in Values, with the comment of the field', () => {
+        const text = renderViewTypes('Steps.view.json', APP_BAR, COMMAND, steps())
+        const [values, props] = text.split('export interface Props')
+        expect(values).toContain(`/** The field "Steps" (${STEPS}). */\n  readonly steps: readonly string[]\n`)
+        expect(props).toContain(
+          `/** The pictures of the entities that the field "Steps" (${STEPS}) names, in the order of the list. */\n  readonly steps: readonly ReactNode[] | undefined\n`,
+        )
+      })
+
+      it('imports ReactNode when the only other field is a list', () => {
+        expect(renderViewTypes('Steps.view.json', APP_BAR, COMMAND, steps())).toContain(
+          "import type { ReactNode } from 'react'\n",
+        )
+      })
+
+      it('gives each field type its own member', () => {
+        const text = renderViewTypes('All.view.json', APP_BAR, COMMAND, {
+          id: APP_BAR,
+          label: 'All',
+          fields: [
+            { id: FIELD_A, label: 'Title', type: 'string' },
+            { id: NEXT, label: 'Next', type: 'reference' },
+            { id: STEPS, label: 'Steps', type: 'reference-list' },
+          ],
+        })
+        expect(text).toContain('readonly title: string | undefined\n')
+        expect(text).toContain('readonly next: ReactNode\n')
+        expect(text).toContain('readonly steps: readonly ReactNode[] | undefined\n')
+      })
+    })
+
     it('names the field in the added props', async () => {
       const dir = mkdtempSync(join(tmpdir(), 'wishem-ref-'))
       try {

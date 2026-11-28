@@ -114,7 +114,7 @@ With no part `store`, the renderer writes no warning. The renderer writes the wa
 
 ### The props
 
-A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. The renderer gives no warning for a name that starts with a digit.
+A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. A `reference` field gives the ID, and a `reference-list` field gives an `Array` of IDs in the order of the value. The renderer holds no entity, and draws each entity that a field names at the top level. The renderer gives no warning for a name that starts with a digit.
 
 Two problems of a label give a warning. The renderer writes each warning with `push_warning`:
 

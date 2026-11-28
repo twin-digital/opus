@@ -285,6 +285,7 @@ The brief of each subagent says: report each thing that is not in the scope of t
 | 4183 | `pixi-page`                                      | construct of the Playwright tests (`--hub-port`) |
 | 4184 | `workbench-app`                                  | end-to-end server with a product                 |
 | 4186 | `workbench-app`                                  | end-to-end server with a run                     |
+| 4188 | `workbench-app`                                  | end-to-end server with a list product (`--list`) |
 | 4747 | `host-nodejs`                                    | default port of a construct                      |
 | 4748 | `host-nodejs`                                    | example port of a hub in the documentation       |
 | 4749 | `renderer-godot`                                 | link of the unit tests of the Godot code         |

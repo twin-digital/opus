@@ -301,6 +301,54 @@ describe('startRenderer: props and viewport', () => {
   })
 })
 
+describe('startRenderer: a reference-list field', () => {
+  const DECK_TYPE = 'ct_8c1e2a9f-1b47-4d0a-9e51-6c2f7a1b0d36'
+  const CARDS_FIELD = 'fld_2a1c2b3d-4e5f-4a6b-8c7d-0e1f2a3b4c5f'
+  const DECK = 'e_8b0e2c4a-9d13-4f7e-8a26-3c1d4e5f6a7b'
+
+  const deckModel = (cards: string[]): Model => ({
+    definitions: [
+      { id: CLEAR_COLOR, label: 'Clear color', fields: [{ id: COLOR_FIELD, label: 'Color', type: 'string' }] },
+      { id: DECK_TYPE, label: 'Deck', fields: [{ id: CARDS_FIELD, label: 'Cards', type: 'reference-list' }] },
+    ],
+    entities: [entity(E1, BLUE), entity(E2, RED), { id: DECK, components: { [DECK_TYPE]: { [CARDS_FIELD]: cards } } }],
+  })
+
+  const deckViews = (colorView: PixiView, deckView: PixiView): ViewTable =>
+    new Map([
+      [CLEAR_COLOR, { sidecar: 'ClearColor.view.json', componentType: CLEAR_COLOR, view: colorView }],
+      [DECK_TYPE, { sidecar: 'Deck.view.json', componentType: DECK_TYPE, view: deckView }],
+    ])
+
+  const start = (cards: string[]) => {
+    const { screen } = makeHub(deckModel(cards))
+    const colorView = makeView()
+    const deckView: TestView = {
+      create: vi.fn(() => new Sprite(Texture.WHITE)),
+      update: vi.fn(),
+    }
+    const stage = new Container()
+    startRenderer({ port: screen, views: deckViews(colorView, deckView), stage, viewport: VIEWPORT })
+    return { deckView, stage }
+  }
+
+  it('gives the view the prop cards as the list of IDs in order', () => {
+    const { deckView } = start([E2, E1])
+    expect(deckView.update.mock.calls[0][1]).toEqual({ cards: [E2, E1] })
+  })
+
+  it('gives an empty list for an empty value', () => {
+    const { deckView } = start([])
+    expect(deckView.update.mock.calls[0][1]).toEqual({ cards: [] })
+  })
+
+  it('draws the entities of the list at the top level', () => {
+    const { stage } = start([E2, E1])
+    expect(objectsOf(stage)).toHaveLength(3)
+    expect(tintsOf(stage).slice(0, 2)).toEqual([hex(BLUE), hex(RED)])
+  })
+})
+
 describe('startRenderer: following the part store', () => {
   it('keeps the same object with the new color after store/set-field', async () => {
     const { editor, screen } = makeHub(modelOf(entity(E1, BLUE)))

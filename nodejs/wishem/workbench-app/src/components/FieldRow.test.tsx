@@ -2,7 +2,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import type { FieldDefinition, FieldValue } from '@thrashplay/wishem-core'
-import { FieldRow, type ChangeOutcome, type FieldRowProps } from './FieldRow.js'
+import { FieldRow, type ChangeOutcome, type FieldRowProps, type ListChange } from './FieldRow.js'
 
 interface Deferred {
   promise: Promise<ChangeOutcome>
@@ -625,6 +625,294 @@ describe('FieldRow', () => {
         'The value is not cleared. The workbench does not run. Start it, and try again.',
       )
       expect(text()?.value).toBe('0')
+    })
+  })
+
+  describe('the list control of a reference-list field', () => {
+    const cards: FieldDefinition = { id: 'f_cards', label: 'Cards', type: 'reference-list' }
+    const deck = [
+      { id: 'e_d', text: 'Deck · e_d' },
+      { id: 'e_a', text: 'Card · e_a' },
+      { id: 'e_b', text: 'Card · e_b' },
+      { id: 'e_c', text: 'Card · e_c' },
+    ]
+    const group = () => container.querySelector<HTMLElement>('[role="group"]')
+    const removes = () =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).filter((button) =>
+        button.getAttribute('aria-label')?.startsWith('Remove '),
+      )
+    const add = () => Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Add')
+    const click = (button: HTMLElement | undefined) => {
+      act(() => {
+        button?.click()
+      })
+    }
+    const optionIds = () => Array.from(select()?.options ?? []).map((option) => option.value)
+    const listProps = (value: FieldRowProps['value'], onListChange?: FieldRowProps['onListChange']): FieldRowProps => ({
+      field: cards,
+      value,
+      options: deck,
+      onListChange,
+    })
+
+    it('shows the items in order, with the name and the short ID, and the type label', () => {
+      draw(listProps(['e_b', 'e_a'], accept))
+      expect(container.querySelector('.font-mono')?.textContent).toBe('reference-list')
+      const items = Array.from(container.querySelectorAll('[role="group"] li'))
+      expect(items.map((item) => item.textContent)).toEqual(['Carde_bRemove', 'Carde_aRemove'])
+    })
+
+    it('has no text field, no check box, and a group named by the label', () => {
+      draw(listProps(['e_a'], accept))
+      expect(text()).toBeNull()
+      expect(box()).toBeNull()
+      const labelled = group()?.getAttribute('aria-labelledby')
+      expect(labelled).toBeTruthy()
+      expect(document.getElementById(labelled ?? '')?.textContent).toBe('Cards')
+    })
+
+    it('names each button Remove <name> · <short ID> and the select Add to <label>', () => {
+      draw(listProps(['e_a', 'e_b'], accept))
+      expect(removes().map((button) => button.getAttribute('aria-label'))).toEqual([
+        'Remove Card · e_a',
+        'Remove Card · e_b',
+      ])
+      expect(select()?.getAttribute('aria-label')).toBe('Add to Cards')
+    })
+
+    it('lists the entities that the list does not hold, with the entity of the row, and selects the first', () => {
+      draw(listProps(['e_a', 'e_b'], accept))
+      expect(optionIds()).toEqual(['e_d', 'e_c'])
+      expect(select()?.value).toBe('e_d')
+    })
+
+    it('has the tab order Remove of each item, then the select, then Add', () => {
+      draw(listProps(['e_a', 'e_b'], accept))
+      const order = Array.from(group()?.querySelectorAll('button, select') ?? []).map(
+        (element) => element.getAttribute('aria-label') ?? element.textContent,
+      )
+      expect(order).toEqual(['Remove Card · e_a', 'Remove Card · e_b', 'Add to Cards', 'Add'])
+    })
+
+    it('shows the label empty list for an empty list and no items', () => {
+      draw(listProps([], accept))
+      expect(container.textContent).toContain('empty list')
+      expect(container.textContent).not.toContain('no value')
+      expect(removes()).toHaveLength(0)
+      expect(optionIds()).toEqual(['e_d', 'e_a', 'e_b', 'e_c'])
+    })
+
+    it('shows the label no value for no value, and enables the select and Add', () => {
+      draw(listProps(undefined, accept))
+      expect(container.textContent).toContain('no value')
+      expect(container.textContent).not.toContain('empty list')
+      expect(add()?.getAttribute('aria-disabled')).toBeNull()
+      expect(select()?.disabled).toBe(false)
+    })
+
+    it('disables the select and Add when the list holds each entity', () => {
+      draw(listProps(['e_d', 'e_a', 'e_b', 'e_c'], accept))
+      expect(optionIds()).toEqual([])
+      expect(select()?.disabled).toBe(true)
+      expect(add()?.getAttribute('aria-disabled')).toBe('true')
+    })
+
+    it('sends add-reference with the selected entity, and never calls onChange', async () => {
+      const onListChange = vi.fn((_change: ListChange) => accept())
+      const onChange = vi.fn(accept)
+      draw({ ...listProps(['e_a'], onListChange), onChange })
+      choose('e_c')
+      click(add())
+      await flush()
+      expect(onListChange).toHaveBeenCalledExactlyOnceWith({ operation: 'add-reference', reference: 'e_c' })
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('sends add-reference for the first option when the designer chose none', async () => {
+      const onListChange = vi.fn((_change: ListChange) => accept())
+      draw(listProps(['e_a'], onListChange))
+      click(add())
+      await flush()
+      expect(onListChange).toHaveBeenCalledExactlyOnceWith({ operation: 'add-reference', reference: 'e_d' })
+    })
+
+    it('sends remove-reference with the item of the button', async () => {
+      const onListChange = vi.fn((_change: ListChange) => accept())
+      draw(listProps(['e_a', 'e_b'], onListChange))
+      click(removes()[1])
+      await flush()
+      expect(onListChange).toHaveBeenCalledExactlyOnceWith({ operation: 'remove-reference', reference: 'e_b' })
+    })
+
+    it('does not call onChange when the select changes', () => {
+      const onChange = vi.fn(accept)
+      draw({ ...listProps(['e_a'], accept), onChange })
+      choose('e_c')
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('is saving: each button and the select are disabled, the group is busy, and Saving shows', async () => {
+      const waiting = defer()
+      const onListChange = vi.fn((_change: ListChange) => waiting.promise)
+      draw(listProps(['e_a', 'e_b'], onListChange))
+      click(add())
+      expect(group()?.getAttribute('aria-busy')).toBe('true')
+      expect(select()?.disabled).toBe(true)
+      expect(add()?.getAttribute('aria-disabled')).toBe('true')
+      expect(removes().every((button) => button.getAttribute('aria-disabled') === 'true')).toBe(true)
+      expect(container.textContent).toContain('Saving')
+      click(add())
+      click(removes()[0])
+      expect(onListChange).toHaveBeenCalledTimes(1)
+      waiting.resolve(saved)
+      await flush()
+      expect(group()?.getAttribute('aria-busy')).toBeNull()
+      expect(container.textContent).not.toContain('Saving')
+    })
+
+    it('is not saved after a rejection: the alert with the reason, the items, and the focus on Add', async () => {
+      draw(listProps(['e_a', 'e_b'], () => Promise.resolve(rejected('The workbench does not run.'))))
+      act(() => {
+        add()?.focus()
+      })
+      click(add())
+      await flush()
+      expect(alert()?.textContent).toBe('The value is not saved. The workbench does not run.')
+      expect(removes()).toHaveLength(2)
+      expect(document.activeElement).toBe(add())
+    })
+
+    it('keeps the focus on the button Remove after a rejection', async () => {
+      draw(listProps(['e_a', 'e_b'], () => Promise.resolve(rejected('No.'))))
+      act(() => {
+        removes()[0]?.focus()
+      })
+      click(removes()[0])
+      await flush()
+      expect(alert()).not.toBeNull()
+      expect(document.activeElement).toBe(removes()[0])
+    })
+
+    it('shows a general line when onListChange rejects', async () => {
+      draw(listProps(['e_a'], () => Promise.reject(new Error('x'))))
+      click(add())
+      await flush()
+      expect(alert()?.textContent).toBe('The value is not saved. The workbench failed to apply the change.')
+      expect(errors).toHaveBeenCalledTimes(1)
+      errors.mockClear()
+    })
+
+    it('clears the alert after an accepted change', async () => {
+      const outcomes = [rejected('No.'), saved]
+      draw(listProps(['e_a'], () => Promise.resolve(outcomes.shift() ?? saved)))
+      click(add())
+      await flush()
+      expect(alert()).not.toBeNull()
+      click(add())
+      await flush()
+      expect(alert()).toBeNull()
+    })
+
+    it('disables each button and the select with no onListChange, and shows the items', () => {
+      draw(listProps(['e_a', 'e_b']))
+      expect(container.querySelectorAll('[role="group"] li')).toHaveLength(2)
+      expect(removes().every((button) => button.getAttribute('aria-disabled') === 'true')).toBe(true)
+      expect(select()?.disabled).toBe(true)
+      expect(add()?.getAttribute('aria-disabled')).toBe('true')
+    })
+
+    it('moves the focus to the button Remove of the next item after an accepted removal', async () => {
+      draw(listProps(['e_a', 'e_b', 'e_c'], accept))
+      act(() => {
+        removes()[0]?.focus()
+      })
+      click(removes()[0])
+      await flush()
+      draw(listProps(['e_b', 'e_c'], accept))
+      expect(document.activeElement).toBe(removes()[0])
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('Remove Card · e_b')
+    })
+
+    it('moves the focus to the button Remove of the previous item when the last item is removed', async () => {
+      draw(listProps(['e_a', 'e_b'], accept))
+      act(() => {
+        removes()[1]?.focus()
+      })
+      click(removes()[1])
+      await flush()
+      draw(listProps(['e_a'], accept))
+      expect(document.activeElement).toBe(removes()[0])
+    })
+
+    it('moves the focus to the select when the removal empties the list', async () => {
+      draw(listProps(['e_a'], accept))
+      act(() => {
+        removes()[0]?.focus()
+      })
+      click(removes()[0])
+      await flush()
+      draw(listProps([], accept))
+      expect(document.activeElement).toBe(select())
+    })
+
+    it('moves the focus when the part arrives before the outcome', async () => {
+      const waiting = defer()
+      draw(listProps(['e_a', 'e_b'], () => waiting.promise))
+      act(() => {
+        removes()[0]?.focus()
+      })
+      click(removes()[0])
+      draw(listProps(['e_b'], () => waiting.promise))
+      waiting.resolve(saved)
+      await flush()
+      expect(document.activeElement).toBe(removes()[0])
+    })
+
+    it('keeps the focus on Add after an accepted addition', async () => {
+      draw(listProps(['e_a'], accept))
+      act(() => {
+        add()?.focus()
+      })
+      click(add())
+      await flush()
+      draw(listProps(['e_a', 'e_d'], accept))
+      expect(document.activeElement).toBe(add())
+    })
+
+    it('moves the focus to the last button Remove when the addition fills the list', async () => {
+      draw(listProps(['e_a', 'e_b', 'e_c'], accept))
+      act(() => {
+        add()?.focus()
+      })
+      click(add())
+      await flush()
+      draw(listProps(['e_a', 'e_b', 'e_c', 'e_d'], accept))
+      expect(document.activeElement).toBe(removes()[3])
+    })
+
+    it('shows an item whose entity is not an option by its ID', () => {
+      draw(listProps(['e_gone'], accept))
+      expect(removes()[0]?.getAttribute('aria-label')).toBe('Remove e_gone')
+      expect(container.querySelector('li')?.textContent).toBe('e_goneRemove')
+    })
+
+    it('starts saving', () => {
+      draw({ ...listProps(['e_a'], accept), initial: { state: 'saving' } })
+      expect(group()?.getAttribute('aria-busy')).toBe('true')
+      expect(select()?.disabled).toBe(true)
+    })
+
+    it('starts not saved with the reason', () => {
+      draw({ ...listProps(['e_a'], accept), initial: { state: 'not-saved', reason: 'No.' } })
+      expect(alert()?.textContent).toBe('The value is not saved. No.')
+    })
+
+    it('keeps the button Clear and calls onClear', async () => {
+      const onClear = vi.fn(accept)
+      draw({ ...listProps(['e_a'], accept), onClear })
+      click(container.querySelector<HTMLElement>('button[aria-label="Clear Cards"]') ?? undefined)
+      await flush()
+      expect(onClear).toHaveBeenCalledTimes(1)
     })
   })
 
