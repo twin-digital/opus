@@ -14,14 +14,14 @@ No command installs Godot on your computer. Each command that needs Godot uses t
 
 ## Scripts
 
-| Script        | Command                       | Docker | Purpose                                                 |
-| ------------- | ----------------------------- | ------ | ------------------------------------------------------- |
-| `start`       | `node scripts/start.ts`       | No     | Start the construct in a Node.js process.               |
-| `godot`       | `node scripts/godot.ts run`   | Yes    | Run the Godot application in a container.               |
-| `godot:image` | `node scripts/godot.ts image` | Yes    | Build the image when it is missing.                     |
-| `test`        | `opus-test`                   | No     | Run the Vitest tests of `src/`.                         |
-| `test:godot`  | `node scripts/godot.ts test`  | Yes    | Run the GDScript tests in the image.                    |
-| `test:ui`     | `pnpm test:godot`             | Yes    | Run the tests that need Docker (the CI job `ui-tests`). |
+| Script        | Command                          | Docker | Purpose                                                 |
+| ------------- | -------------------------------- | ------ | ------------------------------------------------------- |
+| `start`       | `node scripts/start.ts`          | No     | Start the construct in a Node.js process.               |
+| `godot`       | `node scripts/godot.ts run`      | Yes    | Run the Godot application in a container.               |
+| `godot:image` | `node scripts/godot.ts image`    | Yes    | Build the image when it is missing.                     |
+| `test`        | `opus-test`                      | No     | Run the Vitest tests of `src/`.                         |
+| `test:godot`  | `node scripts/godot.ts test`     | Yes    | Run the GDScript tests in the image.                    |
+| `test:ui`     | `test:godot`, then `node --test` | Yes    | Run the tests that need Docker (the CI job `ui-tests`). |
 
 ## GDScript tests
 
@@ -229,3 +229,41 @@ The Docker daemon can be on a different computer (`DOCKER_HOST`). A container ca
 5. When one side ends, the runner ends the other side and starts the next relay.
 
 The limit: one connection at a time. For a short time between two connections, no relay listens, and the application tries again. The runner needs no published port and no change to the construct.
+
+## The screenshot test
+
+`tests/godot.ui.test.ts` runs the construct and the Godot application as two real processes, and checks the pictures of the application.
+
+### Run
+
+The test needs Docker, because the application runs in the image. It needs no running construct: the test starts its own.
+
+```
+pnpm --filter @thrashplay/wishem-renderer-godot test:godot
+pnpm --filter @thrashplay/wishem-renderer-godot exec node --test "tests/*.test.ts"
+pnpm --filter @thrashplay/wishem-renderer-godot test:ui
+```
+
+`test:ui` runs the first two commands in order. `node --test tests/` does not find the file, so give the pattern `tests/*.test.ts`. The test writes the pictures to `.out/test-shots/`.
+
+### The two processes
+
+- The construct runs in the Node.js process of the test, on a port that the system selects, with the time paused.
+- The Godot application runs in a container through `runGodot`. The runner carries the bytes of the link.
+
+### Steps
+
+1. Start the construct.
+2. Start the application. Wait for `connected (link 1)` and a shot with `seq 0`. Each pixel is `#1d4ed8`.
+3. A link client of the test sends `time/advance` of 500. Wait for a shot with `seq 1`. Each pixel is `#b91c1c`, and the file differs from the first one.
+4. Wait 1500 milliseconds. No new shot comes.
+5. Close the construct. Wait for the line of the loss of the link.
+6. Start a construct on the same port. Wait for `connected (link 2)` and a new shot with `seq 0`. Each pixel is `#1d4ed8`.
+7. Close the runner. `docker ps -a` shows no container of the run.
+
+### What the test proves
+
+- The remote port, the renderer, the view `ClearColor`, the relay, and the order of the link work together: a fault in one of them fails a step.
+- The application draws the state of the hub and each change of the state, and it draws no picture when the state is the same.
+- The application connects again after the loss of the link and draws the new state.
+- The runner leaves no container.
