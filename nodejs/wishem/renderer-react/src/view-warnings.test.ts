@@ -69,10 +69,25 @@ describe('viewWarnings', () => {
     ])
   })
 
-  it('gives no warning for an empty name or a name that starts with a digit', () => {
+  it('gives one warning with the field ID for a label that gives an empty name', () => {
     const views = tableOf(entry('AppBar.view.json', APP_BAR))
 
-    expect(viewWarnings(views, [definition(APP_BAR, '---', '1st')])).toEqual([])
+    expect(viewWarnings(views, [definition(APP_BAR, 'title', '---')])).toEqual([
+      { kind: 'empty-name', sidecar: 'AppBar.view.json', componentType: APP_BAR, fields: [FIELD_B] },
+    ])
+  })
+
+  it('gives one warning for each of two empty names, and no same-name warning', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+    const result = viewWarnings(views, [definition(APP_BAR, '???', '---')])
+
+    expect(result.map((warning) => warning.kind)).toEqual(['empty-name', 'empty-name'])
+  })
+
+  it('gives no warning for a name that starts with a digit', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+
+    expect(viewWarnings(views, [definition(APP_BAR, '1st')])).toEqual([])
   })
 
   it('sorts the result by sidecar, so that the order is stable', () => {
@@ -197,6 +212,14 @@ describe('describeWarning', () => {
       }),
     ).toBe(
       `wishem: the sidecar AppBar.view.json: the label of the field ${FIELD_B} of the component type ${APP_BAR} gives the reserved name "wishem". The view does not get the field.`,
+    )
+  })
+
+  it('names the sidecar file, the field, and the component type for an empty name', () => {
+    expect(
+      describeWarning({ kind: 'empty-name', sidecar: 'AppBar.view.json', componentType: APP_BAR, fields: [FIELD_B] }),
+    ).toBe(
+      `wishem: the sidecar AppBar.view.json: the label of the field ${FIELD_B} of the component type ${APP_BAR} gives an empty name. The view does not get the field.`,
     )
   })
 

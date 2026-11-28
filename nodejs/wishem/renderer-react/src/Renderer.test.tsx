@@ -860,6 +860,35 @@ describe('Renderer', () => {
       expect(warn).toHaveBeenCalledTimes(1)
       expect(String(warn.mock.calls[0]?.[0])).toContain('reserved name "wishem"')
     })
+
+    it('gives the view no prop for a field with an empty name, and warns', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const seen: ViewProps[] = []
+      const model = baseModel()
+      const empty: Model = {
+        ...model,
+        definitions: [
+          { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: '???', type: 'string' }] },
+          model.definitions[1],
+        ],
+      }
+      render(
+        startWorld(empty).output,
+        tableOf({
+          name: 'A',
+          componentType: CT_A,
+          view: (props: ViewProps) => {
+            seen.push(props)
+            return null
+          },
+        }),
+      )
+      expect(seen[0]).toBeDefined()
+      expect(Object.keys(seen[0] ?? {})).not.toContain('')
+      expect(typeof seen[0]?.wishem.setField).toBe('function')
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(String(warn.mock.calls[0]?.[0])).toContain('gives an empty name')
+    })
   })
 
   describe('nested views', () => {
