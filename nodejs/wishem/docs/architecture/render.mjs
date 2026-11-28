@@ -698,7 +698,7 @@ const cClock = el(
 )
 
 // The update subsystem sits in its own column on the right, so that its arrows keep a free zone for their labels.
-const UPDATE_X = 1320
+const UPDATE_X = 1620
 const cUpdate = el(
   'container',
   UPDATE_X,
@@ -740,6 +740,15 @@ const cSample = el(
   'sample-product',
   '[Container: TypeScript package]',
   'Holds the example model folder and the count behavior.',
+)
+
+const cSampleProcess = el(
+  'container',
+  UPDATE_X,
+  300,
+  'Sample construct process',
+  '[Container: Node.js]',
+  'Runs the sample construct and serves its link.',
 )
 
 const cGodotRunner = el(
@@ -786,8 +795,8 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has eighteen containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process runs the behaviors with the update package, serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The designer starts the three processes and the Godot runner, edits the two folders, and looks at the two pages.',
-  width: 1614,
+    'Wishem has nineteen containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process runs the behaviors with the update package, serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample construct process starts the product construct with the construct-manager package, runs the behaviors of the sample-product package, builds on the host-nodejs package, and reads the product model folder. The designer starts the four processes and the Godot runner, edits the two folders, and looks at the two pages.',
+  width: 1914,
   height: 3090,
   items: shiftY(
     [
@@ -804,6 +813,7 @@ const containers = {
       cRenderer,
       cClock,
       cUpdate,
+      cSampleProcess,
       cPixiPage,
       cPixiProcess,
       cRendererPixi,
@@ -942,6 +952,38 @@ const containers = {
         'Serves the link with [import]',
         [500, 1770],
       ),
+      // The sample construct
+      rel(
+        'quiet',
+        [right(cDesigner, 184), [1700, 184], top(cSampleProcess, 1700)],
+        'Starts and stops [terminal]',
+        [1400, 184],
+      ),
+      rel(
+        'quiet',
+        [left(cSampleProcess, 322), [1210, 322], [1210, 650], right(cProduct, 650)],
+        'Reads [file system]',
+        [1210, 486],
+      ),
+      rel(
+        'quiet',
+        [left(cSampleProcess, 342), [1290, 342], [1290, 788], [300, 788], top(cHost, 300)],
+        'Builds on [import]',
+        [1290, 570],
+      ),
+      rel(
+        'quiet',
+        [left(cSampleProcess, 362), [1370, 362], [1370, 1100], right(cManager, 1100)],
+        'Starts with [import]',
+        [1370, 900],
+      ),
+      rel(
+        'quiet',
+        [left(cSampleProcess, 382), [1450, 382], [1450, 2125], right(cSample, 2125)],
+        'Runs [import]',
+        [1450, 1500],
+      ),
+
       // The update subsystem
       rel('quiet', [left(cUpdate, 1030), [1165, 1030], [1165, 850], right(cCore, 850)], 'Builds on [import]', [
         UPDATE_X - 80,
@@ -957,22 +999,22 @@ const containers = {
       ]),
       rel(
         'quiet',
-        [right(cPixiProcess, 1850), [1420, 1850], bottom(cUpdate, 1420)],
+        [right(cPixiProcess, 1850), [1720, 1850], bottom(cUpdate, 1720)],
         'Runs the behaviors with [import]',
-        [1420, 1500],
+        [1720, 1500],
       ),
 
       rel(
         'quiet',
-        [right(cManager, 1010), [1135, 1010], [1135, 970], [1500, 970], top(cUpdate, 1500)],
+        [right(cManager, 1010), [1135, 1010], [1135, 970], [1800, 970], top(cUpdate, 1800)],
         'Runs the behaviors with [import]',
-        [1340, 970],
+        [1640, 970],
       ),
       rel(
         'quiet',
-        [bottom(cProcess, 592), [592, 744], [1540, 744], top(cUpdate, 1540)],
+        [bottom(cProcess, 592), [592, 744], [1840, 744], top(cUpdate, 1840)],
         'Checks the product code with [import]',
-        [1300, 744],
+        [1600, 744],
       ),
 
       // The Godot construct

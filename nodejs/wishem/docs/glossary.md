@@ -64,6 +64,8 @@ Terms in each group are in alphabetical order.
 
 **Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt. The count behavior (**Proposed**) and the color behavior (**Proposed**) of the sample product, and the color behavior of the PixiJS construct, are native behaviors in a first form. The update subsystem runs them. It stands in for the behavior feature (issue #481).
 
+**Sample construct** (**Proposed**): The product construct of the sample product, in a Node.js process of its own, with a clock of 500 milliseconds. It serves its link at `ws://127.0.0.1:4750/link`. The renderers draw it. The command `pnpm --filter @thrashplay/wishem-three-renderers construct` starts it.
+
 **Registry**: The part that reports the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state. The registry is not a job of the hub. The store holds it (**Proposed**).
 
 **Relation**: A declared field of the type `reference`. Its value is the ID of an entity of the same model. Examples: a room contains an entity, and a held item is attached to the hero.

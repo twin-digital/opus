@@ -18,6 +18,7 @@ The `docs/` folder holds the blueprint.
 - `renderer-pixi` (`@thrashplay/wishem-renderer-pixi`): the PixiJS renderer. It draws PixiJS views from a port. It uses no Node.js API.
 - `pixi-page` (`@thrashplay/wishem-pixi-page`): a construct with a clock in a Node.js process, a page that draws it through the link, and a `start` script. It is private.
 - `renderer-godot` (`@thrashplay/wishem-renderer-godot`): the Godot renderer. It holds the remote port in GDScript, the renderer, the Godot application, the construct in a Node.js process, the Godot runner, and a `start` script. Its GDScript tests and its screenshot test need Docker. It is private.
+- `three-renderers` (`@thrashplay/wishem-three-renderers`): the sample construct, a product construct of the sample product in a Node.js process, and its command `construct`. It is private.
 - `workbench-app` (`@thrashplay/wishem-workbench-app`): the browser application of the workbench. It holds the page, the client of the hub, the views, the `start` script of the workbench, and the style guide with its screenshot tests, which need Docker.
 
 ## Read before you design or build
