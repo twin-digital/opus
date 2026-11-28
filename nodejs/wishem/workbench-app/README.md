@@ -101,6 +101,29 @@ pnpm --filter @thrashplay/wishem-workbench-app generate --check
 
 A relative `--model` or `--views` path starts from the folder where you run the command.
 
+## Change the title in the page
+
+The title of the app bar is a button with the tooltip `Change the title`. To change the title:
+
+1. Select the title with the mouse, or move to it with Tab and press Enter or Space. A text field opens with the title, and all its text is selected.
+2. Type the new title. The field shows the case that you type. Enter saves it. A move of the focus out of the field also saves it.
+3. To cancel, press Escape. The field closes and the title does not change.
+
+A new text that is empty or the same as the title closes the field and sends no input. While the app bar waits for the answer of the workbench, the field is read-only and the label `SAVING` shows beside it. After the workbench accepts the change, the field closes and the focus goes to the title.
+
+When the workbench does not accept the change, the field stays open with your text. A line below the bar shows `The title is not saved.` and the reason. A new Enter sends the change again. A move of the focus does not send it again.
+
+The file `src/views/outcome-text.ts` makes the text of the reason:
+
+| Reason                                    | Text                                                                          |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| `not-running`                             | `The workbench does not run. Start it, and try again.`                        |
+| `unknown`                                 | `The connection ended before an answer. Look at the title after it connects.` |
+| `not-permitted`                           | `This page cannot send changes.`                                              |
+| `invalid` with a problem                  | The message of the first problem.                                             |
+| `invalid` with no problem, `unknown-type` | `The workbench refused the change.`                                           |
+| `failed`                                  | `The workbench failed to apply the change.`                                   |
+
 ## Start the style guide
 
 ```
@@ -191,7 +214,7 @@ A component uses roles only. A role gives the purpose of a color, for example `b
 
 `src/components/` holds the components. Each component takes all its content as props.
 
-- `AppBar` (`title`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis.
+- `AppBar` (`title`, `onRename`, `initial`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis. With `onRename`, the title is a button. `initial` sets the first state of the edit, for the style guide and the tests.
 - `ZeroState` (`label`, `message`): a mono label and one line of text in the center of the space that it gets. Both texts use `fg-muted`.
 
 A new component goes in the Components section of the style guide, in each of its states, in the same change. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.
