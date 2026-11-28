@@ -354,7 +354,7 @@ The accumulator keeps the time of the construct near the real time. When the tim
 
 One model subsystem is the update subsystem. It runs the behaviors in an order that the specification of the update subsystem gives. A behavior is data and code that this subsystem runs. It is not a subsystem. (rule R22)
 
-The count behavior of the sample product and the color behavior of the PixiJS construct are its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
+The count behavior and the color behavior of the sample product are its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
 
 ### Decision: interpolation in a renderer (**Agreed**)
 
@@ -441,8 +441,8 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 - Each renderer reads the hub through a port. The Godot renderer uses a remote port in GDScript. (**Proposed**)
 - The React renderer is the package `renderer-react`. It runs React views and reads a port. The page gives the port. (**Proposed**) The requirements of the package are in `wishem/renderer-html/renderer`.
 - The PixiJS renderer and the Godot renderer each have one view. (**Agreed**)
-- The Godot renderer is in the package `renderer-godot`. Its view is the Godot view (sidecar kind `godot`). Its construct runs in a Node.js process. (**Proposed**)
-- The PixiJS renderer is the package `renderer-pixi`. Its view is the PixiJS view (sidecar kind `pixi`). The package `pixi-page` holds a construct with a clock in a Node.js process, and a page that reads it through a link. (**Proposed**)
+- The Godot renderer is in the package `renderer-godot`. Its view is the Godot view (sidecar kind `godot`). Its runner runs in a Node.js process and starts the Godot application in Docker. (**Proposed**)
+- The PixiJS renderer is the package `renderer-pixi`. Its view is the PixiJS view (sidecar kind `pixi`). The package `pixi-page` holds a page that reads the sample construct through a link. (**Proposed**)
 - The view of the PixiJS renderer is `ClearColor`. The view of the Godot renderer is the same. Each clears the viewport to a color that a field gives. (**Proposed**)
 - The proof that a renderer works is a screenshot that changes when the clock advances. (**Proposed**)
 

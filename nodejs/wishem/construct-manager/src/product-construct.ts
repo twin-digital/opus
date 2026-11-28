@@ -19,6 +19,8 @@ export interface ProductConstructOptions {
   behaviors?: readonly NativeBehavior[]
   /** The first `running` value of the part `time`. */
   running: boolean
+  /** The port of the link. Default 0: the system selects a free port. */
+  port?: number
   /** Default 50. */
   stepMs?: number
   /** For tests. Default: `setInterval` and `Date.now`. */
@@ -38,7 +40,7 @@ export interface ProductConstruct {
 
 /**
  * Starts a hub with the parts `time` and `store`. The update subsystem runs the behaviors.
- * Serves the link on a port that the system selects, and starts a clock.
+ * Serves the link on the port `port` (default: a port that the system selects), and starts a clock.
  * Only the source `construct-manager` can rewind the hub.
  * Rejects with the error of a step, and then holds no port and no timer.
  */
@@ -49,7 +51,7 @@ export const startProductConstruct = async (options: ProductConstructOptions): P
     rewindSources: [CONSTRUCT_MANAGER_ID],
     ...(options.onError === undefined ? {} : { onError: options.onError }),
   })
-  const server = await serveHub(hub, { port: 0 })
+  const server = await serveHub(hub, { port: options.port ?? 0 })
 
   let clock: Clock | undefined
   let clockPort: Port | undefined

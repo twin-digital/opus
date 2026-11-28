@@ -19,7 +19,8 @@ describe('checkBehaviors', () => {
   })
 
   it('refuses an item that is not an object', () => {
-    expect(() => checkBehaviors([behavior('a'), null])).toThrow(/position 1/)
+    expect(() => checkBehaviors([behavior('a'), null])).toThrow(/position 1 is not an object/)
+    expect(() => checkBehaviors([behavior('a'), 'x'])).toThrow(/position 1 is not an object/)
   })
 
   it('refuses an item with no text id and names the position', () => {

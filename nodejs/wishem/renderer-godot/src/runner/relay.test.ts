@@ -4,7 +4,8 @@ import { connect, createServer, type AddressInfo } from 'node:net'
 import { join } from 'node:path'
 import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import { afterEach, describe, expect, it } from 'vitest'
-import { startGodotConstruct, type GodotConstruct } from '../construct/process.js'
+import type { ProductConstruct } from '@thrashplay/wishem-construct-manager/node'
+import { startSampleConstruct } from '../../tests/sample-construct.js'
 import { startRelay, type Relay } from './relay.js'
 import type { ChildProcessLike } from './docker.js'
 
@@ -32,7 +33,7 @@ const freePort = () =>
   })
 
 describe('startRelay', () => {
-  let constructs: GodotConstruct[]
+  let constructs: ProductConstruct[]
   let relays: Relay[]
   let sockets: WebSocket[]
   let inners: ChildProcessLike[]
@@ -53,14 +54,11 @@ describe('startRelay', () => {
     relays = []
     sockets = []
     inners = []
-    const construct =
-      options.construct === false ?
-        undefined
-      : await startGodotConstruct({ port: 0, paused: true, log: () => undefined })
+    const construct = options.construct === false ? undefined : await startSampleConstruct({ paused: true })
     if (construct) {
       constructs.push(construct)
     }
-    const hubPort = construct ? Number(new URL(construct.url).port) : await freePort()
+    const hubPort = construct ? Number(new URL(construct.linkUrl).port) : await freePort()
     const innerPort = await freePort()
     const errors: unknown[] = []
     const relay = startRelay({

@@ -37,7 +37,7 @@ The protocol has no maximum size for a message. The message `welcome` holds the 
 
 ### The numbers
 
-Each number of version 1 is an integer from 0 to 2^53 - 1. This applies to `protocol`, `seq`, `request`, and the target of `hub/rewind`. A JSON parser that gives each number as a floating-point number (for example the parser of GDScript) can give `3.0` for `3`. Convert each such number to an integer before you compare it or send it.
+Each number of version 1 is an integer from 0 to 2^53 - 1. This applies to `protocol`, `seq`, `request`, each version of `supported`, and the target of `hub/rewind`. A JSON parser that gives each number as a floating-point number (for example the parser of GDScript) can give `3.0` for `3`. Convert each such number to an integer before you compare it or send it.
 
 A message of the hub side is malformed when `protocol` or `seq` of `welcome`, `seq` of the input of `applied`, or `request` of `result` is not an integer from 0 to 2^53 - 1.
 
@@ -127,20 +127,20 @@ A `welcome` message is malformed when `status` is not `created` or `running`, `s
 
 The hub side sends `refused` when it cannot serve the `hello`. It also sends `refused` when a message of the client is malformed. It then closes the connection. Before `welcome`, the hub side attaches none of the subsystems. After `welcome`, the hub side detaches each subsystem of the link.
 
-| Key         | JSON type | Meaning                                                |
-| ----------- | --------- | ------------------------------------------------------ |
-| `t`         | text      | `"refused"`                                            |
-| `reason`    | text      | The reason. See the table below.                       |
-| `message`   | text      | A text for a person. It says what is not correct.      |
-| `supported` | list      | The supported protocol versions. Only for `"version"`. |
+| Key         | JSON type | Meaning                                                                                               |
+| ----------- | --------- | ----------------------------------------------------------------------------------------------------- |
+| `t`         | text      | `"refused"`                                                                                           |
+| `reason`    | text      | The reason. See the table below.                                                                      |
+| `message`   | text      | A text for a person. It says what is not correct.                                                     |
+| `supported` | list      | The supported protocol versions. Only for `"version"`. Each version is an integer from 0 to 2^53 - 1. |
 
-| Reason        | When it occurs                                                                                                                                          |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `malformed`   | The first message is not `hello`. A message is not JSON. The list of subsystems is empty or not correct. A second `hello` arrives. A message is binary. |
-| `version`     | The version of the client is not supported. Use a version of the list `supported`.                                                                      |
-| `id-in-use`   | A subsystem ID is in use by an other link or by the hub. The ID `hub` is always in use.                                                                 |
-| `unsupported` | A subsystem has the kind `"model"`. Version 1 does not support it.                                                                                      |
-| `stopped`     | The hub is stopped.                                                                                                                                     |
+| Reason        | When it occurs                                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `malformed`   | The first message is not `hello`. A message is not JSON. The list of subsystems is empty or not correct. A second `hello` arrives. A message is binary. A number is not an integer from 0 to 2^53 - 1. |
+| `version`     | The version of the client is not supported. Use a version of the list `supported`.                                                                                                                     |
+| `id-in-use`   | A subsystem ID is in use by an other link or by the hub. The ID `hub` is always in use.                                                                                                                |
+| `unsupported` | A subsystem has the kind `"model"`. Version 1 does not support it.                                                                                                                                     |
+| `stopped`     | The hub is stopped.                                                                                                                                                                                    |
 
 ```json
 {
@@ -193,7 +193,7 @@ The keys of `input`:
 | `type`    | text      | The type of the input.                                        |
 | `payload` | any       | The payload of the input. The value is `null` for no payload. |
 
-An `applied` message is malformed when `input` or `parts` is not an object, or when `seq` is not an integer. Close the connection and open a new link.
+An `applied` message is malformed when `input` or `parts` is not an object, or when `seq` is not an integer from 0 to 2^53 - 1. Close the connection and open a new link.
 
 To update the joined state, replace each key of the local state with the key of `parts`. Keep each other part. The message holds no part that did not change.
 

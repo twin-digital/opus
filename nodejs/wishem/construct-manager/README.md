@@ -103,7 +103,7 @@ The construct manager attaches the input port `construct-manager` and the output
 A product construct (`startProductConstruct`) holds:
 
 - a hub with the parts `time` and `store`, and the update subsystem, which runs the `behaviors`. The part `time` holds `stepMs`, the step length of the clock (default 50 milliseconds)
-- a link server on a port that the system selects (`linkUrl`, for example `ws://127.0.0.1:41377/link`)
+- a link server on the port of the option `port` (`linkUrl`, for example `ws://127.0.0.1:41377/link`). The default is 0: the system selects a free port. A port in use rejects `startProductConstruct` with `EADDRINUSE`, and then no timer and no open port stay.
 - a clock on the port `clock`
 
 Only the source `construct-manager` can rewind the hub of a product construct. The construct manager rewinds it when a client sends the input `hub/rewind` with `constructs/send`.

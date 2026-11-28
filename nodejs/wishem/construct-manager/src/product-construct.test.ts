@@ -311,6 +311,44 @@ describe('startProductConstruct', () => {
     expect(new URL(next.linkUrl).port).toBe(String(number))
   })
 
+  describe('the option port', () => {
+    const freePort = () =>
+      new Promise<number>((resolve) => {
+        const probe = createServer()
+        probe.listen(0, '127.0.0.1', () => {
+          const { port } = probe.address() as AddressInfo
+          probe.close(() => {
+            resolve(port)
+          })
+        })
+      })
+
+    it('serves the link on a free port that the option gives', async () => {
+      const clock = await setup()
+      const port = await freePort()
+      const construct = await start(clock, { port })
+      expect(construct.linkUrl).toBe(`ws://127.0.0.1:${port}/link`)
+    })
+
+    it('rejects with EADDRINUSE for a port in use, and leaves no timer and no open port', async () => {
+      const clock = await setup()
+      const first = await start(clock)
+      const port = portOf(first)
+      const second = makeClock()
+      await expect(start(second, { id: 'check', port })).rejects.toMatchObject({ code: 'EADDRINUSE' })
+      expect(second.active).toBe(0)
+      await first.close()
+      expect(await canListen(port)).toBe(true)
+    })
+
+    it('gives a different port to two constructs with the default port', async () => {
+      const clock = await setup()
+      const play = await start(clock)
+      const check = await start(makeClock(), { id: 'check' })
+      expect(portOf(play)).not.toBe(portOf(check))
+    })
+  })
+
   it('writes no file', async () => {
     const clock = await setup()
     const previous = process.cwd()

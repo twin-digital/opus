@@ -99,7 +99,7 @@ The product folder has the same form as the model folder. The construct mounts i
 - The product has a storage subsystem of its own, with the input subsystem `product-files` and the output subsystem `product-files-writer`. Each rule of the model folder applies to each folder alone: the watch, the last correct model, the write of `state.json`, and the hold of the write while the definitions of the store differ from the files.
 - A hand edit of one folder changes only the store of that folder. A change of one store writes only the `state.json` of its own folder.
 - The product folder and the model folder must be different folders. A product folder inside the model folder is permitted.
-- Each problem of a file of the product folder names the absolute path of the file. Each other line about the product starts with `wishem: product: `, for example `wishem: product: the last correct model stays`.
+- Each problem and each warning of a file of the product folder names the absolute path of the file. Each other line about the product starts with `wishem: product: `, for example `wishem: product: the last correct model stays`.
 
 ## Problems
 

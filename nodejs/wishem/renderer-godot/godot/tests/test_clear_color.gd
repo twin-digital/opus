@@ -4,7 +4,7 @@ const Views = preload("res://wishem/views.gd")
 const Renderer = preload("res://wishem/renderer.gd")
 const FakePort = preload("res://tests/fake_port.gd")
 const ClearColor = preload("res://views/ClearColor.gd")
-const TYPE := "ct_c47a0a86-b82f-43a8-8b0b-31a1e4ef6f37"
+const TYPE := "ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512"
 
 
 func _updated(color: Variant, viewport: Vector2 = Vector2(640, 360)) -> ColorRect:
