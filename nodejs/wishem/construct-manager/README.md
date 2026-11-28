@@ -10,7 +10,7 @@ The package is private. The root entry uses no Node.js API. The entry `node` (`@
 
 - `want`: `running` or `stopped`. The wanted state.
 - `startTime`: `running` or `paused`. The time state when the construct starts.
-- `startSeq`: The sequence number of the last `constructs/start` in the workbench record.
+- `startSeq`: The sequence number, in the workbench record, of the `constructs/start` that wrote the entry.
 - `status`: `pending`, `running`, `stopped`, or `failed`. What the construct manager reported last.
 - `link`, `time`: only with the status `running`.
 - `message`, `lastSend`: optional.
@@ -108,6 +108,8 @@ A product construct (`startProductConstruct`) holds:
 Only the source `construct-manager` can rewind the hub of a product construct. The construct manager rewinds it when a client sends the input `hub/rewind` with `constructs/send`.
 
 The construct manager gives each product construct the changes of the model `product` as inputs. It reports `running`, `stopped`, or `failed` for each construct with `constructs/report`. A `failed` construct stays `failed` until a client sends `constructs/stop` and then `constructs/start`.
+
+A `constructs/stop` and a `constructs/start` always give a new product construct: a new link address and a time that starts from 0. This is also true when the hub applies both inputs in one pass.
 
 The construct manager writes these log lines:
 

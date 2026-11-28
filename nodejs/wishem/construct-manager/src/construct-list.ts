@@ -12,7 +12,7 @@ export interface ConstructEntry {
   readonly want: WantedState
   /** The time state when the construct starts. */
   readonly startTime: TimeState
-  /** The sequence number of the last `constructs/start` in the workbench record. */
+  /** The sequence number, in the workbench record, of the `constructs/start` that wrote the entry. */
   readonly startSeq: number
   /** What the construct manager reported last. `pending` until its first report. */
   readonly status: ConstructStatus

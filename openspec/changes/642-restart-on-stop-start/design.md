@@ -27,7 +27,7 @@ The state that this change starts from is `main` at `9708c13b`, with #538 (the c
 
 The design follows the issue. The lead agent did the brainstorm alone, and the design was settled by the issue and the archived review, so no `superpowers:brainstorming` session ran. Three approaches were compared:
 
-- **A. The entry holds the sequence number of its last start (selected).** The construct manager keeps the number of each live construct and compares. It is a pure function of the record, it survives a replay, and a rewind gives the number of the target.
+- **A. The entry holds the sequence number of the start that wrote it (selected).** The construct manager keeps the number of each live construct and compares. It is a pure function of the record, it survives a replay, and a rewind gives the number of the target.
 - **B. The construct manager handles each applied input with the state after that input.** The hub gives the state after each input only through a replay from a checkpoint, and the construct manager would have to keep a copy of each state while a start runs. Rejected: more work in each pass, and the pass of an input that the construct manager missed (for example during a slow start) still sees only the last state.
 - **C. A counter of starts in the entry (1, 2, 3, ...).** It works the same as A, but a rewind and a new start can give the same counter value as a start that the rewind removed. Example: start (1), stop, start (2), rewind to after the stop, start (2 again). Rejected: the sequence number is unique in a record, a counter is not.
 
@@ -61,7 +61,7 @@ The test guide needs a real client that sends a stop and a start with no wait be
 
 ### 6. The blueprint
 
-The term **Construct list** of `nodejs/wishem/docs/glossary.md` adds "the sequence number of its last start" to what an entry holds. The README of `construct-manager` adds `startSeq` to the list of fields and to the row of `constructs/start`.
+The term **Construct list** of `nodejs/wishem/docs/glossary.md` adds "the sequence number of the start that wrote it" to what an entry holds. The README of `construct-manager` adds `startSeq` to the list of fields and to the row of `constructs/start`.
 
 ## Interfaces
 

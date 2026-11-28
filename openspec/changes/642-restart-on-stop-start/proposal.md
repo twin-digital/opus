@@ -23,7 +23,7 @@ None.
 
 ### Modified Capabilities
 
-- `wishem/workbench/construct-list`: the entry holds the sequence number of its last start (the modified requirement "An input starts a product construct"), and a report keeps it (the new requirement "A report keeps the start of the entry").
+- `wishem/workbench/construct-list`: the entry holds the sequence number of the start that wrote it (the modified requirement "An input starts a product construct"), and a report keeps it (the new requirement "A report keeps the start of the entry").
 - `wishem/workbench/construct-manager`: a stop and a start in one pass give a new product construct (requirement "The construct manager stops a construct that is not wanted"), and the construct manager compares the sequence number of the start after a rewind (requirement "The construct manager follows the list after a rewind").
 
 ## Impact
