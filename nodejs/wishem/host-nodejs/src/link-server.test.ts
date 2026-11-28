@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import type { Duplex } from 'node:stream'
 import { createStore, storeInputs, validateModel } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
-import { createHub, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
+import { createHub, LINK_PROTOCOL_VERSION, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { Hub, HubEvent, RemoteLink, WebSocketLike } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
@@ -202,6 +202,72 @@ describe('the server of the link', () => {
     it('answers 404 for a WebSocket at a different path, and attaches nothing', async () => {
       expect(await refusedStatus('/links')).toBe(404)
       expectNothingAttached('page-a')
+    })
+  })
+
+  describe('The server refuses a binary message', () => {
+    const REFUSAL = {
+      t: 'refused',
+      reason: 'malformed',
+      message: 'The message is binary. Send each message as a WebSocket text message.',
+    }
+
+    /** Opens a raw WebSocket and records each message with its binary flag, and the close. */
+    const openRecording = async () => {
+      const socket = new WebSocket(`ws://127.0.0.1:${port}/link`)
+      sockets.push(socket)
+      const received: { binary: boolean; text: string }[] = []
+      const waiters: (() => void)[] = []
+      socket.on('message', (data, binary) => {
+        received.push({ binary, text: (data as Buffer).toString('utf8') })
+        waiters.splice(0).forEach((wake) => {
+          wake()
+        })
+      })
+      const closed = new Promise<void>((resolve) => {
+        socket.once('close', () => {
+          resolve()
+        })
+      })
+      await new Promise<void>((resolve, reject) => {
+        socket.once('open', () => {
+          resolve()
+        })
+        socket.once('error', reject)
+      })
+      const next = async (count: number) => {
+        while (received.length < count) {
+          await new Promise<void>((resolve) => waiters.push(resolve))
+        }
+      }
+      return { socket, received, closed, next }
+    }
+
+    it('answers a binary first message with refused malformed and closes', async () => {
+      const { socket, received, closed, next } = await openRecording()
+      socket.send(Buffer.from([1, 2, 3]))
+      await next(1)
+      await closed
+      expect(received).toHaveLength(1)
+      expect(received[0].binary).toBe(false)
+      expect(JSON.parse(received[0].text)).toEqual(REFUSAL)
+    })
+
+    it('answers a binary message after the welcome, and a new link gets the same ID', async () => {
+      const { socket, received, closed, next } = await openRecording()
+      socket.send(
+        JSON.stringify({ t: 'hello', protocol: LINK_PROTOCOL_VERSION, subsystems: [{ id: 'page-a', kind: 'output' }] }),
+      )
+      await next(1)
+      expect((JSON.parse(received[0].text) as { t: string }).t).toBe('welcome')
+      socket.send(Buffer.from([1, 2, 3]))
+      await next(2)
+      await closed
+      expect(received).toHaveLength(2)
+      expect(received[1].binary).toBe(false)
+      expect(JSON.parse(received[1].text)).toEqual(REFUSAL)
+      const link = await open('page-a')
+      expect(link.ports['page-a'].read().store).toBeDefined()
     })
   })
 
