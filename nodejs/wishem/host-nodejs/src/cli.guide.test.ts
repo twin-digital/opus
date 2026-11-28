@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -106,8 +106,14 @@ describe('wishem start names the definition file of a duplicate label (test guid
     expect(first.lines().some((line) => line.startsWith('wishem: product: warning'))).toBe(false)
 
     await rm(productCopy)
-    await pause(500)
-    expect(warnings(first)).toHaveLength(2)
+    const stateFile = path.join(product, 'state.json')
+    const validState = await readFile(stateFile, 'utf8')
+    await writeFile(stateFile, '{')
+    const marker = 'wishem: product: the last correct model stays'
+    await until(() => first.lines().includes(marker))
+    const beforeMarker = first.lines().slice(0, first.lines().indexOf(marker))
+    expect(beforeMarker.filter((line) => line.includes('warning'))).toEqual([modelLine, productLine])
+    await writeFile(stateFile, validState)
 
     await copyFile(path.join(model, 'definitions', 'zz-copy.json'), productCopy)
     await pause(500)

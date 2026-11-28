@@ -21,7 +21,7 @@ When the model data from a folder is not correct, each problem that comes from o
 
 ### Requirement: Each line about the product model names the product
 
-Each problem of a file of the product folder SHALL name the absolute path of that file. Each other line of the storage subsystem of the product SHALL start with `wishem: product: `. The lines of the storage subsystem of the store `store` SHALL not change.
+Each problem and each warning of a file of the product folder SHALL name the absolute path of that file. Each other line of the storage subsystem of the product SHALL start with `wishem: product: `. The lines of the storage subsystem of the store `store` SHALL not change.
 
 #### Scenario: A file of the product that is saved in part
 
