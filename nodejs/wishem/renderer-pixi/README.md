@@ -59,6 +59,16 @@ A field whose label gives an empty name (for example `???`) gives no prop. The r
 wishem: the sidecar <sidecar>: the label of the field <field ID> of the component type <component type ID> gives an empty name. The view does not get the field.
 ```
 
+## Warnings for a view that has no definition
+
+A view whose sidecar names a component type that has no definition draws nothing. The renderer writes one warning with `console.warn` for it. The line of the warning is:
+
+```text
+wishem: the sidecar <sidecar> names the component type <component type ID>, which no definition has. No view is drawn for it.
+```
+
+The renderer writes no warning when the joined state has no part `store`.
+
 ## The entity at a point
 
 `entityAt(x, y)` gives the entity ID and the component type ID of the top visible display object that contains the point. It gives no value when no visible object contains the point, and after the stop.

@@ -35,8 +35,10 @@ describe('viewWarnings', () => {
     expect(warnings).toEqual([])
   })
 
-  it('gives no warning for a view whose component type has no definition', () => {
-    expect(viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_B, '???')])).toEqual([])
+  it('gives one warning for a view whose component type has no definition', () => {
+    expect(viewWarnings(tableOf(['A.view.json', TYPE_A]), [definition(TYPE_B, '???')])).toEqual([
+      { kind: 'component-type-not-defined', sidecar: 'A.view.json', componentType: TYPE_A },
+    ])
   })
 
   it('gives the warnings of a later view after a view with no definition', () => {
@@ -45,7 +47,10 @@ describe('viewWarnings', () => {
       [TYPE_B, { sidecar: 'B.view.json', componentType: TYPE_B, view }],
     ])
     const warnings = viewWarnings(table, [definition(TYPE_B, '???')])
-    expect(warnings.map((warning) => warning.componentType)).toEqual([TYPE_B])
+    expect(warnings).toEqual([
+      { kind: 'component-type-not-defined', sidecar: 'A.view.json', componentType: TYPE_A },
+      { kind: 'empty-name', sidecar: 'B.view.json', componentType: TYPE_B, fields: ['fld_0'] },
+    ])
   })
 
   it('sorts three warnings that the table gives in each order', () => {
@@ -98,6 +103,12 @@ describe('describeWarning', () => {
       describeWarning({ kind: 'empty-name', sidecar: 'A.view.json', componentType: TYPE_A, fields: ['fld_1'] }),
     ).toBe(
       `wishem: the sidecar A.view.json: the label of the field fld_1 of the component type ${TYPE_A} gives an empty name. The view does not get the field.`,
+    )
+  })
+
+  it('gives the line for a component type with no definition', () => {
+    expect(describeWarning({ kind: 'component-type-not-defined', sidecar: 'A.view.json', componentType: TYPE_A })).toBe(
+      `wishem: the sidecar A.view.json names the component type ${TYPE_A}, which no definition has. No view is drawn for it.`,
     )
   })
 })

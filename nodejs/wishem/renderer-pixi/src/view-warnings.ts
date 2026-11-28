@@ -3,10 +3,11 @@ import { propNames } from './field-names.js'
 import type { ViewTable } from './types.js'
 
 export interface ViewWarning {
-  kind: 'empty-name'
+  kind: 'component-type-not-defined' | 'empty-name'
   sidecar: string
   componentType: Id
-  fields: [Id]
+  /** One field for `empty-name`. */
+  fields?: [Id]
 }
 
 const compare = (a: string, b: string): number =>
@@ -22,6 +23,7 @@ export const viewWarnings = (views: ViewTable, definitions: readonly ComponentTy
   for (const { sidecar, componentType } of views.values()) {
     const definition = definitionsById.get(componentType)
     if (!definition) {
+      warnings.push({ kind: 'component-type-not-defined', sidecar, componentType })
       continue
     }
     for (const problem of propNames(definition).problems) {
@@ -35,5 +37,11 @@ export const viewWarnings = (views: ViewTable, definitions: readonly ComponentTy
 }
 
 /** One line for the browser console. */
-export const describeWarning = ({ sidecar, componentType, fields }: ViewWarning): string =>
-  `wishem: the sidecar ${sidecar}: the label of the field ${fields[0]} of the component type ${componentType} gives an empty name. The view does not get the field.`
+export const describeWarning = ({ kind, sidecar, componentType, fields }: ViewWarning): string => {
+  switch (kind) {
+    case 'component-type-not-defined':
+      return `wishem: the sidecar ${sidecar} names the component type ${componentType}, which no definition has. No view is drawn for it.`
+    case 'empty-name':
+      return `wishem: the sidecar ${sidecar}: the label of the field ${fields?.[0] ?? ''} of the component type ${componentType} gives an empty name. The view does not get the field.`
+  }
+}
