@@ -59,6 +59,19 @@ Task 2: minor (deferred): _send_submit ignores the result of send_text (a failed
 For Task 7: the gaps of LINK.md are 1 to 7 of Decision 14 and 8 to 14 of the report of Task 2.
 Task 2: complete (commits 0092a39..ebb1494, review clean)
 
+Task 3: dispatched (implementer: sonnet), base 2ffd012a
+
+Task 3: implementer DONE_WITH_CONCERNS, commits fc0fe3a2, 91b9c981 (test:godot 103 passed, no SCRIPT ERROR line; one expected push_error). The ID of the component type of ClearColor (for Task 4): ct_c47a0a86-b82f-43a8-8b0b-31a1e4ef6f37. Concerns: (1) the fixture godot/tests/views/bad_json/Box.view.json is invalid JSON on purpose, and Prettier cannot parse it (the root .prettierignore is not a permitted place); (2) the runner counts a test that stops on a runtime SCRIPT ERROR as PASS; (3) choices: an empty field name gives no prop (React keeps ""), two sidecars of one component type are both dropped, a failed create is not tried again until the component is gone; (4) extra: Views.collect_from(folder, names) and a public renderer.errors; no gap of LINK.md.
+Ruling: (1) the merge-checks of the pull request run `prettier --check` on each changed file, so the committed invalid fixture fails a check, and the root .prettierignore needs the owner; the test writes the invalid sidecar at run time in a temporary folder of Godot, and the fixture file is removed — cost if wrong: one test setup. (2) is load-bearing for each later GDScript test: `test:godot` (scripts/godot.ts) ends with exit code 1 when the output of Godot has a line with `SCRIPT ERROR`, with a test of the runner — cost if wrong: one check in the Node.js runner. Both are fixed before the review. (3) and (4) go to the review as facts.
+Task 3: fix dispatched (new implementer, sonnet), base 91b9c981.
+
+Task 3: correction, commit fc7b0468 (the invalid sidecar is written at run time; test:godot scans stdout and stderr and ends with exit 1 for a SCRIPT ERROR line — a real fault gave exit 1; spawn of docker.ts now pipes stderr, ChildProcessLike has stderr; 103 passed, 0 failed; Vitest 13; prettier --check passes). Open: a test file that does not load may still not count as a failure (not checked whether it prints SCRIPT ERROR). Review dispatched (sonnet), range 2ffd012a..fc7b0468.
+
+Task 3: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify: the ID of ClearColor for Task 4 (recorded above: ct_c47a0a86-b82f-43a8-8b0b-31a1e4ef6f37); the 0-failed run (in the report); an empty field name gives no prop with no signal, while renderer-react reports `empty-name`.
+Ruling: the empty field name stays as built (no prop) in this task, and goes to the final review for the parity of the three renderers (#542) — the spec is silent, and no view of this change has such a field — cost if wrong: one error message later.
+Task 3: minor (deferred): _node_for scans each entry for each item (O(n²) per sync; index by key); push_error of the expected failures prints ERROR lines in test:godot (expected noise); _layer.free() needs is_instance_valid; no test of a third sidecar of one type; field names use ASCII [A-Za-z0-9] only (compare with field-names.ts of renderer-react); no TypeScript test of the stderr wiring of godot.ts; a test file that does not load may not count as a failure in run.gd.
+Task 3: complete (commits 2ffd012..fc7b046, review clean)
+
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 3 (the Godot renderer and the ClearColor view). Tasks 4 to 7 wait for the merge of #540.
+- NEXT STEP: Task 4, after #540 is merged (merge main first). Carry to it the ID of ClearColor: ct_c47a0a86-b82f-43a8-8b0b-31a1e4ef6f37. Carry to Task 5: no timeout of welcome and no keepalive (gap 6). Tasks 4 to 7 wait for the merge of #540.
