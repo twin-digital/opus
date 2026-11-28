@@ -6,6 +6,7 @@ export type {
   ConstructStatus,
   PassResult,
   ReportPayload,
+  RewindPayload,
   TimeState,
   WantedState,
 } from './construct-list.js'

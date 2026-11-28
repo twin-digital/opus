@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createStore, storeInputs } from '@thrashplay/wishem-core'
+import { createConstructList } from '@thrashplay/wishem-construct-manager'
 import { createHub, type Hub, type Port } from '@thrashplay/wishem-hub'
 import type { ViewProps, ViewTable, ViewTools } from '@thrashplay/wishem-renderer-react'
 import { COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Page, type PageProps } from './Page.js'
 import { collectAppViews } from './views.js'
 
@@ -48,9 +49,9 @@ describe('Page', () => {
     container.remove()
   })
 
-  const draw = (props: PageProps) => {
+  const draw = (props: Omit<PageProps, 'productViews'> & { productViews?: PageProps['productViews'] }) => {
     act(() => {
-      root.render(<Page {...props} />)
+      root.render(<Page productViews={{ views: new Map() }} {...props} />)
     })
   }
 
@@ -165,6 +166,132 @@ describe('Page', () => {
           value: 4,
         }).type,
       )
+    })
+  })
+
+  describe('with the part constructs', () => {
+    const constructsHub = (): Hub => {
+      const hub = createHub({
+        subsystems: [
+          createStore({ model: { definitions: [definition], entities: state.entities } }),
+          createStore({
+            id: 'product',
+            model: {
+              definitions: [
+                { id: COUNTER_TYPE, label: 'Counter', fields: [{ id: COUNT_FIELD, label: 'count', type: 'number' }] },
+              ],
+              entities: [{ id: SAMPLE_ENTITY, components: { [COUNTER_TYPE]: { [COUNT_FIELD]: 0 } } }],
+            },
+          }),
+          createConstructList(),
+        ],
+      })
+      hub.start()
+      return hub
+    }
+
+    it('shows the run area in an aside named Run beside the product panel, in the main element', () => {
+      const hub = constructsHub()
+      draw({ port: hub.attach({ id: 'screen', kind: 'output' }), input: undefined, views })
+      const main = container.querySelector('main')
+      const aside = main?.querySelector('aside[aria-label="Run"]')
+      expect(aside).not.toBeNull()
+      expect(aside?.querySelector('[role="toolbar"][aria-label="Product controls"]')).not.toBeNull()
+      expect(aside?.querySelector('section[aria-label="Stage"]')?.textContent).toContain(
+        'Not running. Press Run to start the product.',
+      )
+      expect(main?.querySelector('nav[aria-label="Entities"]')).not.toBeNull()
+      expect(aside?.contains(main?.querySelector('nav') ?? null)).toBe(false)
+    })
+
+    it('sends Run through the input port', async () => {
+      const hub = constructsHub()
+      const output = hub.attach({ id: 'screen', kind: 'output' })
+      const input = hub.attach({ id: 'screen-input', kind: 'input' })
+      draw({ port: output, input, views })
+      const run = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Run')
+      await act(async () => {
+        run?.click()
+        await new Promise((done) => setTimeout(done, 0))
+      })
+      expect(hub.record().map(({ type, source }) => [type, source])).toEqual([['constructs/start', 'screen-input']])
+    })
+
+    describe('the order of the run area', () => {
+      type Listener = () => void
+      const fake = (matches: boolean) => {
+        const listeners = new Set<Listener>()
+        const query = {
+          matches,
+          addEventListener: (_type: string, listener: Listener) => listeners.add(listener),
+          removeEventListener: (_type: string, listener: Listener) => listeners.delete(listener),
+        }
+        const queries: string[] = []
+        vi.stubGlobal('matchMedia', (text: string) => {
+          queries.push(text)
+          return query
+        })
+        return {
+          queries,
+          change: (next: boolean) => {
+            query.matches = next
+            act(() => {
+              listeners.forEach((listener) => {
+                listener()
+              })
+            })
+          },
+        }
+      }
+      const parts = () => {
+        const main = container.querySelector('main')
+        return Array.from(main?.querySelectorAll('aside[aria-label="Run"], nav[aria-label="Entities"]') ?? []).map(
+          (element) => element.tagName.toLowerCase(),
+        )
+      }
+      const drawConstructs = () => {
+        const hub = constructsHub()
+        draw({ port: hub.attach({ id: 'screen', kind: 'output' }), input: undefined, views })
+      }
+
+      afterEach(() => {
+        vi.unstubAllGlobals()
+      })
+
+      it('puts the run area before the panel in the DOM on a narrow page', () => {
+        const media = fake(false)
+        drawConstructs()
+        expect(media.queries).toContain('(min-width: 1200px)')
+        expect(parts()).toEqual(['aside', 'nav'])
+      })
+
+      it('puts the panel before the run area in the DOM on a wide page', () => {
+        fake(true)
+        drawConstructs()
+        expect(parts()).toEqual(['nav', 'aside'])
+      })
+
+      it('changes the order when the media query changes', () => {
+        const media = fake(false)
+        drawConstructs()
+        media.change(true)
+        expect(parts()).toEqual(['nav', 'aside'])
+        media.change(false)
+        expect(parts()).toEqual(['aside', 'nav'])
+      })
+
+      it('uses no CSS order', () => {
+        fake(false)
+        drawConstructs()
+        expect(container.querySelector('main')?.innerHTML).not.toMatch(/\border-[12]\b/)
+      })
+    })
+
+    it('shows no run area with no part constructs', () => {
+      const hub = baseHub()
+      draw({ port: hub.attach({ id: 'screen', kind: 'output' }), input: undefined, views })
+      expect(container.querySelector('aside')).toBeNull()
+      expect(container.querySelector('[role="toolbar"]')).toBeNull()
     })
   })
 })

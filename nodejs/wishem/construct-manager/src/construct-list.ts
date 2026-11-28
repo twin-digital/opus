@@ -38,9 +38,16 @@ export interface ReportPayload {
   lastSend?: { seq: number; result: PassResult }
 }
 
+export interface RewindPayload {
+  construct: string
+  /** An integer of 1 or more. */
+  ticks: number
+}
+
 const START = `${CONSTRUCTS_ID}/start`
 const STOP = `${CONSTRUCTS_ID}/stop`
 const SEND = `${CONSTRUCTS_ID}/send`
+const REWIND = `${CONSTRUCTS_ID}/rewind`
 const REPORT = `${CONSTRUCTS_ID}/report`
 
 const ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
@@ -106,6 +113,20 @@ const send = (part: ConstructList, input: RecordedInput): ConstructList => {
   return part
 }
 
+const rewind = (part: ConstructList, input: RecordedInput): ConstructList => {
+  const payload = payloadOf(input)
+  const id = constructOf(payload)
+  const entry = entryOf(part, id)
+  const { ticks } = payload
+  if (typeof ticks !== 'number' || !Number.isInteger(ticks) || ticks < 1) {
+    return refuse('The ticks value is not an integer of 1 or more', ['payload', 'ticks'])
+  }
+  if (entry.want !== 'running' || entry.status !== 'running') {
+    return refuse(`The construct "${id}" does not run`, ['payload', 'construct'])
+  }
+  return part
+}
+
 const REPORTED = ['running', 'stopped', 'failed']
 
 const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b)
@@ -152,6 +173,7 @@ const handlers: Record<string, (part: ConstructList, input: RecordedInput) => Co
   [START]: start,
   [STOP]: stop,
   [SEND]: send,
+  [REWIND]: rewind,
   [REPORT]: report,
 }
 
@@ -176,5 +198,6 @@ export const constructInputs = {
   }),
   stop: (construct: string): Input => ({ type: STOP, payload: { construct } }),
   send: (construct: string, input: Input): Input => ({ type: SEND, payload: { construct, input } }),
+  rewind: (payload: RewindPayload): Input => ({ type: REWIND, payload }),
   report: (payload: ReportPayload): Input => ({ type: REPORT, payload }),
 }

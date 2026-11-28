@@ -324,19 +324,19 @@ A bookmark inside one play session is simple. A bookmark that is kept for a long
 
 A game loop has these jobs: a fixed step, an accumulator, a catch-up with a limit, a source of real time, an update of the rules, and a render. This section says which part of Wishem has each job. The facts come from `clock/src/clock.ts` and `clock/src/time.ts`.
 
-| Job                   | Part of Wishem                                                                                                                                                                            | State                                                           |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Fixed step            | The clock. Each tick is `time/advance { ms: stepMs }`, with the same `ms` each time (50 ms by default). The reason is rule R3.                                                            | Built                                                           |
-| Accumulator           | The clock. At each call of its timer it sends `floor((real time - last) / stepMs)` ticks and moves `last` by that number of steps.                                                        | Built                                                           |
-| Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                                                                              | Built                                                           |
-| Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                                                                     | Built                                                           |
-| Pause, step, rewind   | The part `time` (`running`) and the inputs `time/set-running` and `hub/rewind`. After `time/set-running` and `hub/rewind`, and when the clock starts, the clock measures real time again. | Built                                                           |
-| Update of the rules   | One model subsystem, the update subsystem. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.                                                    | Built ([#617](https://github.com/twin-digital/opus/issues/617)) |
-| Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                                                                   | Built, with no interpolation                                    |
+| Job                   | Part of Wishem                                                                                                                                                                                         | State                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Fixed step            | The clock. Each tick is `time/advance { ms: stepMs }`, with the same `ms` each time (50 ms by default). The reason is rule R3.                                                                         | Built                                                           |
+| Accumulator           | The clock. At each call of its timer it sends `floor((real time - last) / stepMs)` ticks and moves `last` by that number of steps.                                                                     | Built                                                           |
+| Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                                                                                           | Built                                                           |
+| Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                                                                                  | Built                                                           |
+| Pause, step, rewind   | The part `time` (`running` and `stepMs`) and the inputs `time/set-running` and `hub/rewind`. After `time/set-running` and `hub/rewind`, and when the clock starts, the clock measures real time again. | Built                                                           |
+| Update of the rules   | One model subsystem, the update subsystem. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.                                                                 | Built ([#617](https://github.com/twin-digital/opus/issues/617)) |
+| Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                                                                                | Built, with no interpolation                                    |
 
 ### Fixed step
 
-A tick has the same length each time, so the same record gives the same state (rule R3). Rewind and replay need this. The delta of a tick is the payload `ms` of `time/advance`. The part `time` holds `now` (the sum of the deltas), `ticks`, and `running`.
+A tick has the same length each time, so the same record gives the same state (rule R3). Rewind and replay need this. The delta of a tick is the payload `ms` of `time/advance`. The part `time` holds `now` (the sum of the deltas), `ticks`, and `running`. It can also hold `stepMs`, the length of a tick.
 
 ### Catch-up and the source of real time
 
@@ -411,6 +411,8 @@ These items are **Proposed**:
   - It reports the status of each product construct to the workbench hub as inputs.
 - To a product construct, the construct manager is also an output subsystem and an input subsystem. A hub does not connect to a hub.
 - Only the construct manager can rewind a product construct. A rewind of the workbench is an undo of the authored state, and the product construct follows it.
+- A client steps a product construct back with the input `constructs/rewind`. The construct manager keeps a history of the ticks of each product construct. It rewinds the product construct to the state before an earlier tick. The product construct keeps its `running` value and the changes of the authored state that were made after that tick. A rewind or a replay of the workbench does not step the product construct back again.
+- The workbench page has the **run controls** and the **stage** for the product construct `play`. The run controls send each input through the input port of the page to the workbench construct, so the record of the workbench holds each action of the designer. The stage reads the product construct through its own link, at the path `/constructs/<id>/link` of the page address, and it has no input port.
 - The agent connects to the workbench construct through a link.
 - The workbench construct has no clock. It has the record, so it has undo and rewind.
 

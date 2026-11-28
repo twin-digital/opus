@@ -10,7 +10,7 @@ The `docs/` folder holds the blueprint.
 - `hub` (`@thrashplay/wishem-hub`): the hub, the ports, the record, and the link. It uses no Node.js API.
 - `clock` (`@thrashplay/wishem-clock`): the `time` subsystem and the clock. It uses no Node.js API.
 - `update` (`@thrashplay/wishem-update`): the update subsystem. It runs the native behaviors of a product in each tick. It uses no Node.js API. It is private.
-- `sample-product` (`@thrashplay/wishem-sample-product`): the sample product. It holds a model folder with a color and a count, and two native behaviors: the count behavior adds 1 to the count at each tick, and the color behavior sets the next of four colors. It uses no Node.js API.
+- `sample-product` (`@thrashplay/wishem-sample-product`): the sample product. It holds a model folder with a color and a count, two native behaviors (the count behavior adds 1 to the count at each tick, and the color behavior sets the next of four colors), and React views of the color and the count in `views/react/`. The root entry uses no Node.js API and no view.
 - `host-nodejs` (`@thrashplay/wishem-host-nodejs`): runs a construct in a Node.js process, serves the link (`startConstruct` and `serveHub`), writes `state.json`, and provides the `wishem` command.
 - `construct-manager` (`@thrashplay/wishem-construct-manager`): the construct list (the model subsystem `constructs`) and `productChanges`. The entry `node` holds the construct manager and the product construct. The root entry uses no Node.js API. It is private.
 - `workbench` (`@thrashplay/wishem-workbench`): the base workbench. It holds the first model and a `start` script.
@@ -19,7 +19,7 @@ The `docs/` folder holds the blueprint.
 - `pixi-page` (`@thrashplay/wishem-pixi-page`): a page that draws the sample construct through the link, and a `start` script that serves the page and passes its link to the sample construct. It holds no construct. It is private.
 - `renderer-godot` (`@thrashplay/wishem-renderer-godot`): the Godot renderer. It holds the remote port in GDScript, the renderer, the Godot application that draws the sample construct, and the Godot runner. It holds no construct. Its GDScript tests and its screenshot test need Docker. It is private.
 - `three-renderers` (`@thrashplay/wishem-three-renderers`): the sample construct, a product construct of the sample product in a Node.js process, and its command `construct`, and the React page with its page server and its command `react-page`. It is private.
-- `workbench-app` (`@thrashplay/wishem-workbench-app`): the browser application of the workbench. It holds the page, the client of the hub, the views, the `start` script of the workbench, and the style guide with its screenshot tests, which need Docker.
+- `workbench-app` (`@thrashplay/wishem-workbench-app`): the browser application of the workbench. It holds the page, the client of the hub, the views, the run controls and the stage for the product construct, the `start` script of the workbench, and the style guide with its screenshot tests, which need Docker.
 - `docs-check` (`@thrashplay/wishem-docs-check`): tests that the architecture document agrees with the packages. They run `docs/architecture/render.mjs --check`. It is private.
 
 ## Read before you design or build

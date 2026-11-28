@@ -600,6 +600,163 @@ describe('attachConstructManager', () => {
     expect(construct('play').hub.record()).toHaveLength(length)
   })
 
+  describe('a step back', () => {
+    const tickSeqs = () =>
+      construct('play')
+        .hub.record()
+        .filter((recorded) => recorded.type === 'time/advance')
+        .map((recorded) => recorded.seq)
+
+    /** Fires `count` ticks, then pauses through `constructs/send`. */
+    const runPaused = async (count: number) => {
+      await start()
+      for (let i = 0; i < count; i++) {
+        clock.fire(50)
+      }
+      await send({ type: 'time/set-running', payload: { running: false } })
+    }
+
+    /** Sends `constructs/rewind` and waits for its result in the list. */
+    const back = async (ticks: number) => {
+      const result = await tester.submit(constructInputs.rewind({ construct: 'play', ticks }))
+      expect(result.ok).toBe(true)
+      const seq = result.ok ? result.seq : -1
+      await eventually(() => entry('play')?.lastSend?.seq === seq)
+      return seq
+    }
+
+    it('steps back one tick and reports ok under the sequence number of the input', async () => {
+      setup()
+      await runPaused(12)
+      expect(timeOf(construct('play').hub).ticks).toBe(12)
+      const seq = await back(1)
+      expect(timeOf(construct('play').hub).ticks).toBe(11)
+      expect(countOf(construct('play').hub)).toBe(11)
+      expect(entry('play')?.lastSend).toMatchObject({ seq, result: { ok: true } })
+    })
+
+    it('steps back to tick 0 when the count is larger than the history', async () => {
+      setup()
+      await runPaused(3)
+      await back(10)
+      expect(timeOf(construct('play').hub).ticks).toBe(0)
+      expect(countOf(construct('play').hub)).toBe(0)
+    })
+
+    it('steps back two times', async () => {
+      setup()
+      await runPaused(12)
+      await back(1)
+      await back(1)
+      expect(timeOf(construct('play').hub).ticks).toBe(10)
+    })
+
+    it('steps back after a step', async () => {
+      setup()
+      await runPaused(12)
+      await send({ type: 'time/advance', payload: { ms: 50 } })
+      expect(timeOf(construct('play').hub).ticks).toBe(13)
+      await back(1)
+      expect(timeOf(construct('play').hub).ticks).toBe(12)
+    })
+
+    it('reports invalid and changes nothing when the construct has no tick', async () => {
+      setup()
+      await start('play', false)
+      const length = construct('play').hub.record().length
+      await back(1)
+      expect(entry('play')?.lastSend?.result).toMatchObject({
+        ok: false,
+        reason: 'invalid',
+        problems: [{ message: 'The construct has no tick to step back.', path: ['payload', 'ticks'] }],
+      })
+      expect(construct('play').hub.record()).toHaveLength(length)
+    })
+
+    it('keeps the pause: no tick comes after the step back', async () => {
+      setup()
+      await runPaused(5)
+      await back(1)
+      expect(timeOf(construct('play').hub).running).toBe(false)
+      for (let i = 0; i < 20; i++) {
+        clock.fire(50)
+      }
+      await settle()
+      expect(timeOf(construct('play').hub).ticks).toBe(4)
+    })
+
+    it('keeps a change of the product and the count before the last tick', async () => {
+      setup()
+      await runPaused(12)
+      await tester.submit(setColor('#b91c1c'))
+      await eventually(() => colorOf(construct('play').hub) === '#b91c1c')
+      await back(1)
+      expect(colorOf(construct('play').hub)).toBe('#b91c1c')
+      expect(countOf(construct('play').hub)).toBe(11)
+      expect(timeOf(construct('play').hub).ticks).toBe(11)
+    })
+
+    it('keeps running when the construct runs', async () => {
+      setup()
+      await start()
+      for (let i = 0; i < 5; i++) {
+        clock.fire(50)
+      }
+      await back(1)
+      expect(timeOf(construct('play').hub).running).toBe(true)
+      expect(timeOf(construct('play').hub).ticks).toBe(4)
+      clock.fire(50)
+      await eventually(() => timeOf(construct('play').hub).ticks === 5)
+    })
+
+    it('sends nothing after a rewind of the workbench past a step back', async () => {
+      setup()
+      await runPaused(4)
+      const before = hub.seq
+      await back(1)
+      const length = construct('play').hub.record().length
+      await tester.submit(hubInputs.rewind(before))
+      await eventually(() => hub.seq > before + 1)
+      await settle()
+      expect(construct('play').hub.record()).toHaveLength(length)
+    })
+
+    it('removes the ticks after the target of a hub/rewind that constructs/send passes', async () => {
+      setup()
+      await runPaused(6)
+      const third = tickSeqs()[2]
+      await send({ type: 'hub/rewind', payload: { seq: third } })
+      expect(timeOf(construct('play').hub).ticks).toBe(3)
+      await back(1)
+      expect(timeOf(construct('play').hub).ticks).toBe(2)
+    })
+
+    it('applies the rewind, the changes, and the pause with no tick between them', async () => {
+      setup()
+      await runPaused(5)
+      await tester.submit(setColor('#b91c1c'))
+      await eventually(() => colorOf(construct('play').hub) === '#b91c1c')
+      const spy = construct('play').hub.attach({ id: 'spy', kind: 'output' })
+      let fired = 0
+      spy.subscribe((event) => {
+        if (event.type === 'applied' && fired++ < 5) {
+          queueMicrotask(() => {
+            clock.fire(50)
+          })
+        }
+      })
+      const from = construct('play').hub.record().length
+      await back(1)
+      await settle()
+      const types = construct('play')
+        .hub.record()
+        .slice(from)
+        .map((recorded) => recorded.type)
+      expect(types.slice(0, 3)).toEqual(['hub/rewind', 'store/set-field', 'time/set-running'])
+      expect(timeOf(construct('play').hub).ticks).toBe(4)
+    })
+  })
+
   it('stops a construct: stopping to the links, a free port, the status stopped', async () => {
     setup()
     await start()

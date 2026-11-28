@@ -10,17 +10,32 @@
 //   escape:<Component>.<field>              press Escape in the text field
 //   check:<Component>.<field>               click the check box
 //   choose:<Component>.<field>=<short ID>   select the option of the entity
+//   run | stop | pause | resume | step | back
+//                                           click the run control, then wait until no control is busy
+//   waitfor:<text>                          wait at most 10 s for the text in the run area
 //   exec:<command>                          run the command in a shell, in the root of the repository
 //   wait:<ms>
 //   print                                   print the state now
 //   shot:<file>                             save a screenshot of the page; the path is from the root of the repository
-// After the last step, the script prints the state of the panel.
+// After the last step, the script prints the state of the panel. When the page has the run area, it adds the lines
+//   run: <status> tick <n> <time> [<names of the enabled controls>]
+//   stage: <name of each element with the role img>; <text of the stage>
+//   alert: <text>                           only when the page has no panel
 // Exit code 0, or 1 with the line `error: <message>` when a step fails.
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 
 const STEP_TIMEOUT = 5000
+const WAITFOR_TIMEOUT = 10_000
+const RUN_CONTROLS = {
+  run: 'Run',
+  stop: 'Stop',
+  pause: 'Pause',
+  resume: 'Resume',
+  step: 'Step',
+  back: 'Step back',
+}
 // The working folder is `nodejs/wishem/workbench-app`.
 const root = resolve(process.cwd(), '..', '..', '..')
 
@@ -72,8 +87,45 @@ const parseArguments = (argv) => {
   return { options, steps }
 }
 
+/** Reads the state of the run area: the run bar and the stage. */
+const readRun = (page) =>
+  page.evaluate(() => {
+    const area = document.querySelector('aside[aria-label="Run"]')
+    if (!area) {
+      return undefined
+    }
+    const text = (element) => (element?.textContent ?? '').trim()
+    const status = text(area.querySelector('[role="status"]'))
+    const ticks = [...area.querySelectorAll('[role="toolbar"] span')].map(text)
+    const tick = ticks.find((value) => value.startsWith('Tick '))?.slice('Tick '.length) ?? '-'
+    const time = ticks.find((value) => value.endsWith(' s')) ?? '-'
+    const enabled = [...area.querySelectorAll('[role="toolbar"] button')]
+      .filter((button) => button.getAttribute('aria-disabled') !== 'true')
+      .map((button) => (text(button) === 'Step back' ? 'back' : text(button).toLowerCase()))
+    const stage = area.querySelector('section[aria-label="Stage"]')
+    const names = [...(stage?.querySelectorAll('[role="img"]') ?? [])].map(
+      (element) => element.getAttribute('aria-label') ?? '',
+    )
+    const words = [...(stage?.querySelectorAll('p') ?? [])]
+      .filter((element) => !element.classList.contains('font-mono'))
+      .map(text)
+    return { status, tick, time, enabled, stage: `${names.join(', ')}; ${words.join(' ')}`.trimEnd() }
+  })
+
 /** Reads the state of the panel in the page. */
-const readState = (page) =>
+const readState = async (page) => {
+  const state = await readPanel(page)
+  state.run = await readRun(page)
+  state.alerts =
+    state.alerts ??
+    (await page.evaluate(() =>
+      [...document.querySelectorAll('[role="alert"]')].map((element) => element.textContent ?? ''),
+    ))
+  return state
+}
+
+/** Reads the state of the product panel in the page. */
+const readPanel = (page) =>
   page.evaluate(() => {
     const nav = document.querySelector('nav[aria-label="Entities"]')
     if (!nav) {
@@ -113,9 +165,17 @@ const readState = (page) =>
     return { panel: true, entities, rows, alerts, inspector }
   })
 
+const formatRun = (run) => [
+  `run: ${run.status} tick ${run.tick} ${run.time} [${run.enabled.join(' ')}]`,
+  `stage: ${run.stage}`,
+]
+
 const formatState = (state) => {
   if (!state.panel) {
-    return 'panel: none'
+    return [
+      'panel: none',
+      ...(state.run ? [...formatRun(state.run), ...state.alerts.map((alert) => `alert: ${alert}`)] : []),
+    ].join('\n')
   }
   const lines = [
     `entities: ${state.entities.map((entity) => `${entity.name} ${entity.shortId}${entity.selected ? ' [selected]' : ''}`).join('; ')}`,
@@ -124,6 +184,9 @@ const formatState = (state) => {
   ]
   if (state.inspector !== undefined) {
     lines.push(`inspector: ${state.inspector}`)
+  }
+  if (state.run) {
+    lines.push(...formatRun(state.run))
   }
   return lines.join('\n')
 }
@@ -186,6 +249,31 @@ const runStep = async (page, step) => {
       await waitForSaved(page)
       return
     }
+    case 'run':
+    case 'stop':
+    case 'pause':
+    case 'resume':
+    case 'step':
+    case 'back': {
+      const button = page
+        .getByRole('toolbar', { name: 'Product controls', exact: true })
+        .getByRole('button', { name: RUN_CONTROLS[name], exact: true })
+      await button.waitFor({ timeout: STEP_TIMEOUT })
+      if ((await button.getAttribute('aria-disabled')) === 'true') {
+        throw new Error(`the control ${name} is not enabled`)
+      }
+      await button.click({ timeout: STEP_TIMEOUT })
+      await waitForSaved(page)
+      return
+    }
+    case 'waitfor': {
+      await page.waitForFunction(
+        (text) => document.querySelector('aside[aria-label="Run"]')?.textContent?.includes(text) === true,
+        argument,
+        { timeout: WAITFOR_TIMEOUT },
+      )
+      return
+    }
     case 'exec': {
       const run = spawnSync('sh', ['-c', argument], { cwd: root, encoding: 'utf8' })
       if (run.status !== 0) {
@@ -237,8 +325,10 @@ const main = async () => {
         await runStep(page, step)
       } catch (error) {
         const timedOut = error instanceof Error && error.name === 'TimeoutError'
+        const waiting = step.startsWith('waitfor:')
         const message =
-          timedOut ? `the page has no matching element after ${String(STEP_TIMEOUT)} ms`
+          timedOut && waiting ? `the run area does not show the text after ${String(WAITFOR_TIMEOUT)} ms`
+          : timedOut ? `the page has no matching element after ${String(STEP_TIMEOUT)} ms`
           : error instanceof Error ? error.message.split('\n')[0]
           : String(error)
         throw new Error(`step ${String(index + 1)} ${step}: ${message}`, { cause: error })

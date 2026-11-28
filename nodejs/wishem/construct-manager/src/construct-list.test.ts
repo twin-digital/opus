@@ -61,7 +61,13 @@ describe('constructInputs', () => {
 })
 
 describe('the input payload', () => {
-  const types = ['constructs/start', 'constructs/stop', 'constructs/send', 'constructs/report'] as const
+  const types = [
+    'constructs/start',
+    'constructs/stop',
+    'constructs/send',
+    'constructs/rewind',
+    'constructs/report',
+  ] as const
 
   it.each(types.flatMap((type) => [null, [], 5].map((payload) => [type, payload] as const)))(
     'refuses the type %s with the payload %j',
@@ -83,7 +89,7 @@ describe('the input payload', () => {
     expect(result.problems[0]?.path?.join('.')).toBe('payload.construct')
   })
 
-  it.each(['constructs/stop', 'constructs/send', 'constructs/report'] as const)(
+  it.each(['constructs/stop', 'constructs/send', 'constructs/rewind', 'constructs/report'] as const)(
     'refuses the type %s with a construct that is a key of Object.prototype',
     async (type) => {
       const rig = makeRig()
@@ -296,6 +302,62 @@ describe('constructs/send', () => {
     )
     expect(result.reason).toBe('invalid')
     expect(result.problems[0]?.path?.join('.')).toBe('payload.input.type')
+  })
+})
+
+describe('constructs/rewind', () => {
+  it('makes the input', () => {
+    expect(constructInputs.rewind({ construct: 'play', ticks: 2 })).toStrictEqual({
+      type: 'constructs/rewind',
+      payload: { construct: 'play', ticks: 2 },
+    })
+  })
+
+  it('keeps the same part for a running construct and records the input', async () => {
+    const rig = makeRig()
+    await running(rig)
+    const before = rig.part()
+    const result = await rig.client.submit(constructInputs.rewind({ construct: 'play', ticks: 1 }))
+    expect(result.ok).toBe(true)
+    expect(rig.part()).toBe(before)
+    expect(rig.hub.record().at(-1)?.type).toBe('constructs/rewind')
+  })
+
+  it.each([0, 1.5, -1, 'one', undefined, null, Number.NaN])('refuses the ticks %j', async (ticks) => {
+    const rig = makeRig()
+    await running(rig)
+    const result = refusal(
+      await rig.client.submit({ type: 'constructs/rewind', payload: { construct: 'play', ticks } }),
+    )
+    expect(result.reason).toBe('invalid')
+    expect(result.problems[0]?.path?.join('.')).toBe('payload.ticks')
+  })
+
+  it.each(['pending', 'stopped'] as const)('refuses a construct with the status %s', async (status) => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    if (status === 'stopped') {
+      await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'stopped' }))
+    }
+    const result = refusal(await rig.client.submit(constructInputs.rewind({ construct: 'play', ticks: 1 })))
+    expect(result.reason).toBe('invalid')
+    expect(result.problems[0]?.path?.join('.')).toBe('payload.construct')
+  })
+
+  it('refuses a construct that is not wanted to run', async () => {
+    const rig = makeRig()
+    await running(rig)
+    await rig.client.submit(constructInputs.stop('play'))
+    expect(refusal(await rig.client.submit(constructInputs.rewind({ construct: 'play', ticks: 1 }))).reason).toBe(
+      'invalid',
+    )
+  })
+
+  it('refuses a construct that is not in the list', async () => {
+    const rig = makeRig()
+    const result = refusal(await rig.client.submit(constructInputs.rewind({ construct: 'ghost', ticks: 1 })))
+    expect(result.reason).toBe('invalid')
+    expect(result.problems[0]?.path?.join('.')).toBe('payload.construct')
   })
 })
 

@@ -9,6 +9,8 @@ import { createUpdate } from '@thrashplay/wishem-update'
 import type { NativeBehavior } from '@thrashplay/wishem-update'
 import { CONSTRUCT_MANAGER_ID } from './ids.js'
 
+const DEFAULT_STEP_MS = 50
+
 export interface ProductConstructOptions {
   /** The ID in the construct list. */
   id: string
@@ -43,9 +45,10 @@ export interface ProductConstruct {
  * Rejects with the error of a step, and then holds no port and no timer.
  */
 export const startProductConstruct = async (options: ProductConstructOptions): Promise<ProductConstruct> => {
+  const stepMs = options.stepMs ?? DEFAULT_STEP_MS
   const update = createUpdate({ store: createStore({ model: options.model }), behaviors: options.behaviors ?? [] })
   const hub = createHub({
-    subsystems: [createTime({ running: options.running }), update],
+    subsystems: [createTime({ running: options.running, stepMs }), update],
     rewindSources: [CONSTRUCT_MANAGER_ID],
     ...(options.onError === undefined ? {} : { onError: options.onError }),
   })
@@ -57,7 +60,7 @@ export const startProductConstruct = async (options: ProductConstructOptions): P
     hub.start()
     clockPort = hub.attach({ id: 'clock', kind: 'input' })
     clock = startClock(clockPort, {
-      ...(options.stepMs === undefined ? {} : { stepMs: options.stepMs }),
+      stepMs,
       ...(options.timer === undefined ? {} : { timer: options.timer }),
       ...(options.now === undefined ? {} : { now: options.now }),
     })

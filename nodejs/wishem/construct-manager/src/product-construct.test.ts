@@ -176,6 +176,19 @@ describe('startProductConstruct', () => {
     expect(clock.intervals).toEqual([50, 25])
   })
 
+  it('holds the step length 50 in the part time by default', async () => {
+    const construct = await start(await setup())
+    expect(timeOf(construct.hub).stepMs).toBe(50)
+  })
+
+  it('holds the step length 500 in the part time and gets ticks of 500 ms', async () => {
+    const clock = await setup()
+    const construct = await start(clock, { stepMs: 500 })
+    clock.fire(500)
+    expect(timeOf(construct.hub)).toMatchObject({ stepMs: 500, ticks: 1, now: 500 })
+    expect(clock.intervals).toEqual([500])
+  })
+
   it('gives an error of a listener to onError', async () => {
     const clock = await setup()
     const errors: unknown[] = []

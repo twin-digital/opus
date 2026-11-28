@@ -61,3 +61,20 @@ await controls.submit(timeInputs.advance(100))
 ```
 
 `model` is the model of the folder `model/`.
+
+## The React views
+
+The folder `views/react/` holds two React views with their sidecars. The root entry does not import them. The build of the package does not include them.
+
+| View         | Component type | Props                                             | Draws                                                                                           |
+| ------------ | -------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `ClearColor` | `Color`        | `color: string \| undefined`, `wishem: ViewTools` | An element with `role="img"`, the name `Color <value>`, and a 320 by 180 pixel box of the color |
+| `Count`      | `Counter`      | `count: number \| undefined`, `wishem: ViewTools` | A paragraph with the text `Count <value>`                                                       |
+
+A view with no value draws nothing.
+
+The workbench loads the views with the option `--product-views`. Give it the path of the folder:
+
+```sh
+pnpm --filter @thrashplay/wishem-workbench-app start --product-views nodejs/wishem/sample-product/views/react
+```

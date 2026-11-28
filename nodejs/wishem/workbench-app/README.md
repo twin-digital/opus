@@ -13,13 +13,14 @@ pnpm --filter @thrashplay/wishem-workbench-app start
 
 The script starts one construct and the page server in one Node.js process. It prints the model folder, the address of the link (for example `ws://127.0.0.1:4747/link`), and the address of the page. Open the address of the page in a web browser. Press Ctrl+C to stop both.
 
-The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket at `/link` of the page address to the server of the construct, with the `Origin` header of the page. It passes no other path. The page uses the client of the hub (`connectHub`) to open its link at `/link` on the origin of the page. The link has two subsystems: the output subsystem `page-<hex>` and the input subsystem `page-<hex>-input`. The client makes `<hex>` one time, and uses it for each link of the page load. It makes a new `<hex>` only after the hub refuses a link with `id-in-use`. The source of each input of the page is the ID of the input subsystem, so it is the same for the whole load. After each `welcome`, the client gives the two remote ports of the new link to `onPorts({ output, input })`. The page draws from `output`, and the views send inputs through `input`.
+The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket at `/link` of the page address to the server of the construct, with the `Origin` header of the page. The Vite proxy passes no other path. The path `/constructs/<id>/link` has its own passage (see "Product constructs"). The page uses the client of the hub (`connectHub`) to open its link at `/link` on the origin of the page. The link has two subsystems: the output subsystem `page-<hex>` and the input subsystem `page-<hex>-input`. The client makes `<hex>` one time, and uses it for each link of the page load. It makes a new `<hex>` only after the hub refuses a link with `id-in-use`. The source of each input of the page is the ID of the input subsystem, so it is the same for the whole load. After each `welcome`, the client gives the two remote ports of the new link to `onPorts({ output, input })`. The page draws from `output`, and the views send inputs through `input`.
 
 | Option            | Default                                            | Meaning                                         |
 | ----------------- | -------------------------------------------------- | ----------------------------------------------- |
 | `--model`         | the model folder of `@thrashplay/wishem-workbench` | The model folder.                               |
 | `--product`       | none                                               | The folder of a product model to mount.         |
 | `--product-code`  | none                                               | The module with the rules of the product.       |
+| `--product-views` | none                                               | The folder of the React views of the product.   |
 | `--port`          | `5173`                                             | The port of the page. `0`: the system selects.  |
 | `--hub-port`      | `4747`                                             | The port of the hub. `0`: the system selects.   |
 | `--views`         | `src/views/` of the package                        | The folder of the sidecars and generated files. |
@@ -56,7 +57,34 @@ node $RAW --url $PLAY --once
 
 The last command prints the state of the product construct. The count of the sample product advances at each tick. To pause the product construct, send `constructs/send` with `{"type":"time/set-running","payload":{"running":false}}` as its `input`.
 
+The page address also carries the link of each product construct that runs. The WebSocket at `/constructs/<id>/link` of the page address reaches the link of the product construct `<id>`. The page server writes the request with the path `/link` to the port of the construct and pipes the two connections. For an ID with no running product construct, the page server answers with the status 404. The connection ends when the product construct stops. The path `/link` still reaches the workbench.
+
+The option `--product-views <folder>` names a folder of React views of the product. Each view is a pair of a file `<name>.view.json` and a file `<name>.tsx`. A file `*.test.tsx` is not a view. A relative path starts from the folder where you run the command. The script prints `wishem: product views <absolute path>` after the line of the product code, or after the line of the product. The option needs `--product`, and the folder must exist. Otherwise the script prints the reason and stops with exit code 1. The page server answers `GET /@wishem/product-views.json` with the pairs of the folder, as `{ "views": [{ "sidecar": "/@fs/...", "view": "/@fs/..." }] }`. With no option, the answer is `{ "views": [] }`. When a person adds or removes a sidecar or a view file, the page loads again. To start the workbench with the views of the sample product, from the root of the repository:
+
+```
+pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sample-product/model --product-code @thrashplay/wishem-sample-product --product-views nodejs/wishem/sample-product/views/react
+```
+
 While the script runs, it keeps the generated files of the views current. It runs the generator at the start, after each change to a definition that the hub accepts, and after each change to a sidecar. A change to `state.json` does not run the generator. The script prints one line for each file that it wrote, changed, or removed, with the new and removed props. It prints each error of the generator and continues to serve the page. With `--no-view-types`, the script writes no generated file.
+
+### Run controls and stage
+
+With a part `constructs`, the page shows the run area: an `aside` named `Run` with the run controls and the stage. From 1200 pixels of width, the run area is at the right of the product panel. Below 1200 pixels, it is above the product panel.
+
+The run controls control the product construct `play`. The toolbar `Product controls` has these buttons:
+
+| Button    | Input to the workbench                                                                   |
+| --------- | ---------------------------------------------------------------------------------------- |
+| Run       | `constructs/start`. After a failure: `constructs/stop`, then `constructs/start`.         |
+| Stop      | `constructs/stop`.                                                                       |
+| Pause     | `constructs/send` with `time/set-running` and `running` set to `false`.                  |
+| Resume    | `constructs/send` with `time/set-running` and `running` set to `true`.                   |
+| Step      | `constructs/send` with `time/advance`. The length is `stepMs` of the part `time`, or 50. |
+| Step back | `constructs/rewind` with `ticks` set to `1`.                                             |
+
+Each input goes through the input port of the page. A button is disabled while a control waits for its outcome, and when the page has no input port. A control that the workbench refuses shows the line `Not done.` with the reason. A pass that the product construct refuses shows a line with the name of the control. A control waits at most 5 seconds for the result of its pass. The next accepted control removes the line. The toolbar also shows the status, the tick, and the time in seconds.
+
+The stage opens a link at `/constructs/play/link` while `play` runs. The link has one output subsystem `page-<hex>-stage`. The stage draws the part `store` of that link with the React views of the product, and it gives the views no input port. The stage shows a zero state when it has no picture: `play` does not run, the link connects, the page has no views of the product, or the views are not correct. When the link is down, the stage keeps the last picture and shows a note. The page loads the views of the product with `GET /@wishem/product-views.json` (see `--product-views`).
 
 ### Change the picture by hand
 
@@ -203,7 +231,8 @@ When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the scrip
 
 - `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
 - `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
-- `product` runs `tests/product.spec.ts`. The browser opens the page of the workbench with the sample product at `127.0.0.1:4190`.
+- `product` runs `tests/product.spec.ts`. The browser opens the page of the workbench with the sample product at `127.0.0.1:4184`.
+- `run` runs `tests/run.guide.spec.ts`. The browser opens the page of the workbench with the sample product, its code, and its views at `127.0.0.1:4186` (`scripts/e2e-server.ts --run`, with the folders `.e2e-run-model/`, `.e2e-run-product/`, and `.e2e-run-views/`; the last holds the view files of the sample product with no test file, and ESLint ignores each `.e2e-*` folder). The tests run, pause, step, and step back `play`.
 
 The `webServer` option of the config runs `scripts/e2e-server.ts` (and `scripts/e2e-server.ts --product`) on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, hub port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
 

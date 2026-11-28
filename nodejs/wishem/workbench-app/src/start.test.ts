@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { request as httpRequest } from 'node:http'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, connect, type Server } from 'node:net'
 import { networkInterfaces, tmpdir } from 'node:os'
@@ -34,6 +35,7 @@ vi.mock('@thrashplay/wishem-host-nodejs', async (importActual) => {
 const script = join(import.meta.dirname, '..', 'scripts', 'start.ts')
 const baseModel = join(import.meta.dirname, '..', '..', 'workbench', 'model')
 const sampleProduct = join(import.meta.dirname, '..', '..', 'sample-product', 'model')
+const sampleViews = join(import.meta.dirname, '..', '..', 'sample-product', 'views', 'react')
 const appBarSidecar = join(import.meta.dirname, 'views', 'AppBar.view.json')
 const APP_BAR = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
 const TITLE = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
@@ -47,7 +49,7 @@ const openTestLink = async (address: string) => {
     { id: 'tester', kind: 'input' },
     { id: 'reader', kind: 'output' },
   ])
-  return { link, tester: link.ports.tester, reader: link.ports.reader }
+  return { link, socket, tester: link.ports.tester, reader: link.ports.reader }
 }
 
 /** The JSON text of the part `store` that the hub gives at the address. */
@@ -353,7 +355,7 @@ describe('the start script of the workbench', () => {
     })
     vite.createServer.mockResolvedValue({
       listen: () => Promise.resolve(),
-      httpServer: { address: () => ({ port: 5173 }) },
+      httpServer: { address: () => ({ port: 5173 }), on: () => undefined },
       close: () => Promise.resolve(),
     })
 
@@ -440,7 +442,7 @@ describe('the start script of the workbench', () => {
       const close = vi.fn(() => Promise.resolve())
       vite.createServer.mockResolvedValue({
         listen: () => Promise.resolve(),
-        httpServer: { address: () => ({ port: 5555 }) },
+        httpServer: { address: () => ({ port: 5555 }), on: () => undefined },
         close,
       })
       breakManagerClose()
@@ -516,7 +518,7 @@ describe('the start script of the workbench', () => {
     const close = vi.fn(() => Promise.resolve())
     vite.createServer.mockResolvedValue({
       listen: () => Promise.resolve(),
-      httpServer: { address: () => ({ port: 5555 }) },
+      httpServer: { address: () => ({ port: 5555 }), on: () => undefined },
       close,
     })
     const lines: string[] = []
@@ -688,7 +690,7 @@ describe('the start script of the workbench', () => {
     const fakeServer = () =>
       vite.createServer.mockResolvedValue({
         listen: () => Promise.resolve(),
-        httpServer: { address: () => ({ port: 5555 }) },
+        httpServer: { address: () => ({ port: 5555 }), on: () => undefined },
         close: () => Promise.resolve(),
       })
     const countOf = (store: unknown) => Number(new RegExp(`"${COUNT_FIELD}":(\\d+)`).exec(JSON.stringify(store))?.[1])
@@ -1156,6 +1158,243 @@ describe('the start script of the workbench', () => {
         await expectNoWrites(workbench.linkUrl)
       } finally {
         await workbench.close()
+      }
+    })
+  })
+
+  describe('the product links and the product views', () => {
+    const SAMPLE_CODE = '@thrashplay/wishem-sample-product'
+    let product = ''
+    let productViews = ''
+
+    beforeEach(() => {
+      product = join(folder, 'product')
+      cpSync(sampleProduct, product, { recursive: true })
+      productViews = join(folder, 'product-views')
+      cpSync(sampleViews, productViews, { recursive: true })
+    })
+
+    const startProduct = async (extra: string[] = ['--product-views', productViews]) => {
+      const run = start([
+        '--port',
+        '0',
+        '--hub-port',
+        '0',
+        '--product',
+        product,
+        '--product-code',
+        SAMPLE_CODE,
+        ...extra,
+      ])
+      await until(
+        () => run.output().includes('wishem: workbench at') || run.child.exitCode !== null,
+        () => run.output(),
+      )
+      const page = /wishem: workbench at (http:\/\/127\.0\.0\.1:\d+\/)/.exec(run.output())?.[1]
+      if (page === undefined) {
+        expect.fail(`the script stopped with no address:\n${run.output()}`)
+      }
+      return { run, page, socketBase: page.replace('http:', 'ws:') }
+    }
+
+    /** Starts the construct `play` through the link of the workbench. */
+    const startPlay = async (run: Run, socketBase: string) => {
+      const workbench = await openTestLink(`${socketBase}link`)
+      await workbench.tester.submit(constructInputs.start('play'))
+      await until(
+        () => run.output().includes('construct play runs'),
+        () => run.output(),
+      )
+      return workbench
+    }
+
+    const upgradeStatus = (page: string, path: string, extra: Record<string, string> = {}) =>
+      new Promise<number>((resolve, reject) => {
+        const url = new URL(path, page)
+        const request = httpRequest(url, {
+          headers: {
+            Connection: 'Upgrade',
+            Upgrade: 'websocket',
+            'Sec-WebSocket-Version': '13',
+            'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+            ...extra,
+          },
+        })
+        request.on('response', (response) => {
+          response.resume()
+          resolve(response.statusCode ?? 0)
+        })
+        request.on('upgrade', (response, socket) => {
+          socket.destroy()
+          resolve(response.statusCode ?? 0)
+        })
+        request.on('error', reject)
+        request.end()
+      })
+
+    it(
+      'gives a link at /constructs/play/link the welcome of play with the parts time and store',
+      { timeout: 30000 },
+      async () => {
+        const { run, socketBase } = await startProduct()
+        const workbench = await startPlay(run, socketBase)
+        const play = await openTestLink(`${socketBase}constructs/play/link`)
+        try {
+          expect(Object.keys(play.reader.read()).sort()).toEqual(['store', 'time'])
+          expect(JSON.stringify(play.reader.read().time)).toContain('"stepMs":50')
+        } finally {
+          play.link.close()
+          workbench.link.close()
+        }
+      },
+    )
+
+    it('answers 404 for a construct that does not run', { timeout: 30000 }, async () => {
+      const { page, run, socketBase } = await startProduct()
+      const workbench = await startPlay(run, socketBase)
+      try {
+        expect(await upgradeStatus(page, '/constructs/other/link')).toBe(404)
+      } finally {
+        workbench.link.close()
+      }
+    })
+
+    it('refuses a foreign Origin at /constructs/play/link with 403', { timeout: 30000 }, async () => {
+      const { page, run, socketBase } = await startProduct()
+      const workbench = await startPlay(run, socketBase)
+      try {
+        const path = '/constructs/play/link'
+        expect(await upgradeStatus(page, path, { Origin: 'http://evil.example' })).toBe(403)
+        expect(await upgradeStatus(page, path, { Origin: new URL(page).origin })).toBe(101)
+      } finally {
+        workbench.link.close()
+      }
+    })
+
+    it('sends stopping and closes the connection when play stops', { timeout: 30000 }, async () => {
+      const { run, socketBase } = await startProduct()
+      const workbench = await startPlay(run, socketBase)
+      const play = await openTestLink(`${socketBase}constructs/play/link`)
+      const events: string[] = []
+      play.reader.subscribe((event: HubEvent) => events.push(event.type))
+      const closed = new Promise<void>((resolve) => {
+        play.socket.addEventListener('close', () => {
+          resolve()
+        })
+      })
+      try {
+        await workbench.tester.submit(constructInputs.stop('play'))
+        await closed
+
+        expect(events).toContain('stopping')
+      } finally {
+        workbench.link.close()
+      }
+    })
+
+    it('still passes /link to the workbench while play runs', { timeout: 30000 }, async () => {
+      const { run, socketBase } = await startProduct()
+      const workbench = await startPlay(run, socketBase)
+      try {
+        expect(Object.keys(workbench.reader.read()).sort()).toEqual(['constructs', 'product', 'store'])
+      } finally {
+        workbench.link.close()
+      }
+    })
+
+    it('prints the line of the product views after the line of the product code', { timeout: 30000 }, async () => {
+      const { run } = await startProduct()
+
+      expect(run.output()).toContain(`wishem: product code ${SAMPLE_CODE}\nwishem: product views ${productViews}\n`)
+    })
+
+    it('resolves a relative --product-views against INIT_CWD', { timeout: 30000 }, async () => {
+      const args = ['--model', model, '--views', views, '--port', '0', '--hub-port', '0', '--product', product]
+      const child = spawn('node', [script, ...args, '--product-views', './product-views'], {
+        env: { ...process.env, INIT_CWD: folder },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+      children.push(child)
+      let text = ''
+      child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()))
+      child.stderr.on('data', (chunk: Buffer) => (text += chunk.toString()))
+
+      await until(
+        () => text.includes('wishem: workbench at') || child.exitCode !== null,
+        () => text,
+      )
+
+      expect(text).toContain(`wishem: product views ${productViews}\n`)
+    })
+
+    it('lists the pairs of the sample product and no test file', { timeout: 30000 }, async () => {
+      const { page } = await startProduct()
+      const body = (await (await fetch(new URL('/@wishem/product-views.json', page))).json()) as unknown
+
+      expect(body).toEqual({
+        views: ['ClearColor', 'Count'].map((name) => ({
+          sidecar: `/@fs${productViews}/${name}.view.json`,
+          view: `/@fs${productViews}/${name}.tsx`,
+        })),
+      })
+      expect(JSON.stringify(body)).not.toContain('.test.tsx')
+    })
+
+    it('lists no view with no option', { timeout: 30000 }, async () => {
+      const { page } = await startProduct([])
+      const response = await fetch(new URL('/@wishem/product-views.json', page))
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ views: [] })
+    })
+
+    it('stops with a message when the folder does not exist, and frees the hub port', { timeout: 30000 }, async () => {
+      const hubPort = await freePort()
+      const missing = join(folder, 'missing')
+      const run = start([
+        '--port',
+        '0',
+        '--hub-port',
+        String(hubPort),
+        '--product',
+        product,
+        '--product-views',
+        missing,
+      ])
+      const code = await run.exit
+
+      expect(code).toBe(1)
+      expect(run.output()).toContain(`wishem: the product views folder ${missing} does not exist`)
+      expect(run.output()).not.toContain('wishem: workbench at')
+      expect(await refuses('127.0.0.1', hubPort)).toBe(true)
+    })
+
+    it('stops with a message when --product-views has no --product', { timeout: 30000 }, async () => {
+      const run = start(['--port', '0', '--hub-port', '0', '--product-views', productViews])
+      const code = await run.exit
+
+      expect(code).toBe(1)
+      expect(run.output()).toContain('wishem: --product-views needs --product')
+      expect(run.output()).not.toContain('wishem: workbench at')
+    })
+
+    it('sends a full reload to the HMR socket when a sidecar is added', { timeout: 30000 }, async () => {
+      const { socketBase } = await startProduct()
+      const socket = new WebSocket(socketBase, 'vite-hmr')
+      const messages: string[] = []
+      socket.addEventListener('message', (event) => messages.push(String(event.data)))
+      await until(
+        () => messages.some((text) => text.includes('"connected"')),
+        () => messages.join('\n'),
+      )
+      writeFileSync(join(productViews, 'Extra.view.json'), JSON.stringify({ kind: 'react', componentType: 'ct_x' }))
+      try {
+        await until(
+          () => messages.some((text) => text.includes('full-reload')),
+          () => messages.join('\n'),
+        )
+      } finally {
+        socket.close()
       }
     })
   })

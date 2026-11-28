@@ -1,4 +1,4 @@
-import { InputRefusedError, createHub } from '@thrashplay/wishem-hub'
+import { InputRefusedError, createHub, hubInputs } from '@thrashplay/wishem-hub'
 import { describe, expect, it } from 'vitest'
 import { TIME_ID, createTime, timeInputs, type TimeOptions, type TimePart } from './time.js'
 
@@ -114,6 +114,44 @@ describe('createTime', () => {
       await controls.submit(timeInputs.advance(50))
     }
     expect(part()).toEqual({ now: 50000, ticks: 1000, running: true })
+  })
+})
+
+describe('createTime with a step length', () => {
+  it('holds the step length of the first part', () => {
+    const { part } = setup({ stepMs: 500 })
+    expect(part()).toEqual({ now: 0, ticks: 0, running: true, stepMs: 500 })
+  })
+
+  it('keeps the step length through three ticks and a pause', async () => {
+    const { controls, part } = setup({ stepMs: 500 })
+    for (let i = 0; i < 3; i++) {
+      await controls.submit(timeInputs.advance(500))
+    }
+    await controls.submit(timeInputs.setRunning(false))
+    expect(part()).toEqual({ now: 1500, ticks: 3, running: false, stepMs: 500 })
+  })
+
+  it('keeps the step length through a rewind', async () => {
+    const { controls, part } = setup({ stepMs: 50 })
+    for (let i = 0; i < 5; i++) {
+      await controls.submit(timeInputs.advance(50))
+    }
+    await controls.submit(hubInputs.rewind(2))
+    expect(part()).toMatchObject({ ticks: 2, stepMs: 50 })
+  })
+
+  it('gives a part with no key stepMs when there is no option', () => {
+    const { part } = setup()
+    expect(Object.hasOwn(part(), 'stepMs')).toBe(false)
+    expect(Object.hasOwn(setup({ running: false }).part(), 'stepMs')).toBe(false)
+  })
+
+  it('throws a RangeError for a step length that is not correct', () => {
+    for (const stepMs of [0, -1, Number.NaN, Infinity, '50' as unknown as number]) {
+      expect(() => createTime({ stepMs })).toThrow(RangeError)
+      expect(() => createTime({ stepMs })).toThrow('The step length must be a finite number larger than 0.')
+    }
   })
 })
 
