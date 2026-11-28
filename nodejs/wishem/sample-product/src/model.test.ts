@@ -20,8 +20,24 @@ describe('the model folder', () => {
     expect(state.entities).toHaveLength(1)
     expect(state.entities[0]?.components).toEqual({
       [COLOR_TYPE]: { [COLOR_FIELD]: '#1d4ed8' },
-      [COUNTER_TYPE]: { [COUNT_FIELD]: '0' },
+      [COUNTER_TYPE]: { [COUNT_FIELD]: 0 },
     })
+  })
+})
+
+describe('the count', () => {
+  it('has the type number', () => {
+    expect(counter.fields[0]?.type).toBe('number')
+  })
+
+  it('is not correct as a string', () => {
+    const entities = [{ id: SAMPLE_ENTITY, components: { [COUNTER_TYPE]: { [COUNT_FIELD]: '8' } } }]
+    const bad = validateModel({ definitions: [color, counter], entities })
+    expect(bad.ok).toBe(false)
+    const messages = bad.ok ? '' : bad.problems.map((problem) => problem.message).join('\n')
+    expect(messages).toContain('count')
+    expect(messages).toContain('Counter')
+    expect(messages).toContain('number')
   })
 })
 

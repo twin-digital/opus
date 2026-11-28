@@ -3,11 +3,10 @@ import type { ApplyContext, ModelSubsystem, RecordedInput } from '@thrashplay/wi
 import { COUNTER_TYPE, COUNT_FIELD } from './ids.js'
 
 const TICK = 'time/advance'
-const DECIMAL_INTEGER = /^(0|[1-9][0-9]*)$/
 
 /**
  * Returns a model subsystem with the ID of `store`. It applies each input of the store as the store does.
- * For each `time/advance`, it adds 1 to each `count` of a `Counter` component that is a decimal integer.
+ * For each `time/advance`, it adds 1 to each `count` of a `Counter` component that is a number.
  * Put the `time` subsystem before it in the list of subsystems.
  */
 export const withCountRule = (store: ModelSubsystem<Model>): ModelSubsystem<Model> => ({
@@ -22,14 +21,14 @@ export const withCountRule = (store: ModelSubsystem<Model>): ModelSubsystem<Mode
     return part.entities.reduce((current, entity) => {
       const component = entity.components[COUNTER_TYPE] as Entity['components'][Id] | undefined
       const count = component?.[COUNT_FIELD]
-      if (typeof count !== 'string' || !DECIMAL_INTEGER.test(count)) {
+      if (typeof count !== 'number') {
         return current
       }
       const payload = {
         entity: entity.id,
         componentType: COUNTER_TYPE,
         field: COUNT_FIELD,
-        value: String(BigInt(count) + 1n),
+        value: count + 1,
       }
       return store.apply(current, { ...input, type: setFieldType, payload }, context)
     }, part)
