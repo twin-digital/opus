@@ -374,6 +374,20 @@ describe('startClock', () => {
       hub.stop()
     })
 
+    it('calls performance.now on the performance object', () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+      const receivers: unknown[] = []
+      vi.spyOn(performance, 'now').mockImplementation(function (this: unknown) {
+        receivers.push(this)
+        return 0
+      })
+      const hub = createHub({ subsystems: [createTime()] })
+      const clockPort = hub.attach({ id: 'clock', kind: 'input' })
+      startClock(clockPort)
+      expect(receivers.length).toBeGreaterThan(0)
+      expect(receivers.every((receiver) => receiver === performance)).toBe(true)
+    })
+
     it('uses setInterval and the fake real time', () => {
       vi.useFakeTimers()
       const hub = createHub({ subsystems: [createTime()] })
