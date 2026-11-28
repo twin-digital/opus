@@ -63,7 +63,7 @@ The renderer SHALL put the nodes in the order of the entities, and then in the o
 
 ### Requirement: The ClearColor view fills the viewport
 
-The view `ClearColor` SHALL make one rectangle node that covers the full viewport, with the color of the prop `color`. When the prop has no value or is not a color, the node SHALL be hidden.
+The view `ClearColor` SHALL make one rectangle node that covers the full viewport, with the color of the prop `color`, as the requirement "A color of the sample construct is #rrggbb" of `wishem/renderers/sample-construct` gives it. When the prop has no value or is not a color, the node SHALL have the fallback color `#ff00ff`. The node SHALL stay visible.
 
 #### Scenario: A color
 
@@ -73,7 +73,17 @@ The view `ClearColor` SHALL make one rectangle node that covers the full viewpor
 #### Scenario: A value that is not a color
 
 - **WHEN** the prop `color` is `not a color`
-- **THEN** the node is hidden
+- **THEN** the node is visible, covers the viewport, and has the color `#ff00ff`
+
+#### Scenario: No value
+
+- **WHEN** the props have no `color`
+- **THEN** the node is visible and has the color `#ff00ff`
+
+#### Scenario: A color that Godot reads and the rule refuses
+
+- **WHEN** the prop `color` is `1d4ed8` or `#1d4ed880`
+- **THEN** the node has the color `#ff00ff`, with an alpha of 1
 
 ### Requirement: The renderer gives the entity at a point
 
