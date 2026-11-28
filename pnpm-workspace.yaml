@@ -44,7 +44,7 @@ catalog:
   pngjs: ^7.0.0
   prettier: ^3.5.3
   prettier-package-json: ^2.8.0
-  serverless: 4.40.0
+  serverless: 4.46.0
   ts-node: ^10.9.2
   tsdown: ^0.18.3
   typescript: ^6.0.0
