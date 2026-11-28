@@ -4,10 +4,10 @@ import { propNames } from './field-names.js'
 import { findHolds } from './hold.js'
 
 export interface ViewWarning {
-  kind: 'component-type-not-defined' | 'same-name' | 'reserved-name' | 'reference-cycle'
+  kind: 'component-type-not-defined' | 'same-name' | 'reserved-name' | 'empty-name' | 'reference-cycle'
   sidecar: string
   componentType: Id
-  /** Set for `same-name`. One field for `reserved-name` and `reference-cycle`. */
+  /** Set for `same-name`. One field for `reserved-name`, `empty-name`, and `reference-cycle`. */
   fields?: [Id, Id] | [Id]
   /** Set for `same-name` and `reserved-name`. */
   name?: string
@@ -42,6 +42,8 @@ export const viewWarnings = (views: ViewTable, definitions: readonly ComponentTy
         warnings.push({ kind: 'same-name', sidecar, componentType, name: problem.name, fields: problem.fields })
       } else if (problem.kind === 'reserved-name') {
         warnings.push({ kind: 'reserved-name', sidecar, componentType, name: problem.name, fields: [problem.field] })
+      } else if (problem.kind === 'empty-name') {
+        warnings.push({ kind: 'empty-name', sidecar, componentType, fields: [problem.field] })
       }
     }
   }
@@ -71,6 +73,8 @@ export const describeWarning = (warning: ViewWarning): string => {
       return `wishem: the sidecar ${sidecar}: the fields ${fields?.[0] ?? ''} and ${fields?.[1] ?? ''} of the component type ${componentType} give the same name "${name ?? ''}". The prop has the value of the first field.`
     case 'reserved-name':
       return `wishem: the sidecar ${sidecar}: the label of the field ${fields?.[0] ?? ''} of the component type ${componentType} gives the reserved name "${name ?? ''}". The view does not get the field.`
+    case 'empty-name':
+      return `wishem: the sidecar ${sidecar}: the label of the field ${fields?.[0] ?? ''} of the component type ${componentType} gives an empty name. The view does not get the field.`
     case 'reference-cycle':
       return `wishem: the sidecar ${sidecar}: the field ${fields?.[0] ?? ''} of the component type ${componentType} of the entity ${entities?.[0] ?? ''} names the entity ${entities?.[1] ?? ''}, which is already on the path of its picture. The view gets no picture for it.`
   }

@@ -106,7 +106,7 @@ When a sidecar of the kind `react` has no view file, or its view file has no def
 
 ### Requirement: A view gets the fields of its component type by name
 
-The renderer SHALL give a view one prop for each field in the definition of its component type. The name of the prop SHALL be the name that the `wishem/renderer-html/view-types` specification gives for the label of the field. The value SHALL be the value of the field in the component. A prop SHALL have no value when the component omits the field. The view SHALL decide what it draws for a prop that has no value.
+The renderer SHALL give a view one prop for each field in the definition of its component type, except a field whose label gives an empty name or a reserved name. The name of the prop SHALL be the name that the `wishem/renderer-html/view-types` specification gives for the label of the field. The value SHALL be the value of the field in the component. A prop SHALL have no value when the component omits the field. The view SHALL decide what it draws for a prop that has no value.
 
 #### Scenario: A component with a title
 
@@ -127,6 +127,11 @@ The renderer SHALL give a view one prop for each field in the definition of its 
 
 - **WHEN** a component has the value `3` in a number field with the label `points` and `true` in a boolean field with the label `done`
 - **THEN** the view gets the prop `points` with the number `3` and the prop `done` with the boolean `true`
+
+#### Scenario: A label that gives an empty name
+
+- **WHEN** a component type has the fields `title` and `???`, and the component holds a value in each field
+- **THEN** the view gets the prop `title` and the prop `wishem`, and it gets no other prop
 
 ### Requirement: The page warns about a sidecar or a field that it cannot use
 
@@ -258,3 +263,22 @@ The prop of a `reference` field SHALL be the picture of the entity that the fiel
 
 - **WHEN** the reference field `first` names an entity that has no component with a view
 - **THEN** the view of `list` gets in the prop `first` a picture that draws nothing
+
+### Requirement: The page warns about a label that gives an empty name
+
+When the label of a field gives an empty name, the page SHALL give one warning in the browser console for that field, and SHALL continue to draw. The warning SHALL name the sidecar file, the field ID, and the component type ID. `setField` of the tools of the view SHALL give the outcome `invalid` for the name `""`.
+
+#### Scenario: A label with no letter or digit
+
+- **WHEN** a component type has a field with the label `???`, and a sidecar names that component type
+- **THEN** the browser console has one warning that names the sidecar file, the field ID, and the component type ID, and the page draws the view with the other props
+
+#### Scenario: Two labels that give an empty name
+
+- **WHEN** a component type has the fields `???` and `--`
+- **THEN** the browser console has one warning for each of the two fields, and no warning that the two fields give the same name
+
+#### Scenario: setField with an empty name
+
+- **WHEN** a view calls `wishem.setField('', 'x')`
+- **THEN** the outcome is `invalid`, and the hub gets no input
