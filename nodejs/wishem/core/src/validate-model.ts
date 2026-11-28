@@ -90,7 +90,7 @@ export const validateModel = (data: unknown): ValidationResult => {
 
   const definitions: ComponentTypeDefinition[] = []
   const typesById = new Map<Id, ComponentTypeDefinition>()
-  const typeIdsByLabel = new Map<string, Id[]>()
+  const typeIdsByLabel = new Map<string, { id: Id; index: number }[]>()
 
   rawDefinitions.forEach((raw: unknown, index) => {
     const path: Path = ['definitions', index]
@@ -153,7 +153,7 @@ export const validateModel = (data: unknown): ValidationResult => {
       if (!typesById.has(id)) {
         typesById.set(id, type)
       }
-      typeIdsByLabel.set(type.label, [...(typeIdsByLabel.get(type.label) ?? []), id])
+      typeIdsByLabel.set(type.label, [...(typeIdsByLabel.get(type.label) ?? []), { id, index }])
     }
   })
 
@@ -238,8 +238,8 @@ export const validateModel = (data: unknown): ValidationResult => {
     for (const other of rest) {
       warnings.push({
         severity: 'warning',
-        message: `Component types ${first} and ${other} have the same label "${label}"`,
-        path: ['definitions'],
+        message: `Component types ${first.id} and ${other.id} have the same label "${label}"`,
+        path: ['definitions', other.index, 'label'],
       })
     }
   }

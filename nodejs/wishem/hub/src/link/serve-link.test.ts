@@ -444,6 +444,37 @@ describe('a hello that the hub side refuses', () => {
     expect(link.isClosed()).toBe(true)
   })
 
+  it.each([
+    ['a fractional number', 1.5],
+    ['a negative number', -1],
+    ['the number 2^53', 2 ** 53],
+    ['a number larger than 2^53', 2 ** 60],
+  ])('refuses a hello with a protocol that is %s', async (_name, protocol) => {
+    const hub = makeHub()
+    const link = connect(hub)
+    link.send({ ...hello(page), protocol })
+    await settle()
+    expect(link.messages).toEqual([expect.objectContaining({ t: 'refused', reason: 'malformed' })])
+    expect(link.isClosed()).toBe(true)
+    expect(() => hub.attach(page)).not.toThrow()
+  })
+
+  it.each([
+    ['a fractional number', 1.5],
+    ['a negative number', -1],
+    ['the number 2^53', 2 ** 53],
+    ['a number larger than 2^53', 2 ** 60],
+  ])('refuses a submit with a request that is %s, closes, and frees the IDs', async (_name, request) => {
+    const hub = makeHub()
+    const link = await joined(hub, page, keyboard)
+    link.send({ t: 'submit', request, subsystem: 'keyboard', input: setField('a') })
+    await settle()
+    expect(link.messages).toHaveLength(2)
+    expect(link.messages[1]).toMatchObject({ t: 'refused', reason: 'malformed' })
+    expect(link.isClosed()).toBe(true)
+    expect(() => hub.attach(page)).not.toThrow()
+  })
+
   it('refuses a hello with a key that is missing', async () => {
     const link = connect(makeHub())
     link.send({ t: 'hello', protocol: 1 })
