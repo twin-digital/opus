@@ -320,6 +320,17 @@ describe('RunTool', () => {
     expect(stage()?.textContent).toContain('The views of the product are not correct.')
   })
 
+  it('shows connecting for a running entry with no link', async () => {
+    draw()
+    await act(async () => {
+      await input.submit(constructInputs.start('play'))
+    })
+    await report({ status: 'running' })
+    await settle()
+    expect(stage()?.textContent).toContain('Connecting to the product.')
+    expect(stage()?.textContent).not.toContain('Not running.')
+  })
+
   it('keeps the picture and shows a note when the stage link is down', async () => {
     draw()
     await running()

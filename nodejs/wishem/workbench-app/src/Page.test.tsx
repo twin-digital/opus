@@ -7,7 +7,7 @@ import type { ViewProps, ViewTable, ViewTools } from '@thrashplay/wishem-rendere
 import { COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Page, type PageProps } from './Page.js'
 import { collectAppViews } from './views.js'
 
@@ -215,6 +215,76 @@ describe('Page', () => {
         await new Promise((done) => setTimeout(done, 0))
       })
       expect(hub.record().map(({ type, source }) => [type, source])).toEqual([['constructs/start', 'screen-input']])
+    })
+
+    describe('the order of the run area', () => {
+      type Listener = () => void
+      const fake = (matches: boolean) => {
+        const listeners = new Set<Listener>()
+        const query = {
+          matches,
+          addEventListener: (_type: string, listener: Listener) => listeners.add(listener),
+          removeEventListener: (_type: string, listener: Listener) => listeners.delete(listener),
+        }
+        const queries: string[] = []
+        vi.stubGlobal('matchMedia', (text: string) => {
+          queries.push(text)
+          return query
+        })
+        return {
+          queries,
+          change: (next: boolean) => {
+            query.matches = next
+            act(() => {
+              listeners.forEach((listener) => {
+                listener()
+              })
+            })
+          },
+        }
+      }
+      const parts = () => {
+        const main = container.querySelector('main')
+        return Array.from(main?.querySelectorAll('aside[aria-label="Run"], nav[aria-label="Entities"]') ?? []).map(
+          (element) => element.tagName.toLowerCase(),
+        )
+      }
+      const drawConstructs = () => {
+        const hub = constructsHub()
+        draw({ port: hub.attach({ id: 'screen', kind: 'output' }), input: undefined, views })
+      }
+
+      afterEach(() => {
+        vi.unstubAllGlobals()
+      })
+
+      it('puts the run area before the panel in the DOM on a narrow page', () => {
+        const media = fake(false)
+        drawConstructs()
+        expect(media.queries).toContain('(min-width: 1200px)')
+        expect(parts()).toEqual(['aside', 'nav'])
+      })
+
+      it('puts the panel before the run area in the DOM on a wide page', () => {
+        fake(true)
+        drawConstructs()
+        expect(parts()).toEqual(['nav', 'aside'])
+      })
+
+      it('changes the order when the media query changes', () => {
+        const media = fake(false)
+        drawConstructs()
+        media.change(true)
+        expect(parts()).toEqual(['nav', 'aside'])
+        media.change(false)
+        expect(parts()).toEqual(['aside', 'nav'])
+      })
+
+      it('uses no CSS order', () => {
+        fake(false)
+        drawConstructs()
+        expect(container.querySelector('main')?.innerHTML).not.toMatch(/\border-[12]\b/)
+      })
     })
 
     it('shows no run area with no part constructs', () => {

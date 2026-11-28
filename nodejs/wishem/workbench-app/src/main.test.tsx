@@ -237,6 +237,15 @@ describe('workbench page', () => {
     expect(fetchMock).toHaveBeenCalledWith('/@wishem/product-views.json')
   })
 
+  it('renders the zero state and opens the link while the list of the product views is not loaded', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined))
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(document.querySelector('main')?.textContent).toContain('Nothing to show yet.')
+      expect(FakeWebSocket.instances).toHaveLength(1)
+    })
+  })
+
   it('shows the run area when the workbench has a construct list, with views that are not correct', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     fetchMock.mockImplementation(() => Promise.resolve(new Response('{"views":3}', { status: 200 })))

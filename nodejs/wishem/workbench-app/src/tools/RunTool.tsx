@@ -145,7 +145,7 @@ export const RunTool = ({ port, input, productViews }: RunToolProps): ReactNode 
 
   const frame = ((): ReactNode => {
     if (stage.state === 'off') {
-      return entry?.status === 'pending' ?
+      return entry?.status === 'pending' || entry?.status === 'running' ?
           <StageFrame message='Connecting to the product.' />
         : <StageFrame message='Not running. Press Run to start the product.' />
     }
