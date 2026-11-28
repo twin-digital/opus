@@ -147,8 +147,13 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 
 #### Scenario: A product construct serves its link from the workbench process
 
-- **WHEN** the workbench process runs a product construct whose link a renderer in a different process opens
-- **THEN** the table row of the workbench process says that it runs the product constructs and serves the link of each one, and the diagram shows no new process for a product construct
+- **WHEN** a renderer in a different process opens the link of a product construct at `/constructs/<id>/link` of the address of the page
+- **THEN** the container diagram shows that the workbench process passes the link to the product construct process
+
+#### Scenario: A product construct runs in a process of its own
+
+- **WHEN** the construct manager of the workbench process starts each product construct in a Node.js child process, and reaches its hub through a link on the IPC channel
+- **THEN** the container diagram shows the product construct process as a Node.js container, a relationship from the workbench process to it with the label "Starts, stops, and reaches the hub [child process, link over IPC]", and a relationship from the workbench process to it with the label "Passes the links of the product constructs [WebSocket]", and the table row of the workbench process does not say that it runs the product constructs
 
 #### Scenario: The wishem command runs a construct with no page
 
@@ -292,22 +297,27 @@ The merge checks of each pull request against `main` SHALL run `node nodejs/wish
 
 ### Requirement: The component diagram of the workbench process
 
-The architecture document SHALL hold a C4 component diagram of the workbench process, in `nodejs/wishem/docs/architecture/components-workbench-process-light.svg` and `components-workbench-process-dark.svg`. The diagram SHALL show the parts of the process, among them the construct, the construct manager, the product constructs, and the update subsystem, and their relationships to the page and to the model folders.
+The architecture document SHALL hold a C4 component diagram of the workbench process, in `nodejs/wishem/docs/architecture/components-workbench-process-light.svg` and `components-workbench-process-dark.svg`. The diagram SHALL show the parts of the process, among them the construct, the construct manager, and the launcher of the product construct processes, and their relationships to the page, to the model folders, and to the product construct processes.
 
 #### Scenario: The parts of the workbench process
 
 - **WHEN** the `start` script of `@thrashplay/wishem-workbench-app` starts the workbench process with `--product` and `--product-code`
-- **THEN** the component diagram shows the start script, the workbench construct, the storage subsystems, the construct manager, the product constructs, the update subsystem, the product code, the Vite development server, and the generator of the view types
+- **THEN** the component diagram shows the start script, the workbench construct, the storage subsystems, the construct manager, the launcher of the product construct processes, the Vite development server, and the generator of the view types inside the process boundary, and the product construct process outside it
 
 #### Scenario: The construct manager runs the product constructs
 
-- **WHEN** the start script attaches the construct manager to the hub of the workbench construct, and the construct manager starts a product construct for each item of the construct list
-- **THEN** the component diagram shows a relationship from the construct manager to the workbench construct, and a relationship from the construct manager to the product constructs
+- **WHEN** the start script attaches the construct manager to the hub of the workbench construct, and the construct manager starts a product construct process with the launcher for each item of the construct list
+- **THEN** the component diagram shows a relationship from the construct manager to the workbench construct, a relationship from the construct manager to the launcher, and a relationship from the launcher to the product construct process with the label "Starts, stops, and reaches the hub [child process, link over IPC]"
 
 #### Scenario: A product construct runs the behaviors
 
-- **WHEN** each product construct runs the native behaviors of the product code in its update subsystem
-- **THEN** the component diagram shows a relationship from the product constructs to the update subsystem, and from the update subsystem to the product code
+- **WHEN** each product construct process loads the product code and runs its native behaviors in its update subsystem
+- **THEN** the component diagram shows no update subsystem and no product code inside the process boundary, and the table of the components says that the product construct process loads the product code
+
+#### Scenario: The start script checks the product code
+
+- **WHEN** the start script checks the product code in a child process before the workbench construct starts
+- **THEN** the component diagram shows a relationship from the start script to the launcher with the label "Checks the product code"
 
 #### Scenario: The page connects through the Vite development server
 
