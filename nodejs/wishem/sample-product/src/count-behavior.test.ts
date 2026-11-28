@@ -53,8 +53,8 @@ const tick = async (hub: Hub, times: number): Promise<void> => {
 }
 
 describe('behaviors', () => {
-  it('holds the count behavior for the component type Counter', () => {
-    expect(behaviors).toEqual([countBehavior])
+  it('starts with the count behavior for the component type Counter', () => {
+    expect(behaviors[0]).toBe(countBehavior)
     expect(countBehavior.id).toBe('sample-product/count')
     expect(countBehavior.componentType).toBe(COUNTER_TYPE)
   })
@@ -113,8 +113,8 @@ describe('countBehavior', () => {
     expect((hub.read()[TIME_ID] as TimePart).ticks).toBe(1)
   })
 
-  it('returns the same part when no entity has a Counter component', async () => {
-    const hub = startHub(modelOf(entity(SAMPLE_ENTITY, undefined)))
+  it('returns the same part when no entity has a Counter component or a Color component', async () => {
+    const hub = startHub(modelOf({ id: SAMPLE_ENTITY, components: {} }))
     const before = hub.read().store
     await tick(hub, 1)
     expect(hub.read().store).toBe(before)

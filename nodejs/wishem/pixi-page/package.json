@@ -2,7 +2,7 @@
   "private": true,
   "name": "@thrashplay/wishem-pixi-page",
   "version": "0.0.0",
-  "description": "The PixiJS page of Wishem: a construct in a Node.js process and a page that draws from its hub through the link.",
+  "description": "The PixiJS page of Wishem: a page that draws the sample construct through the link, and its page server.",
   "type": "module",
   "scripts": {
     "build": "build",
@@ -21,15 +21,16 @@
   "dependencies": {
     "@thrashplay/wishem-clock": "workspace:*",
     "@thrashplay/wishem-core": "workspace:*",
-    "@thrashplay/wishem-host-nodejs": "workspace:*",
     "@thrashplay/wishem-hub": "workspace:*",
     "@thrashplay/wishem-renderer-pixi": "workspace:*",
-    "@thrashplay/wishem-update": "workspace:*",
     "pixi.js": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@playwright/test": "catalog:",
+    "@thrashplay/wishem-construct-manager": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-sample-product": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

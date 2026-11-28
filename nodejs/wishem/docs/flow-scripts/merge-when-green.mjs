@@ -1,5 +1,6 @@
 // Usage: node merge-when-green.mjs <pull request number>
 // Waits for the checks, merges with a squash, and updates the branch and waits again when main moved.
+// Exit code: 0 when merged, 1 when not merged.
 import { execFileSync } from 'node:child_process'
 
 const pr = process.argv[2]
@@ -40,4 +41,6 @@ for (let round = 1; round <= 4 && !merged(); round += 1) {
     `round ${round}: not merged, update of the branch: ${gh('pr', 'update-branch', pr, '-R', 'twin-digital/opus')}`,
   )
 }
-console.log(`${pr} merged=${merged()}`)
+const done = merged()
+console.log(`${pr} merged=${done}`)
+process.exit(done ? 0 : 1)

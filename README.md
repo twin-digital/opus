@@ -60,11 +60,12 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/wishem-docs-check](./nodejs/wishem/docs-check): Tests that the architecture document of Wishem agrees with the packages.
 - [@thrashplay/wishem-host-nodejs](./nodejs/wishem/host-nodejs): Runs a Wishem construct in a Node.js process. Reads and writes a model folder, serves the link of the hub over local WebSocket, and provides the wishem command.
 - [@thrashplay/wishem-hub](./nodejs/wishem/hub): The hub of a Wishem construct. Joins the joined state, orders the inputs, and keeps the record. Runs with no Node.js API.
-- [@thrashplay/wishem-pixi-page](./nodejs/wishem/pixi-page): The PixiJS page of Wishem: a construct in a Node.js process and a page that draws from its hub through the link.
+- [@thrashplay/wishem-pixi-page](./nodejs/wishem/pixi-page): The PixiJS page of Wishem: a page that draws the sample construct through the link, and its page server.
 - [@thrashplay/wishem-renderer-godot](./nodejs/wishem/renderer-godot): The Godot renderer of Wishem: a Godot project that draws a construct through the link, and the runner that runs it in Docker.
 - [@thrashplay/wishem-renderer-pixi](./nodejs/wishem/renderer-pixi): The PixiJS renderer of Wishem. Draws PixiJS views from the joined state that a port gives. Runs with no Node.js API.
 - [@thrashplay/wishem-renderer-react](./nodejs/wishem/renderer-react): The React renderer of Wishem. Draws React views from a port of the hub, and writes the prop types of the views.
 - [@thrashplay/wishem-sample-product](./nodejs/wishem/sample-product): The sample product of Wishem: a model with a color and a count, and the behavior that makes the clock advance the count. Runs with no Node.js API.
+- [@thrashplay/wishem-three-renderers](./nodejs/wishem/three-renderers): The sample construct of Wishem and its command, which the React, PixiJS, and Godot renderers draw.
 - [@thrashplay/wishem-update](./nodejs/wishem/update): The update subsystem of a Wishem construct: runs the native behaviors of a product in each tick. Runs with no Node.js API.
 - [@thrashplay/wishem-workbench](./nodejs/wishem/workbench): The base workbench of Wishem. Holds the first model and a command to start it.
 - [@thrashplay/wishem-workbench-app](./nodejs/wishem/workbench-app): The Wishem workbench application: design tokens, components, and the style guide.

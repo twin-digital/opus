@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { timeInputs } from '@thrashplay/wishem-clock'
+import type { ProductConstruct } from '@thrashplay/wishem-construct-manager/node'
 import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { RemoteLink } from '@thrashplay/wishem-hub'
 import { PNG } from 'pngjs'
-import { startGodotConstruct } from '../src/construct/process.ts'
-import type { GodotConstruct } from '../src/construct/process.ts'
 import { runGodot } from '../src/runner/run-godot.ts'
 import type { GodotRun } from '../src/runner/run-godot.ts'
+import { startSampleConstruct } from './sample-construct.ts'
 
 const SHOTS_DIR = join(import.meta.dirname, '..', '.out', 'test-shots')
 const WAIT_MS = 30_000
@@ -60,12 +60,12 @@ const shotsAfter = (lines: string[], from: number): Shot[] =>
 
 await test('the Godot application draws the construct through the link', async () => {
   const lines: string[] = []
-  let construct: GodotConstruct | undefined
+  let construct: ProductConstruct | undefined
   let run: GodotRun | undefined
   let client: RemoteLink | undefined
   try {
     // Step 1: the construct.
-    construct = await startGodotConstruct({ port: 0, paused: true, log: () => undefined })
+    construct = await startSampleConstruct({ paused: true })
     const hubPort = Number(new URL(construct.linkUrl).port)
 
     // Step 2: the first picture.
@@ -98,7 +98,7 @@ await test('the Godot application draws the construct through the link', async (
     // Step 6: a new construct on the same port, and the application connects again.
     const port = hubPort
     const from = lines.length
-    construct = await startGodotConstruct({ port, paused: true, log: () => undefined })
+    construct = await startSampleConstruct({ port, paused: true })
     await waitFor('connected (link 2)', () => lines.slice(from).find((line) => line.includes('connected (link 2)')))
     const again = await waitFor('shot seq 0 after link 2', () => shotsAfter(lines, from).find((shot) => shot.seq === 0))
     assertAllPixels(again.file, BLUE)

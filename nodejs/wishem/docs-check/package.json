@@ -47,6 +47,7 @@
     "@thrashplay/wishem-renderer-pixi": "workspace:*",
     "@thrashplay/wishem-renderer-react": "workspace:*",
     "@thrashplay/wishem-sample-product": "workspace:*",
+    "@thrashplay/wishem-three-renderers": "workspace:*",
     "@thrashplay/wishem-update": "workspace:*",
     "@thrashplay/wishem-workbench": "workspace:*",
     "@thrashplay/wishem-workbench-app": "workspace:*",

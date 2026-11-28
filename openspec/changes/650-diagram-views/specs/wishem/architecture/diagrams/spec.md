@@ -2,7 +2,7 @@
 
 ## REMOVED Requirements
 
-### Requirement: The container diagram
+### Requirement: The container diagram of Wishem
 
 **Reason**: The container diagram showed each package of `nodejs/wishem/` as a container and each value import as a relationship. The owner decided in #649 that the container diagram holds runtime units only.
 
@@ -85,20 +85,25 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the `start` script of `@thrashplay/wishem-workbench` runs the `wishem` command of `@thrashplay/wishem-host-nodejs`
 - **THEN** the container diagram shows the Wishem command process as a Node.js container, a relationship from the designer to it, and relationships from it to the model folder and to the product model folder with the label "Reads, watches, and writes [file system]"
 
-#### Scenario: The PixiJS process runs the PixiJS construct and serves the PixiJS page
+#### Scenario: The PixiJS process serves the PixiJS page
 
-- **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` runs the PixiJS construct and its page server in one Node.js process
-- **THEN** the container diagram shows the PixiJS process as a Node.js container, relationships from the designer to the PixiJS process and to the PixiJS page, and relationships from the PixiJS page to the PixiJS process with the labels "Gets page code [HTTP]" and "Connects to the hub [WebSocket link]"
+- **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` runs only the page server of the PixiJS page, and passes the WebSocket at `/link` to the sample construct process
+- **THEN** the container diagram shows the PixiJS process as a Node.js container, relationships from the designer to the PixiJS process and to the PixiJS page, relationships from the PixiJS page to the PixiJS process with the labels "Gets page code [HTTP]" and "Connects to the hub [WebSocket link]", and a relationship from the PixiJS process to the sample construct process with the label "Passes the link [WebSocket]"
 
-#### Scenario: The Godot process runs the construct of the Godot application
+#### Scenario: The sample construct process runs the sample product
 
-- **WHEN** the `start` script of `@thrashplay/wishem-renderer-godot` runs the construct of the Godot application in a Node.js process
-- **THEN** the container diagram shows the Godot process as a Node.js container and a relationship from the designer to it
+- **WHEN** the `construct` script of `@thrashplay/wishem-three-renderers` runs the sample construct in a Node.js process
+- **THEN** the container diagram shows the sample construct process as a Node.js container, a relationship from the designer to it, and a relationship from it to the product model folder with the label "Reads [file system]"
 
-#### Scenario: The Godot application connects through the Godot runner
+#### Scenario: The React page draws the sample construct
 
-- **WHEN** the `godot` script of `@thrashplay/wishem-renderer-godot` starts the Godot application in Docker and carries the bytes of its link to the Godot process
-- **THEN** the container diagram shows the Godot runner as a Node.js container and the Godot application as a Godot container, a relationship from the designer to the Godot runner, a relationship from the Godot runner to the Godot application with the label "Starts and copies the screenshots [Docker]", a relationship from the Godot application to the Godot runner with the label "Connects to the hub [WebSocket link]", and a relationship from the Godot runner to the Godot process with the label "Carries the link [TCP]"
+- **WHEN** the `react-page` script of `@thrashplay/wishem-three-renderers` runs the page server of the React page
+- **THEN** the container diagram shows the React page server as a Node.js container and the React page as a container in a web browser, relationships from the designer to both, relationships from the React page to the React page server with the labels "Gets page code [HTTP]" and "Connects to the hub [WebSocket link]", and a relationship from the React page server to the sample construct process with the label "Passes the link [WebSocket]"
+
+#### Scenario: The Godot application connects to the sample construct through the Godot runner
+
+- **WHEN** the `godot` script of `@thrashplay/wishem-renderer-godot` starts the Godot application in Docker and carries the bytes of its link to the sample construct process
+- **THEN** the container diagram shows the Godot runner as a Node.js container and the Godot application as a Godot container, a relationship from the designer to the Godot runner, a relationship from the Godot runner to the Godot application with the label "Starts and copies the screenshots [Docker]", a relationship from the Godot application to the Godot runner with the label "Connects to the hub [WebSocket link]", and a relationship from the Godot runner to the sample construct process with the label "Carries the link [TCP]"
 
 ### Requirement: The package dependency view
 

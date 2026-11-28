@@ -573,7 +573,7 @@ const legend = (c, item) => {
 // ---------------------------------------------------------------------------
 
 const BAND = { x: 24, w: 992, top: 64, pad: 14, spacing: 14 }
-const GRID = { columns: 3, left: 124, cardW: 176, gutter: 96 }
+const GRID = { columns: 3, left: 124, cardW: 176, gutter: 112 }
 const ROUTE = {
   portGap: 14,
   stagger: 4,
@@ -770,28 +770,55 @@ const cCommand = el(
   'Runs one construct, with no page.',
   { pkg: 'Package: host-nodejs' },
 )
-const cPixiPage = el(
+const cReactPage = el(
   'container',
   COLUMN,
   cCommand.y + CARD_H + UNIT_GAP,
-  'PixiJS page',
-  '[Container: PixiJS, web browser]',
-  'Draws the PixiJS construct and sends the keys.',
-  { pkg: 'Package: pixi-page' },
+  'React page',
+  '[Container: React, web browser]',
+  'Draws the sample construct.',
+  { pkg: 'Package: three-renderers' },
+)
+const cReactServer = el(
+  'container',
+  COLUMN,
+  cReactPage.y + CARD_H + 150,
+  'React page server',
+  '[Container: Node.js]',
+  'Serves the page and passes its link.',
+  { pkg: 'Package: three-renderers' },
+)
+const cSample = el(
+  'container',
+  COLUMN,
+  cReactServer.y + CARD_H + 110,
+  'Sample construct process',
+  '[Container: Node.js]',
+  'Runs the sample construct and serves its link.',
+  { pkg: 'Package: three-renderers' },
 )
 const cPixiProcess = el(
   'container',
   COLUMN,
-  cPixiPage.y + CARD_H + 150,
+  cSample.y + CARD_H + 110,
   'PixiJS process',
   '[Container: Node.js]',
-  'Runs the construct and serves the page.',
+  'Serves the page and passes its link.',
+  { pkg: 'Package: pixi-page' },
+)
+const cPixiPage = el(
+  'container',
+  COLUMN,
+  cPixiProcess.y + CARD_H + 150,
+  'PixiJS page',
+  '[Container: PixiJS, web browser]',
+  'Draws the sample construct and sends the keys.',
   { pkg: 'Package: pixi-page' },
 )
 const cGodotApp = el(
   'container',
   COLUMN,
-  cPixiProcess.y + CARD_H + UNIT_GAP,
+  cPixiPage.y + CARD_H + UNIT_GAP,
   'Godot application',
   '[Container: GDScript, Docker]',
   'Draws the construct and writes screenshots.',
@@ -806,21 +833,12 @@ const cGodotRunner = el(
   'Starts Godot in Docker, carries the link.',
   { pkg: 'Package: renderer-godot' },
 )
-const cGodotProcess = el(
-  'container',
-  COLUMN,
-  cGodotRunner.y + CARD_H + 110,
-  'Godot process',
-  '[Container: Node.js]',
-  'Runs the construct with a clock.',
-  { pkg: 'Package: renderer-godot' },
-)
 
 // The arrow k of the designer: it leaves the right edge of the designer at a height that depends on k, runs to a
 // position that depends on k, and enters the right edge of `target` at `at`. The label sits in the middle of the last line.
 const designerArrow = (k, tone, target, at, line) => {
-  const x = 560 + 34 * k
-  const y = 176 - 12 * k
+  const x = 560 + 28 * k
+  const y = 176 - 10 * k
   return rel(tone, [right(cDesigner, y), [x, y], [x, at], right(target, at)], line, [(x + CARD_W + COLUMN) / 2, at])
 }
 
@@ -833,14 +851,16 @@ const stacked = (tone, from, to, x, line) => {
 
 const SKIP_X = 310
 const COMMAND_X = 550
-const UNITS_BOTTOM = cGodotProcess.y + CARD_H
+const LANE_SAMPLE_X = 330
+const LANE_TCP_X = 370
+const UNITS_BOTTOM = cGodotRunner.y + CARD_H
 const LEGEND_Y = UNITS_BOTTOM + 62
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has ten containers. The designer starts the four processes and the Godot runner, edits the model folder and the product model folder, and looks at the two pages. The page gets page code over HTTP and connects to the hub over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The PixiJS page connects the same way to the PixiJS process. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process.',
+    'Wishem has eleven containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
   width: WIDTH_PX,
   height: LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -851,11 +871,13 @@ const containers = {
     cModel,
     cProduct,
     cCommand,
-    cPixiPage,
+    cReactPage,
+    cReactServer,
+    cSample,
     cPixiProcess,
+    cPixiPage,
     cGodotApp,
     cGodotRunner,
-    cGodotProcess,
 
     // The designer
     designerArrow(0, 'flow', cPage, 340, 'Looks at [web browser]'),
@@ -863,10 +885,12 @@ const containers = {
     designerArrow(2, 'flow', cModel, 816, 'Edits files [text editor]'),
     designerArrow(3, 'quiet', cProduct, cProduct.y + 40, 'Edits files [text editor]'),
     designerArrow(4, 'quiet', cCommand, cCommand.y + 64, 'Starts and stops [terminal]'),
-    designerArrow(5, 'flow', cPixiPage, cPixiPage.y + 40, 'Looks at and presses keys [web browser]'),
-    designerArrow(6, 'quiet', cPixiProcess, cPixiProcess.y + 52, 'Starts and stops [terminal]'),
-    designerArrow(7, 'quiet', cGodotRunner, cGodotRunner.y + 52, 'Starts and looks at the screenshots [terminal]'),
-    designerArrow(8, 'quiet', cGodotProcess, cGodotProcess.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(5, 'flow', cReactPage, cReactPage.y + 40, 'Looks at [web browser]'),
+    designerArrow(6, 'quiet', cReactServer, cReactServer.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(7, 'quiet', cSample, cSample.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(8, 'quiet', cPixiProcess, cPixiProcess.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(9, 'flow', cPixiPage, cPixiPage.y + 40, 'Looks at and presses keys [web browser]'),
+    designerArrow(10, 'quiet', cGodotRunner, cGodotRunner.y + 52, 'Starts and looks at the screenshots [terminal]'),
 
     // The workbench process
     stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
@@ -893,14 +917,43 @@ const containers = {
       [COMMAND_X, (cProduct.y + STORE_H + cCommand.y) / 2 + 20],
     ),
 
+    // The React page server
+    stacked('quiet', cReactPage, cReactServer, 100, 'Gets page code [HTTP]'),
+    stacked('flow', cReactPage, cReactServer, 250, 'Connects to the hub [WebSocket link]'),
+    stacked('flow', cReactServer, cSample, 165, 'Passes the link [WebSocket]'),
+
+    // The sample construct process reads the product model folder
+    rel(
+      'quiet',
+      [
+        right(cSample, cSample.y + 20),
+        [LANE_SAMPLE_X, cSample.y + 20],
+        [LANE_SAMPLE_X, cProduct.y + 66],
+        right(cProduct, cProduct.y + 66),
+      ],
+      'Reads [file system]',
+      [LANE_SAMPLE_X, cReactPage.y - UNIT_GAP / 2],
+    ),
+
     // The PixiJS process
+    stacked('flow', cPixiProcess, cSample, 165, 'Passes the link [WebSocket]'),
     stacked('quiet', cPixiPage, cPixiProcess, 100, 'Gets page code [HTTP]'),
     stacked('flow', cPixiPage, cPixiProcess, 250, 'Connects to the hub [WebSocket link]'),
 
-    // The Godot application, the Godot runner, and the Godot process
+    // The Godot application and the Godot runner
     stacked('quiet', cGodotRunner, cGodotApp, 100, 'Starts and copies\nthe screenshots\n[Docker]'),
     stacked('flow', cGodotApp, cGodotRunner, 255, 'Connects to the hub [WebSocket link]'),
-    stacked('quiet', cGodotRunner, cGodotProcess, 165, 'Carries the link [TCP]'),
+    rel(
+      'quiet',
+      [
+        right(cGodotRunner, cGodotRunner.y + 20),
+        [LANE_TCP_X, cGodotRunner.y + 20],
+        [LANE_TCP_X, cSample.y + 84],
+        right(cSample, cSample.y + 84),
+      ],
+      'Carries the link [TCP]',
+      [LANE_TCP_X, cGodotApp.y - UNIT_GAP / 2],
+    ),
     {
       kind: 'legend',
       x: 24,
@@ -1360,7 +1413,7 @@ const packageLayers = [
       'sample-product',
     ],
   },
-  { name: 'Applications', packages: ['workbench', 'workbench-app', 'pixi-page'] },
+  { name: 'Applications', packages: ['workbench', 'workbench-app', 'pixi-page', 'three-renderers'] },
   { name: 'Checks', packages: ['docs-check'] },
 ]
 

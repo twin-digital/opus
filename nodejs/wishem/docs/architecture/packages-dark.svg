@@ -1,261 +1,275 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 1797" width="1040" height="1797" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 1881" width="1040" height="1881" role="img" aria-labelledby="title desc">
 <title id="title">Package dependency view: Wishem</title>
-<desc id="desc">The view shows 14 packages in 5 layers: layer 1 (Hub), layer 2 (Model and subsystems), layer 3 (Hosts, renderers, and products), layer 4 (Applications), layer 5 (Checks). Layer 1 is at the bottom and layer 5 is at the top. Each of the 38 arrows goes down from a package to a package that it uses at run time, in dependencies or peerDependencies. A package uses only packages in its own layer or in a lower layer. The line Tests with on a card names the packages that its package has only in devDependencies.</desc>
+<desc id="desc">The view shows 15 packages in 5 layers: layer 1 (Hub), layer 2 (Model and subsystems), layer 3 (Hosts, renderers, and products), layer 4 (Applications), layer 5 (Checks). Layer 1 is at the bottom and layer 5 is at the top. Each of the 38 arrows goes down from a package to a package that it uses at run time, in dependencies or peerDependencies. A package uses only packages in its own layer or in a lower layer. The line Tests with on a card names the packages that its package has only in devDependencies.</desc>
 <defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.5"/></filter></defs>
-<rect width="1040" height="1797" fill="#121222"/>
+<rect width="1040" height="1881" fill="#121222"/>
 <text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#ececf3" text-anchor="start">Package dependency view: Wishem</text>
 <rect x="24" y="64" width="992" height="107" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
 <text x="40" y="88" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 5:</text>
 <text x="40" y="104" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Checks</text>
-<rect x="24" y="185" width="992" height="376" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
+<rect x="24" y="185" width="992" height="460" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
 <text x="40" y="209" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 4:</text>
 <text x="40" y="225" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Applications</text>
-<rect x="24" y="575" width="992" height="591" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
-<text x="40" y="599" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 3:</text>
-<text x="40" y="615" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Hosts,</text>
-<text x="40" y="631" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">renderers,</text>
-<text x="40" y="647" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">and products</text>
-<rect x="24" y="1180" width="992" height="437" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
-<text x="40" y="1204" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 2:</text>
-<text x="40" y="1220" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Model and</text>
-<text x="40" y="1236" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">subsystems</text>
-<rect x="24" y="1631" width="992" height="84" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
-<text x="40" y="1655" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 1: Hub</text>
-<rect x="420" y="78" width="176" height="79" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="108" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">docs-check</text>
-<text x="428" y="124" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: each other</text>
-<text x="428" y="140" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">package</text>
-<rect x="420" y="199" width="176" height="79" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="229" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">workbench-app</text>
-<text x="428" y="245" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with:</text>
-<text x="428" y="261" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">sample-product</text>
-<rect x="148" y="382" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="156" y="412" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">workbench</text>
-<text x="156" y="428" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: hub</text>
-<rect x="420" y="382" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="412" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">pixi-page</text>
-<rect x="148" y="589" width="176" height="79" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="156" y="619" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">renderer-godot</text>
-<rect x="420" y="589" width="176" height="79" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="619" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">construct-manager</text>
-<text x="428" y="635" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with:</text>
-<text x="428" y="651" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">sample-product</text>
-<rect x="420" y="784" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="814" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">sample-product</text>
-<text x="428" y="830" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: clock</text>
-<rect x="148" y="975" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="156" y="1005" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">host-nodejs</text>
-<text x="156" y="1021" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: clock</text>
-<rect x="420" y="975" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="1005" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">renderer-pixi</text>
-<rect x="692" y="975" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="700" y="1005" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">renderer-react</text>
-<rect x="420" y="1194" width="176" height="56" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="1224" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">update</text>
-<rect x="420" y="1438" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="1468" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">clock</text>
-<text x="428" y="1484" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: core</text>
-<rect x="148" y="1438" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="156" y="1468" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">core</text>
-<rect x="420" y="1645" width="176" height="56" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="428" y="1675" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">hub</text>
+<rect x="24" y="659" width="992" height="627" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
+<text x="40" y="683" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 3:</text>
+<text x="40" y="699" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Hosts,</text>
+<text x="40" y="715" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">renderers,</text>
+<text x="40" y="731" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">and products</text>
+<rect x="24" y="1300" width="992" height="401" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
+<text x="40" y="1324" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 2:</text>
+<text x="40" y="1340" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Model and</text>
+<text x="40" y="1356" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">subsystems</text>
+<rect x="24" y="1715" width="992" height="84" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
+<text x="40" y="1739" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Layer 1: Hub</text>
+<rect x="436" y="78" width="176" height="79" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="108" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">docs-check</text>
+<text x="444" y="124" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: each other</text>
+<text x="444" y="140" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">package</text>
+<rect x="436" y="199" width="176" height="79" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="229" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">workbench-app</text>
+<text x="444" y="245" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with:</text>
+<text x="444" y="261" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">sample-product</text>
+<rect x="148" y="394" width="176" height="111" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="156" y="424" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">workbench</text>
+<text x="156" y="440" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: hub</text>
+<rect x="436" y="394" width="176" height="111" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="424" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">pixi-page</text>
+<text x="444" y="440" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with:</text>
+<text x="444" y="456" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">construct-manager,</text>
+<text x="444" y="472" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">host-nodejs,</text>
+<text x="444" y="488" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">sample-product</text>
+<rect x="724" y="394" width="176" height="111" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="732" y="424" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">three-renderers</text>
+<text x="732" y="440" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: clock,</text>
+<text x="732" y="456" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">pixi-page,</text>
+<text x="732" y="472" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">renderer-godot,</text>
+<text x="732" y="488" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">workbench-app</text>
+<rect x="436" y="673" width="176" height="79" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="703" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">construct-manager</text>
+<text x="444" y="719" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with:</text>
+<text x="444" y="735" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">sample-product</text>
+<rect x="436" y="856" width="176" height="111" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="886" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">sample-product</text>
+<text x="444" y="902" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: clock</text>
+<rect x="148" y="856" width="176" height="111" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="156" y="886" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">renderer-godot</text>
+<text x="156" y="902" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: clock,</text>
+<text x="156" y="918" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">construct-manager,</text>
+<text x="156" y="934" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">core, host-nodejs,</text>
+<text x="156" y="950" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">hub, sample-product</text>
+<rect x="148" y="1119" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="156" y="1149" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">host-nodejs</text>
+<text x="156" y="1165" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: clock</text>
+<rect x="436" y="1119" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="1149" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">renderer-pixi</text>
+<rect x="724" y="1119" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="732" y="1149" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">renderer-react</text>
+<rect x="436" y="1314" width="176" height="56" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="1344" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">update</text>
+<rect x="436" y="1522" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="1552" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">clock</text>
+<text x="444" y="1568" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Tests with: core</text>
+<rect x="148" y="1522" width="176" height="63" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="156" y="1552" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">core</text>
+<rect x="436" y="1729" width="176" height="56" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="444" y="1759" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="start">hub</text>
 <g class="uses" data-from="clock" data-to="hub">
 <title>clock uses hub</title>
-<path d="M504 1501 L504 1531 Q504 1541 494 1541 L478 1541 Q468 1541 468 1551 L468 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="468,1645 462.5,1634 473.5,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M520 1585 L520 1615 Q520 1625 510 1625 L508.67 1625 Q498.67 1625 498.67 1635 L498.67 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="498.67,1729 493.17,1718 504.17,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="construct-manager" data-to="clock">
 <title>construct-manager uses clock</title>
-<path d="M504 668 L504 746 Q504 756 514 756 L619 756 Q629 756 629 766 L629 1340 Q629 1350 619 1350 L469.2 1350 Q459.2 1350 459.2 1360 L459.2 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="459.2,1438 453.7,1427 464.7,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M490.67 752 L490.67 770 Q490.67 780 480.67 780 L389 780 Q379 780 379 790 L379 1388 Q379 1398 389 1398 L474 1398 Q484 1398 484 1408 L484 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="484,1522 478.5,1511 489.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="construct-manager" data-to="core">
 <title>construct-manager uses core</title>
-<path d="M474.67 668 L474.67 710 Q474.67 720 484.67 720 L630 720 Q640 720 640 730 L640 1352 Q640 1362 630 1362 L258 1362 Q248 1362 248 1372 L248 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="248,1438 242.5,1427 253.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M461.33 752 L461.33 818 Q461.33 828 471.33 828 L635 828 Q645 828 645 838 L645 1460 Q645 1470 635 1470 L274 1470 Q264 1470 264 1480 L264 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="264,1522 258.5,1511 269.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="construct-manager" data-to="host-nodejs">
 <title>construct-manager uses host-nodejs</title>
-<path d="M445.33 668 L445.33 686 Q445.33 696 435.33 696 L235 696 Q225 696 225 706 L225 867.83 Q225 875 217.83 875 L217.83 875 Q210.67 875 210.67 882.17 L210.67 965" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="210.67,975 205.17,964 216.17,964" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M578.67 752 L578.67 794 Q578.67 804 588.67 804 L802 804 Q812 804 812 814 L812 1081 Q812 1091 802 1091 L301.8 1091 Q292.8 1091 292.8 1100 L292.8 1109" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="292.8,1119 287.3,1108 298.3,1108" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="construct-manager" data-to="hub">
 <title>construct-manager uses hub</title>
-<path d="M533.33 668 L533.33 698 Q533.33 708 543.33 708 L597 708 Q607 708 607 718 L607 1519 Q607 1529 597 1529 L522 1529 Q512 1529 512 1539 L512 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="512,1645 506.5,1634 517.5,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M520 752 L520 782 Q520 792 510 792 L411 792 Q401 792 401 802 L401 1627 Q401 1637 411 1637 L459.33 1637 Q469.33 1637 469.33 1647 L469.33 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="469.33,1729 463.83,1718 474.83,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="construct-manager" data-to="update">
 <title>construct-manager uses update</title>
-<path d="M562.67 668 L562.67 686 Q562.67 696 572.67 696 L880 696 Q890 696 890 706 L890 1104 Q890 1114 880 1114 L539.6 1114 Q529.6 1114 529.6 1124 L529.6 1184" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="529.6,1194 524.1,1183 535.1,1183" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M549.33 752 L549.33 806 Q549.33 816 559.33 816 L679 816 Q689 816 689 826 L689 1224 Q689 1234 679 1234 L538 1234 Q528 1234 528 1244 L528 1304" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="528,1314 522.5,1303 533.5,1303" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="core" data-to="hub">
 <title>core uses hub</title>
-<path d="M232 1501 L232 1579 Q232 1589 242 1589 L428.67 1589 Q438.67 1589 438.67 1599 L438.67 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="438.67,1645 433.17,1634 444.17,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M232 1585 L232 1651 Q232 1661 242 1661 L444.67 1661 Q454.67 1661 454.67 1671 L454.67 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="454.67,1729 449.17,1718 460.17,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="host-nodejs" data-to="core">
 <title>host-nodejs uses core</title>
-<path d="M202.67 1038 L202.67 1060.67 Q202.67 1066 197.33 1066 L197.33 1066 Q192 1066 192 1071.33 L192 1268 Q192 1278 182 1278 L178 1278 Q168 1278 168 1288 L168 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="168,1438 162.5,1427 173.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M202.67 1182 L202.67 1200 Q202.67 1210 192.67 1210 L169 1210 Q159 1210 159 1220 L159 1393.5 Q159 1398 163.5 1398 L163.5 1398 Q168 1398 168 1402.5 L168 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="168,1522 162.5,1511 173.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="host-nodejs" data-to="hub">
 <title>host-nodejs uses hub</title>
-<path d="M261.33 1038 L261.33 1128 Q261.33 1138 271.33 1138 L693 1138 Q703 1138 703 1148 L703 1543 Q703 1553 693 1553 L551.33 1553 Q541.33 1553 541.33 1563 L541.33 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="541.33,1645 535.83,1634 546.83,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M261.33 1182 L261.33 1248 Q261.33 1258 271.33 1258 L657 1258 Q667 1258 667 1268 L667 1627 Q667 1637 657 1637 L582 1637 Q572 1637 572 1647 L572 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="572,1729 566.5,1718 577.5,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="pixi-page" data-to="clock">
 <title>pixi-page uses clock</title>
-<path d="M466.29 445 L466.29 475 Q466.29 485 456.29 485 L389 485 Q379 485 379 495 L379 1292 Q379 1302 389 1302 L484.4 1302 Q494.4 1302 494.4 1312 L494.4 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="494.4,1438 488.9,1427 499.9,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M502.4 505 L502.4 595 Q502.4 605 512.4 605 L624 605 Q634 605 634 615 L634 1388 Q634 1398 624 1398 L538 1398 Q528 1398 528 1408 L528 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="528,1522 522.5,1511 533.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="pixi-page" data-to="core">
 <title>pixi-page uses core</title>
-<path d="M441.14 445 L441.14 463 Q441.14 473 431.14 473 L356 473 Q346 473 346 483 L346 1304 Q346 1314 336 1314 L226 1314 Q216 1314 216 1324 L216 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="216,1438 210.5,1427 221.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
-</g>
-<g class="uses" data-from="pixi-page" data-to="host-nodejs">
-<title>pixi-page uses host-nodejs</title>
-<path d="M541.71 445 L541.71 499 Q541.71 509 551.71 509 L715 509 Q725 509 725 519 L725 913 Q725 923 715 923 L279.33 923 Q269.33 923 269.33 933 L269.33 965" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="269.33,975 263.83,964 274.83,964" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M467.2 505 L467.2 523 Q467.2 533 457.2 533 L356 533 Q346 533 346 543 L346 1412 Q346 1422 336 1422 L226 1422 Q216 1422 216 1432 L216 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="216,1522 210.5,1511 221.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="pixi-page" data-to="hub">
 <title>pixi-page uses hub</title>
-<path d="M491.43 445 L491.43 487 Q491.43 497 481.43 497 L400 497 Q390 497 390 507 L390 1543 Q390 1553 400 1553 L487.33 1553 Q497.33 1553 497.33 1563 L497.33 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="497.33,1645 491.83,1634 502.83,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M537.6 505 L537.6 535 Q537.6 545 527.6 545 L422 545 Q412 545 412 555 L412 1615 Q412 1625 422 1625 L474 1625 Q484 1625 484 1635 L484 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="484,1729 478.5,1718 489.5,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="pixi-page" data-to="renderer-pixi">
 <title>pixi-page uses renderer-pixi</title>
-<path d="M566.86 445 L566.86 487 Q566.86 497 576.86 497 L726 497 Q736 497 736 507 L736 925 Q736 935 726 935 L522 935 Q512 935 512 945 L512 965" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="512,975 506.5,964 517.5,964" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
-</g>
-<g class="uses" data-from="pixi-page" data-to="update">
-<title>pixi-page uses update</title>
-<path d="M516.57 445 L516.57 523 Q516.57 533 526.57 533 L641 533 Q651 533 651 543 L651 1080 Q651 1090 641 1090 L504.4 1090 Q494.4 1090 494.4 1100 L494.4 1184" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="494.4,1194 488.9,1183 499.9,1183" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
-</g>
-<g class="uses" data-from="renderer-godot" data-to="clock">
-<title>renderer-godot uses clock</title>
-<path d="M249.6 668 L249.6 734 Q249.6 744 259.6 744 L652 744 Q662 744 662 754 L662 1364 Q662 1374 652 1374 L574.8 1374 Q564.8 1374 564.8 1384 L564.8 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="564.8,1438 559.3,1427 570.3,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
-</g>
-<g class="uses" data-from="renderer-godot" data-to="core">
-<title>renderer-godot uses core</title>
-<path d="M284.8 668 L284.8 722 Q284.8 732 294.8 732 L663 732 Q673 732 673 742 L673 1376 Q673 1386 663 1386 L290 1386 Q280 1386 280 1396 L280 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="280,1438 274.5,1427 285.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
-</g>
-<g class="uses" data-from="renderer-godot" data-to="host-nodejs">
-<title>renderer-godot uses host-nodejs</title>
-<path d="M179.2 668 L179.2 689.6 Q179.2 696 185.6 696 L185.6 696 Q192 696 192 702.4 L192 869.67 Q192 875 186.67 875 L186.67 875 Q181.33 875 181.33 880.33 L181.33 965" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="181.33,975 175.83,964 186.83,964" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
-</g>
-<g class="uses" data-from="renderer-godot" data-to="hub">
-<title>renderer-godot uses hub</title>
-<path d="M214.4 668 L214.4 746 Q214.4 756 224.4 756 L347 756 Q357 756 357 766 L357 1555 Q357 1565 367 1565 L443.33 1565 Q453.33 1565 453.33 1575 L453.33 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="453.33,1645 447.83,1634 458.83,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M572.8 505 L572.8 535 Q572.8 545 582.8 545 L690 545 Q700 545 700 555 L700 1045 Q700 1055 690 1055 L538 1055 Q528 1055 528 1065 L528 1109" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="528,1119 522.5,1108 533.5,1108" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="renderer-pixi" data-to="core">
 <title>renderer-pixi uses core</title>
-<path d="M474.67 1038 L474.67 1104 Q474.67 1114 464.67 1114 L235 1114 Q225 1114 225 1124 L225 1280 Q225 1290 215 1290 L194 1290 Q184 1290 184 1300 L184 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="184,1438 178.5,1427 189.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M490.67 1182 L490.67 1236 Q490.67 1246 480.67 1246 L312 1246 Q302 1246 302 1256 L302 1388 Q302 1398 292 1398 L194 1398 Q184 1398 184 1408 L184 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="184,1522 178.5,1511 189.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="renderer-pixi" data-to="hub">
 <title>renderer-pixi uses hub</title>
-<path d="M533.33 1038 L533.33 1092 Q533.33 1102 543.33 1102 L704 1102 Q714 1102 714 1112 L714 1555 Q714 1565 704 1565 L566 1565 Q556 1565 556 1575 L556 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="556,1645 550.5,1634 561.5,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M549.33 1182 L549.33 1212 Q549.33 1222 559.33 1222 L668 1222 Q678 1222 678 1232 L678 1639 Q678 1649 668 1649 L596.67 1649 Q586.67 1649 586.67 1659 L586.67 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="586.67,1729 581.17,1718 592.17,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="renderer-react" data-to="core">
 <title>renderer-react uses core</title>
-<path d="M805.33 1038 L805.33 1068 Q805.33 1078 795.33 1078 L746 1078 Q736 1078 736 1088 L736 1388 Q736 1398 726 1398 L306 1398 Q296 1398 296 1408 L296 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="296,1438 290.5,1427 301.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M837.33 1182 L837.33 1212 Q837.33 1222 827.33 1222 L745 1222 Q735 1222 735 1232 L735 1484 Q735 1494 725 1494 L321 1494 Q312 1494 312 1503 L312 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="312,1522 306.5,1511 317.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="renderer-react" data-to="hub">
 <title>renderer-react uses hub</title>
-<path d="M746.67 1038 L746.67 1056 Q746.67 1066 736.67 1066 L735 1066 Q725 1066 725 1076 L725 1567 Q725 1577 715 1577 L580.67 1577 Q570.67 1577 570.67 1587 L570.67 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="570.67,1645 565.17,1634 576.17,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M778.67 1182 L778.67 1200 Q778.67 1210 768.67 1210 L710 1210 Q700 1210 700 1220 L700 1663 Q700 1673 690 1673 L611.33 1673 Q601.33 1673 601.33 1683 L601.33 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="601.33,1729 595.83,1718 606.83,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="sample-product" data-to="core">
 <title>sample-product uses core</title>
-<path d="M504 847 L504 877 Q504 887 514 887 L891 887 Q901 887 901 897 L901 1400 Q901 1410 891 1410 L321 1410 Q312 1410 312 1419 L312 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="312,1438 306.5,1427 317.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M520 967 L520 1009 Q520 1019 530 1019 L701 1019 Q711 1019 711 1029 L711 1472 Q711 1482 701 1482 L306 1482 Q296 1482 296 1492 L296 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="296,1522 290.5,1511 301.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="sample-product" data-to="hub">
 <title>sample-product uses hub</title>
-<path d="M460 847 L460 889 Q460 899 470 899 L869 899 Q879 899 879 909 L879 1579 Q879 1589 869 1589 L595.33 1589 Q585.33 1589 585.33 1599 L585.33 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="585.33,1645 579.83,1634 590.83,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M476 967 L476 1021 Q476 1031 486 1031 L646 1031 Q656 1031 656 1041 L656 1615 Q656 1625 646 1625 L567.33 1625 Q557.33 1625 557.33 1635 L557.33 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="557.33,1729 551.83,1718 562.83,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="sample-product" data-to="update">
 <title>sample-product uses update</title>
-<path d="M548 847 L548 865 Q548 875 558 875 L902 875 Q912 875 912 885 L912 1116 Q912 1126 902 1126 L574.8 1126 Q564.8 1126 564.8 1136 L564.8 1184" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="564.8,1194 559.3,1183 570.3,1183" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M564 967 L564 997 Q564 1007 574 1007 L901 1007 Q911 1007 911 1017 L911 1236 Q911 1246 901 1246 L582 1246 Q572 1246 572 1256 L572 1304" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="572,1314 566.5,1303 577.5,1303" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+</g>
+<g class="uses" data-from="three-renderers" data-to="construct-manager">
+<title>three-renderers uses construct-manager</title>
+<path d="M770.29 505 L770.29 559 Q770.29 569 760.29 569 L567.33 569 Q557.33 569 557.33 579 L557.33 663" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="557.33,673 551.83,662 562.83,662" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+</g>
+<g class="uses" data-from="three-renderers" data-to="core">
+<title>three-renderers uses core</title>
+<path d="M745.14 505 L745.14 547 Q745.14 557 735.14 557 L367 557 Q357 557 357 567 L357 1424 Q357 1434 347 1434 L242 1434 Q232 1434 232 1444 L232 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="232,1522 226.5,1511 237.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+</g>
+<g class="uses" data-from="three-renderers" data-to="host-nodejs">
+<title>three-renderers uses host-nodejs</title>
+<path d="M845.71 505 L845.71 607 Q845.71 617 835.71 617 L745 617 Q735 617 735 627 L735 1057 Q735 1067 725 1067 L232.4 1067 Q222.4 1067 222.4 1077 L222.4 1109" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="222.4,1119 216.9,1108 227.9,1108" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+</g>
+<g class="uses" data-from="three-renderers" data-to="hub">
+<title>three-renderers uses hub</title>
+<path d="M795.43 505 L795.43 571 Q795.43 581 785.43 581 L633 581 Q623 581 623 591 L623 1603 Q623 1613 613 1613 L538 1613 Q528 1613 528 1623 L528 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="528,1729 522.5,1718 533.5,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+</g>
+<g class="uses" data-from="three-renderers" data-to="renderer-react">
+<title>three-renderers uses renderer-react</title>
+<path d="M870.86 505 L870.86 525.57 Q870.86 533 863.43 533 L863.43 533 Q856 533 856 540.43 L856 989.67 Q856 995 850.67 995 L850.67 995 Q845.33 995 845.33 1000.33 L845.33 1109" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="845.33,1119 839.83,1108 850.83,1108" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+</g>
+<g class="uses" data-from="three-renderers" data-to="sample-product">
+<title>three-renderers uses sample-product</title>
+<path d="M820.57 505 L820.57 595 Q820.57 605 810.57 605 L666 605 Q656 605 656 615 L656 782 Q656 792 646 792 L538 792 Q528 792 528 802 L528 846" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="528,856 522.5,845 533.5,845" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="update" data-to="clock">
 <title>update uses clock</title>
-<path d="M504 1250 L504 1280 Q504 1290 514 1290 L519.6 1290 Q529.6 1290 529.6 1300 L529.6 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="529.6,1438 524.1,1427 535.1,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M520 1370 L520 1412 Q520 1422 530 1422 L562 1422 Q572 1422 572 1432 L572 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="572,1522 566.5,1511 577.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="update" data-to="core">
 <title>update uses core</title>
-<path d="M460 1250 L460 1328 Q460 1338 450 1338 L274 1338 Q264 1338 264 1348 L264 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="264,1438 258.5,1427 269.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M476 1370 L476 1448 Q476 1458 466 1458 L290 1458 Q280 1458 280 1468 L280 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="280,1522 274.5,1511 285.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="update" data-to="hub">
 <title>update uses hub</title>
-<path d="M548 1250 L548 1292 Q548 1302 558 1302 L608 1302 Q618 1302 618 1312 L618 1531 Q618 1541 608 1541 L536.67 1541 Q526.67 1541 526.67 1551 L526.67 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="526.67,1645 521.17,1634 532.17,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M564 1370 L564 1400 Q564 1410 574 1410 L679 1410 Q689 1410 689 1420 L689 1651 Q689 1661 679 1661 L552.67 1661 Q542.67 1661 542.67 1671 L542.67 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="542.67,1729 537.17,1718 548.17,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench" data-to="core">
 <title>workbench uses core</title>
-<path d="M202.67 445 L202.67 523 Q202.67 533 212.67 533 L358 533 Q368 533 368 543 L368 1316 Q368 1326 358 1326 L242 1326 Q232 1326 232 1336 L232 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="232,1438 226.5,1427 237.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M202.67 505 L202.67 595 Q202.67 605 212.67 605 L358 605 Q368 605 368 615 L368 1436 Q368 1446 358 1446 L258 1446 Q248 1446 248 1456 L248 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="248,1522 242.5,1511 253.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench" data-to="host-nodejs">
 <title>workbench uses host-nodejs</title>
-<path d="M261.33 445 L261.33 511 Q261.33 521 271.33 521 L748 521 Q758 521 758 531 L758 937 Q758 947 748 947 L307.67 947 Q298.67 947 298.67 956 L298.67 965" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="298.67,975 293.17,964 304.17,964" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M261.33 505 L261.33 583 Q261.33 593 271.33 593 L747 593 Q757 593 757 603 L757 1069 Q757 1079 747 1079 L267.6 1079 Q257.6 1079 257.6 1089 L257.6 1109" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="257.6,1119 252.1,1108 263.1,1108" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench-app" data-to="construct-manager">
 <title>workbench-app uses construct-manager</title>
-<path d="M482 278 L482 332 Q482 342 492 342 L597 342 Q607 342 607 352 L607 463 Q607 473 597 473 L522 473 Q512 473 512 483 L512 579" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="512,589 506.5,578 517.5,578" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M498 278 L498 332 Q498 342 488 342 L411 342 Q401 342 401 352 L401 559 Q401 569 411 569 L488.67 569 Q498.67 569 498.67 579 L498.67 663" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="498.67,673 493.17,662 504.17,662" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench-app" data-to="core">
 <title>workbench-app uses core</title>
-<path d="M460 278 L460 332 Q460 342 450 342 L345 342 Q335 342 335 352 L335 1292 Q335 1302 325 1302 L210 1302 Q200 1302 200 1312 L200 1428" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="200,1438 194.5,1427 205.5,1427" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M476 278 L476 320 Q476 330 466 330 L345 330 Q335 330 335 340 L335 1400 Q335 1410 325 1410 L210 1410 Q200 1410 200 1420 L200 1512" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="200,1522 194.5,1511 205.5,1511" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench-app" data-to="host-nodejs">
 <title>workbench-app uses host-nodejs</title>
-<path d="M548 278 L548 308 Q548 318 558 318 L693 318 Q703 318 703 328 L703 901 Q703 911 693 911 L250 911 Q240 911 240 921 L240 965" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="240,975 234.5,964 245.5,964" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M564 278 L564 308 Q564 318 574 318 L657 318 Q667 318 667 328 L667 1033 Q667 1043 657 1043 L197.2 1043 Q187.2 1043 187.2 1053 L187.2 1109" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="187.2,1119 181.7,1108 192.7,1108" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench-app" data-to="hub">
 <title>workbench-app uses hub</title>
-<path d="M504 278 L504 344 Q504 354 494 354 L411 354 Q401 354 401 364 L401 1519 Q401 1529 411 1529 L472.67 1529 Q482.67 1529 482.67 1539 L482.67 1635" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="482.67,1645 477.17,1634 488.17,1634" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M520 278 L520 344 Q520 354 510 354 L433 354 Q423 354 423 364 L423 1603 Q423 1613 433 1613 L503.33 1613 Q513.33 1613 513.33 1623 L513.33 1719" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="513.33,1729 507.83,1718 518.83,1718" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench-app" data-to="renderer-react">
 <title>workbench-app uses renderer-react</title>
-<path d="M570 278 L570 296 Q570 306 580 306 L704 306 Q714 306 714 316 L714 901 Q714 911 724 911 L774 911 Q784 911 784 921 L784 965" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="784,975 778.5,964 789.5,964" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M586 278 L586 296 Q586 306 596 306 L668 306 Q678 306 678 316 L678 985 Q678 995 688 995 L776.67 995 Q786.67 995 786.67 1005 L786.67 1109" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="786.67,1119 781.17,1108 792.17,1108" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench-app" data-to="update">
 <title>workbench-app uses update</title>
-<path d="M526 278 L526 320 Q526 330 536 330 L608 330 Q618 330 618 340 L618 1068 Q618 1078 608 1078 L469.2 1078 Q459.2 1078 459.2 1088 L459.2 1184" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="459.2,1194 453.7,1183 464.7,1183" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M542 278 L542 356 Q542 366 532 366 L400 366 Q390 366 390 376 L390 1212 Q390 1222 400 1222 L474 1222 Q484 1222 484 1232 L484 1304" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="484,1314 478.5,1303 489.5,1303" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
 <g class="uses" data-from="workbench-app" data-to="workbench">
 <title>workbench-app uses workbench</title>
-<path d="M438 278 L438 308 Q438 318 428 318 L250 318 Q240 318 240 328 L240 372" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="240,382 234.5,371 245.5,371" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M454 278 L454 308 Q454 318 444 318 L250 318 Q240 318 240 328 L240 384" fill="none" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="240,394 234.5,383 245.5,383" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
 </g>
-<rect x="24" y="1729" width="992" height="44" rx="12" fill="#1b1b30" stroke="#45455d"/>
-<text x="40" y="1755.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">Legend</text>
-<rect x="100.64" y="1743" width="26" height="16" rx="5" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
-<text x="134.64" y="1755.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Layer</text>
-<rect x="188.64" y="1743" width="26" height="16" rx="5" fill="#1b1b30" stroke="#45455d"/>
-<text x="222.64" y="1755.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Package</text>
-<path d="M291.04 1751 L307.04 1751" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round"/>
-<polygon points="317.04,1751 306.04,1756.5 306.04,1745.5" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
-<text x="325.04" y="1755.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Uses at run time [dependencies, peerDependencies]</text>
+<rect x="24" y="1813" width="992" height="44" rx="12" fill="#1b1b30" stroke="#45455d"/>
+<text x="40" y="1839.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">Legend</text>
+<rect x="100.64" y="1827" width="26" height="16" rx="5" fill="#1e1f30" stroke="#45455d" stroke-width="1.5"/>
+<text x="134.64" y="1839.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Layer</text>
+<rect x="188.64" y="1827" width="26" height="16" rx="5" fill="#1b1b30" stroke="#45455d"/>
+<text x="222.64" y="1839.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Package</text>
+<path d="M291.04 1835 L307.04 1835" stroke="#a3a3b8" stroke-width="2" stroke-linecap="round"/>
+<polygon points="317.04,1835 306.04,1840.5 306.04,1829.5" fill="#a3a3b8" stroke="#a3a3b8" stroke-width="1" stroke-linejoin="round"/>
+<text x="325.04" y="1839.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Uses at run time [dependencies, peerDependencies]</text>
 </svg>
