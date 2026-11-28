@@ -17,6 +17,7 @@ export { isEqual } from './equality.js'
 export { createStore, storeInputs } from './store.js'
 export type {
   AddEntityPayload,
+  ClearFieldPayload,
   RemoveEntityPayload,
   ReplaceModelPayload,
   SetFieldPayload,

@@ -50,16 +50,17 @@ Options:
 - `id`: the ID of the store. The default is `store`. Each input type starts with the ID and a slash.
 - `model`: the first model. The default is a model with no definitions and no entities.
 
-The store applies four inputs.
+The store applies five inputs.
 
-| Input type            | Payload                                   | Effect                                                       |
-| --------------------- | ----------------------------------------- | ------------------------------------------------------------ |
-| `store/replace-model` | `{ model }`                               | Replaces the model.                                          |
-| `store/add-entity`    | `{ entity }`                              | Adds the entity at the end of the list. The ID must be new.  |
-| `store/remove-entity` | `{ entity }`, the ID of the entity        | Removes the entity.                                          |
-| `store/set-field`     | `{ entity, componentType, field, value }` | Sets the value. Adds the component when the entity has none. |
+| Input type            | Payload                                   | Effect                                                                                             |
+| --------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `store/replace-model` | `{ model }`                               | Replaces the model.                                                                                |
+| `store/add-entity`    | `{ entity }`                              | Adds the entity at the end of the list. The ID must be new.                                        |
+| `store/remove-entity` | `{ entity }`, the ID of the entity        | Removes the entity.                                                                                |
+| `store/set-field`     | `{ entity, componentType, field, value }` | Sets the value. Adds the component when the entity has none.                                       |
+| `store/clear-field`   | `{ entity, componentType, field }`        | Removes the value. Keeps the component. Keeps the same part when the field has no value to remove. |
 
-`storeInputs(id)` gives the functions that make these inputs: `replaceModel`, `addEntity`, `removeEntity`, and `setField`.
+`storeInputs(id)` gives the functions that make these inputs: `replaceModel`, `addEntity`, `removeEntity`, `setField`, and `clearField`.
 
 The store applies an input only when the model after the input is correct. Otherwise, the store refuses the input with problems. Each problem has a `message` and a `path`. The part and the record of the hub do not change. An input that changes nothing keeps the same part object. Each part is frozen. An entity that an input does not change is the same object in the new part.
 
@@ -87,7 +88,7 @@ const refused = await form.submit(storeInputs().removeEntity('e_00000000-0000-40
 - `validateModel(data)`: checks data against the rules of the model. Returns `{ ok: true, model, warnings }` or `{ ok: false, problems }`.
 - `ModelError`: the error with the list `problems`. `createStore` throws it for a first model that is not correct.
 - `createStore(options)`: makes the store, a model subsystem for a hub. See "The store".
-- `storeInputs(id)`: gives the functions that make the four inputs of a store.
+- `storeInputs(id)`: gives the functions that make the five inputs of a store.
 - `isEqual(a, b)`: compares two models by canonical JSON.
 
 ## No Node.js API

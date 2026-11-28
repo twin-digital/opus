@@ -1,4 +1,4 @@
-import { createHub } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs } from '@thrashplay/wishem-hub'
 import { describe, expect, it } from 'vitest'
 import type { Model } from './model.js'
 import { createStore, storeInputs } from './store.js'
@@ -146,6 +146,26 @@ describe('a store with the four field types in a hub', () => {
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
     expect(hub.read().store).toBe(before)
     expect(hub.record()).toHaveLength(0)
+  })
+})
+
+describe('clear-field in a hub', () => {
+  it('refuses an input with no field, keeps the part, and gives no record', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({ type: 'store/clear-field', payload: { entity: ENT, componentType: CT } })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+    expect(hub.record()).toHaveLength(0)
+  })
+
+  it('records a clear, and a rewind restores the value', async () => {
+    const { hub, form } = start()
+    const result = await form.submit(storeInputs().clearField({ entity: ENT, componentType: CT, field: FLD }))
+    expect(result).toEqual({ ok: true, seq: 1 })
+    expect((hub.read().store as Model).entities[0]?.components[CT]).toEqual({})
+    expect(await form.submit(hubInputs.rewind(0))).toMatchObject({ ok: true })
+    expect((hub.read().store as Model).entities[0]?.components[CT]?.[FLD]).toBe('Wishem')
   })
 })
 
