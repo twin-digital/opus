@@ -287,6 +287,52 @@ describe('AppBar that edits its title', () => {
     expect(alert()).not.toBeNull()
   })
 
+  it('shows the line of a general failure when the rename function rejects', async () => {
+    const onRename = vi.fn(() => Promise.reject<RenameOutcome>(new Error('x')))
+    draw({ title: 'Wishem', onRename })
+    open()
+    type('Offline')
+    press('Enter')
+    await flush()
+    expect(alert()?.textContent).toBe('The title is not saved. The workbench failed to apply the change.')
+    expect(field()?.value).toBe('Offline')
+    expect(field()?.readOnly).toBe(false)
+  })
+
+  it('shows the line of a general failure when the rename function throws', async () => {
+    const onRename = vi.fn((): Promise<RenameOutcome> => {
+      throw new Error('x')
+    })
+    draw({ title: 'Wishem', onRename })
+    open()
+    type('Offline')
+    press('Enter')
+    await flush()
+    expect(alert()?.textContent).toBe('The title is not saved. The workbench failed to apply the change.')
+    expect(field()?.value).toBe('Offline')
+    expect(field()?.readOnly).toBe(false)
+  })
+
+  it('sends the text with no spaces at the ends', async () => {
+    const onRename = vi.fn(() => Promise.resolve(saved))
+    draw({ title: 'Wishem', onRename })
+    open()
+    type('  Wishem studio  ')
+    press('Enter')
+    await flush()
+    expect(onRename).toHaveBeenCalledExactlyOnceWith('Wishem studio')
+  })
+
+  it('closes the field with no call when the trimmed text is the same title', () => {
+    const onRename = vi.fn(() => Promise.resolve(saved))
+    draw({ title: 'Wishem', onRename })
+    open()
+    type(' Wishem ')
+    press('Enter')
+    expect(onRename).not.toHaveBeenCalled()
+    expect(field()).toBeNull()
+  })
+
   it('closes the field after an accepted rename, and puts the focus on the title button', async () => {
     const pending = defer()
     draw({ title: 'Wishem', onRename: () => pending.promise })

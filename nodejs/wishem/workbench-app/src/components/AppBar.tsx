@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { outcomeText } from '../views/outcome-text.js'
 
 export type RenameOutcome = { saved: true } | { saved: false; reason: string }
 
@@ -70,13 +71,27 @@ export const AppBar = ({ title, onRename, initial }: AppBarProps) => {
     if (!onRename || (phaseRef.current !== 'edit' && phaseRef.current !== 'not-saved')) {
       return
     }
-    if (draft.trim() === '' || draft === title) {
+    const text = draft.trim()
+    if (text === '' || text === title) {
       close(refocus)
       return
     }
     setReason('')
     go('saving')
-    void onRename(draft).then((outcome) => {
+    const fail = () => {
+      if (mounted.current) {
+        setReason(outcomeText({ ok: false, reason: 'failed', problems: [] }))
+        go('not-saved')
+      }
+    }
+    let sent: Promise<RenameOutcome>
+    try {
+      sent = onRename(text)
+    } catch {
+      fail()
+      return
+    }
+    void sent.then((outcome) => {
       if (!mounted.current) {
         return
       }
@@ -86,7 +101,7 @@ export const AppBar = ({ title, onRename, initial }: AppBarProps) => {
         setReason(outcome.reason)
         go('not-saved')
       }
-    })
+    }, fail)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
