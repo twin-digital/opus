@@ -35,7 +35,8 @@ export interface ProductConstruct {
 }
 
 /**
- * Starts a hub with the parts `time` and `store`, where the update subsystem runs the behaviors,, serves its link on a port that the system selects, and starts a clock.
+ * Starts a hub with the parts `time` and `store`. The update subsystem runs the behaviors.
+ * Serves the link on a port that the system selects, and starts a clock.
  * Only the source `construct-manager` can rewind the hub.
  * Rejects with the error of a step, and then holds no port and no timer.
  */

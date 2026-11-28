@@ -305,10 +305,9 @@ describe('attachConstructManager', () => {
     await send({ type: 'store/remove-entity', payload: { entity: SAMPLE_ENTITY } })
     await tester.submit(setColor('#b91c1c'))
     await eventually(() => entry('play')?.message !== undefined)
-    expect(entry('play')?.message).toBeTruthy()
-    expect(lines).toContain(
-      `wishem: construct play: the change of the product was refused: ${entry('play')?.message ?? ''}`,
-    )
+    const refusal = `No entity has the ID "${SAMPLE_ENTITY}"`
+    expect(entry('play')?.message).toBe(refusal)
+    expect(lines).toContain(`wishem: construct play: the change of the product was refused: ${refusal}`)
     await send({ type: 'store/replace-model', payload: { model } })
     await tester.submit(setColor('#15803d'))
     await eventually(() => colorOf(construct('play').hub) === '#15803d')
