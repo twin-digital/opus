@@ -73,7 +73,7 @@ This is the path of a tick from the clock in the sample construct process to the
 This is the path of a tick from the clock in the sample construct process to the picture in the PixiJS page.
 
 1. The clock sends `time/advance` of 500 milliseconds to the hub, through its input subsystem `clock`.
-2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the `Color` field to the color at the position `ticks` modulo 4.
+2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the field `color` to the color at the position `ticks` modulo 4.
 3. The hub sends the `applied` message with the new parts on each open link. The Vite development server of the PixiJS process passes the WebSocket to the PixiJS page.
 4. The remote port of the PixiJS page tells its subscribers about the `applied` event.
 5. `startRenderer` reads the part `store`, calls `update` of the `ClearColor` view, and the view sets the tint of its sprite.
@@ -97,7 +97,7 @@ This is the path of a tick from the clock in the sample construct process to the
 This is the path of a tick from the clock in the sample construct process to the screenshot.
 
 1. The clock sends `time/advance` of 500 milliseconds to the hub, through its input subsystem `clock`.
-2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the `Color` field to the color at the position `ticks` modulo 4.
+2. The part `time` counts the tick. The update subsystem runs the color behavior, which sets the field `color` to the color at the position `ticks` modulo 4.
 3. The hub sends the `applied` message with the new parts on the open link. `serveHub` sends it over the connection that the Godot runner carries.
 4. The remote port in GDScript of the Godot application tells its subscribers about the `applied` event.
 5. The Godot renderer reads the part `store`, calls `update` of the `ClearColor` view, and the view sets the color of its `ColorRect`.
@@ -267,19 +267,27 @@ The files of the model folder are `definitions/*.json` for the component types a
 
 - [`wishem/architecture/diagrams`](../../../../openspec/specs/wishem/architecture/diagrams/spec.md): the diagrams of this document.
 - [`wishem/renderer-html/views`](../../../../openspec/specs/wishem/renderer-html/views/spec.md): the view files, the sidecars, and the table of views.
+- [`wishem/renderer-html/view-types`](../../../../openspec/specs/wishem/renderer-html/view-types/spec.md): the generated types of the props of a React view.
 - [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the hub, and the marked element.
+- [`wishem/renderer-html/renderer`](../../../../openspec/specs/wishem/renderer-html/renderer/spec.md): the React renderer package and what it draws from a port.
+- [`wishem/renderer-html/react-page`](../../../../openspec/specs/wishem/renderer-html/react-page/spec.md): the React page and its page server.
 - [`wishem/renderer-pixi/renderer`](../../../../openspec/specs/wishem/renderer-pixi/renderer/spec.md): the PixiJS renderer package and the PixiJS view.
-- [`wishem/renderer-pixi/construct`](../../../../openspec/specs/wishem/renderer-pixi/construct/spec.md): the `start` script of the PixiJS page.
 - [`wishem/renderer-pixi/page`](../../../../openspec/specs/wishem/renderer-pixi/page/spec.md): the PixiJS page, its keys, and its status line.
 - [`wishem/renderer-godot/remote-port`](../../../../openspec/specs/wishem/renderer-godot/remote-port/spec.md): the remote port in GDScript.
 - [`wishem/renderer-godot/renderer`](../../../../openspec/specs/wishem/renderer-godot/renderer/spec.md): the Godot renderer and the Godot view.
 - [`wishem/renderer-godot/application`](../../../../openspec/specs/wishem/renderer-godot/application/spec.md): the Godot application, the runner, and the screenshots.
+- [`wishem/renderers/sample-construct`](../../../../openspec/specs/wishem/renderers/sample-construct/spec.md): the sample construct and its command `construct`.
+- [`wishem/renderers/end-to-end-test`](../../../../openspec/specs/wishem/renderers/end-to-end-test/spec.md): the test of the three renderers on one hub.
 - [`wishem/workbench/start`](../../../../openspec/specs/wishem/workbench/start/spec.md): the `start` script of the workbench.
 - [`wishem/workbench/mount`](../../../../openspec/specs/wishem/workbench/mount/spec.md): the mount of a product in the workbench construct.
 - [`wishem/workbench/construct-list`](../../../../openspec/specs/wishem/workbench/construct-list/spec.md): the model subsystem `constructs` and its inputs.
 - [`wishem/workbench/construct-manager`](../../../../openspec/specs/wishem/workbench/construct-manager/spec.md): the construct manager and the product constructs.
-- [`wishem/sample-product/model`](../../../../openspec/specs/wishem/sample-product/model/spec.md): the model of the sample product and its count behavior.
+- [`wishem/sample-product/model`](../../../../openspec/specs/wishem/sample-product/model/spec.md): the model of the sample product, its count behavior, and its color behavior.
+- [`wishem/core/model`](../../../../openspec/specs/wishem/core/model/spec.md): the data of a model, its IDs, and the rules of a correct model.
 - [`wishem/core/store`](../../../../openspec/specs/wishem/core/store/spec.md): the store.
+- [`wishem/host-nodejs/cli`](../../../../openspec/specs/wishem/host-nodejs/cli/spec.md): the `wishem` command.
+- [`wishem/host-nodejs/model-folder`](../../../../openspec/specs/wishem/host-nodejs/model-folder/spec.md): the model folder, the storage subsystem, and `state.json`.
+- [`wishem/host-nodejs/server`](../../../../openspec/specs/wishem/host-nodejs/server/spec.md): the local server that carries the link as a WebSocket.
 - [`wishem/clock/time`](../../../../openspec/specs/wishem/clock/time/spec.md): the `time` subsystem and the clock.
 - [`wishem/update/update-subsystem`](../../../../openspec/specs/wishem/update/update-subsystem/spec.md): the update subsystem and the native behaviors.
 - [`wishem/hub/construct`](../../../../openspec/specs/wishem/hub/construct/spec.md): the hub, the ports, and the record.
