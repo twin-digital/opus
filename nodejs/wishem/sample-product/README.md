@@ -1,6 +1,6 @@
 # @thrashplay/wishem-sample-product
 
-The sample product of Wishem. It is a small authored model with a color and a count, and a behavior that makes each tick of the clock add 1 to the count. The workbench, the construct manager, and the renderers use it as the one product to mount, run, and draw.
+The sample product of Wishem. It is a small authored model with a color and a count, and two behaviors. Each tick of the clock adds 1 to the count and sets the next color. The workbench, the construct manager, and the renderers use it as the one product to mount, run, and draw.
 
 The package is private. The root entry uses no Node.js API.
 
@@ -16,7 +16,7 @@ The folder `model/` is a model folder. It holds two files in `definitions/` and 
 | `count`    | `fld_ef085a2e-22ef-4409-bac4-9cd5648d0705` | `COUNT_FIELD`   |
 | The entity | `e_99969ed3-f499-4dbb-bf6d-958db4542884`   | `SAMPLE_ENTITY` |
 
-The one entity has the color `#1d4ed8` and the count `0`. The color is a string. The count is a number.
+The one entity has the color `#1d4ed8` and the count `0` at the start. The color is a string. The count is a number.
 
 The path of the model folder is `nodejs/wishem/sample-product/model`. To start it alone, run this command from the root of the repository:
 
@@ -28,9 +28,13 @@ pnpm --filter @thrashplay/wishem-workbench exec wishem start "$PWD/nodejs/wishem
 
 `countBehavior` is a native behavior with the ID `sample-product/count` and the component type `Counter`. The update subsystem runs it at each tick. It adds 1 to `count` when the value is a number. Other values stay. The behavior never refuses a tick.
 
-`behaviors` is the list `[countBehavior]`. A product construct gets the code of the product from this export.
+## The color behavior
 
-The count depends only on the recorded ticks. A replay or a rewind gives the same count.
+`colorBehavior` is a native behavior with the ID `sample-product/color` and the component type `Color`. The update subsystem runs it at each tick. It sets `color` to the color at the position `ticks` modulo 4 in `COLORS`: `#1d4ed8`, `#b91c1c`, `#15803d`, `#a16207`. Tick 1 gives `#b91c1c`. Tick 4 gives `#1d4ed8`. A color that a person sets stays until the next tick.
+
+`behaviors` is the list `[countBehavior, colorBehavior]`. A product construct gets the code of the product from this export.
+
+The count and the color depend only on the recorded ticks. A replay or a rewind gives the same values.
 
 Put the `time` subsystem before the update subsystem in the list of subsystems.
 
@@ -47,7 +51,7 @@ const hub = createHub({ subsystems: [createTime(), createUpdate({ store: createS
 hub.start()
 const controls = hub.attach({ id: 'controls', kind: 'input' })
 await controls.submit(timeInputs.advance(100))
-// The count of the sample entity is now 1.
+// The count of the sample entity is now 1. The color is now `#b91c1c`.
 ```
 
 `model` is the model of the folder `model/`.
