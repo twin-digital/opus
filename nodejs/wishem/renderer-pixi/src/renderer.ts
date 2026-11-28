@@ -2,6 +2,7 @@ import { Container } from 'pixi.js'
 import type { ComponentTypeDefinition, Entity, Id, Model } from '@thrashplay/wishem-core'
 import { propNames } from './field-names.js'
 import type { DrawnComponent, PixiRenderer, RendererOptions, ViewProps } from './types.js'
+import { describeWarning, viewWarnings } from './view-warnings.js'
 
 interface Drawn extends DrawnComponent {
   display: Container
@@ -38,6 +39,19 @@ export const startRenderer = (options: RendererOptions): PixiRenderer => {
   let order: Drawn[] = []
   let lastPart: unknown = NOT_READ
   let stopped = false
+  let lastWarnings = ''
+
+  /** Writes the lines only when they differ from the last lines. */
+  const warn = (definitions: readonly ComponentTypeDefinition[]): void => {
+    const lines = viewWarnings(views, definitions).map(describeWarning)
+    const text = lines.join('\n')
+    if (text !== lastWarnings) {
+      lastWarnings = text
+      lines.forEach((line) => {
+        console.warn(line)
+      })
+    }
+  }
 
   /** Returns no value when the view throws. */
   const attempt = <T>(run: () => T): { value: T } | undefined => {
@@ -58,6 +72,7 @@ export const startRenderer = (options: RendererOptions): PixiRenderer => {
       return
     }
     lastPart = part
+    warn(part?.definitions ?? [])
 
     const next: Drawn[] = []
     const wanted = new Set<string>()

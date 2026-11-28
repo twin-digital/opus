@@ -53,6 +53,12 @@ A view gets one prop for each field in the definition of its component type. The
 
 A prop has no value when the component omits the field. For two fields with one name, the prop has the value of the first field.
 
+A field whose label gives an empty name (for example `???`) gives no prop. The renderer writes one warning with `console.warn` for each such field. The renderer writes the warnings again only when they change. The line of a warning is:
+
+```text
+wishem: the sidecar <sidecar>: the label of the field <field ID> of the component type <component type ID> gives an empty name. The view does not get the field.
+```
+
 ## The entity at a point
 
 `entityAt(x, y)` gives the entity ID and the component type ID of the top visible display object that contains the point. It gives no value when no visible object contains the point, and after the stop.

@@ -146,6 +146,8 @@ describe('parseHubMessage', () => {
     ['a refused with no message', json({ ...refused, message: undefined })],
     ['a refused with a supported that is not a list', json({ ...refused, supported: 1 })],
     ['a refused with a supported that holds text', json({ ...refused, supported: ['1'] })],
+    ['a refused with a supported that holds a number and text', json({ ...refused, supported: [1, '2'] })],
+    ['a refused with a supported that is null', json({ ...refused, supported: null })],
     ['an event with an event that is not known', json({ t: 'event', event: 'applied' })],
     ['an event with no event', json({ t: 'event' })],
     ['an applied with no input', json({ ...applied, input: undefined })],
@@ -157,6 +159,7 @@ describe('parseHubMessage', () => {
     ['a result with no request', json({ ...result, request: undefined })],
     ['a result with no result and no error', json({ t: 'result', request: 1 })],
     ['a result with a result that is not an object', json({ t: 'result', request: 1, result: 'ok' })],
+    ['a result with a result that is null', json({ t: 'result', request: 1, result: null })],
     ['a result with a result with no ok', json({ t: 'result', request: 1, result: {} })],
     ['a result with an error that is not text', json({ t: 'result', request: 1, error: 5 })],
     [
@@ -173,10 +176,28 @@ describe('parseHubMessage', () => {
     ['a welcome with a negative seq', json({ ...welcome, seq: -1 })],
     ['a welcome with a protocol of 1.5', json({ ...welcome, protocol: 1.5 })],
     ['a welcome with the status stopped', json({ ...welcome, status: 'stopped' })],
+    ['a welcome with a seq of 2^53', json({ ...welcome, seq: 2 ** 53 })],
+    ['a welcome with a protocol of 2^53', json({ ...welcome, protocol: 2 ** 53 })],
+    ['a result with a request of 2^53', json({ ...result, request: 2 ** 53 })],
+    ['an applied with an input with a seq of 2^53', json({ ...applied, input: { ...applied.input, seq: 2 ** 53 } })],
     ['an applied with an input with a seq of 4.5', json({ ...applied, input: { ...applied.input, seq: 4.5 } })],
     ['an applied with an input with a negative seq', json({ ...applied, input: { ...applied.input, seq: -1 } })],
   ])('gives undefined for %s', (_name, text) => {
     expect(parseHubMessage(text)).toBeUndefined()
+  })
+
+  it('reads a count of 0 and a count of 2^53 - 1 where a count is required', () => {
+    const top = Number.MAX_SAFE_INTEGER
+    const messages = [
+      { ...welcome, protocol: top, seq: top },
+      { ...welcome, protocol: 0, seq: 0 },
+      { ...applied, input: { ...applied.input, seq: top } },
+      { ...result, request: top },
+      { ...result, request: 0 },
+    ]
+    for (const message of messages) {
+      expect(parseHubMessage(json(message))).toEqual({ kind: 'message', message })
+    }
   })
 
   it('marks a message with an unknown type', () => {

@@ -5,8 +5,17 @@ if (!wsEndpoint) {
   throw new Error('WISHEM_BROWSER_WS_ENDPOINT is not set. Run the tests with the "test:ui" script.')
 }
 
-// The page of the workbench. `scripts/e2e-server.ts` serves it on the computer of the test runner.
+// The pages of the workbench. `scripts/e2e-server.ts` serves them on the computer of the test runner.
 const WORKBENCH_URL = 'http://127.0.0.1:4180'
+// The workbench with the sample product mounted (`--product`).
+const PRODUCT_URL = 'http://127.0.0.1:4182'
+
+const server = (command: string, url: string) => ({
+  command,
+  url,
+  reuseExistingServer: false,
+  gracefulShutdown: { signal: 'SIGTERM' as const, timeout: 10_000 },
+})
 
 export default defineConfig({
   // The Vitest unit tests are in src/.
@@ -19,13 +28,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   // The job uploads the HTML report when a test fails.
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-  // The workbench runs on the computer of the test runner, from the real start script.
-  webServer: {
-    command: 'node scripts/e2e-server.ts',
-    url: WORKBENCH_URL,
-    reuseExistingServer: false,
-    gracefulShutdown: { signal: 'SIGTERM', timeout: 10_000 },
-  },
+  // The workbenches run on the computer of the test runner, from the real start script.
+  webServer: [
+    server('node scripts/e2e-server.ts', WORKBENCH_URL),
+    server('node scripts/e2e-server.ts --product', PRODUCT_URL),
+  ],
   expect: {
     // The default of Playwright, stated because the design requires it.
     toHaveScreenshot: { animations: 'disabled' },
@@ -50,6 +57,15 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: WORKBENCH_URL,
         // The browser sends its requests to loopback addresses through this connection to the test runner.
+        connectOptions: { wsEndpoint, exposeNetwork: '<loopback>' },
+      },
+    },
+    {
+      name: 'product',
+      testMatch: 'product.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: PRODUCT_URL,
         connectOptions: { wsEndpoint, exposeNetwork: '<loopback>' },
       },
     },

@@ -42,4 +42,16 @@ describe('outcomeText', () => {
   it('tells that the workbench failed to apply the change', () => {
     expect(outcomeText(reject('failed'))).toBe('The workbench failed to apply the change.')
   })
+
+  it('names the subject in the text of an unknown outcome', () => {
+    expect(outcomeText(reject('unknown'), 'the value')).toBe(
+      'The connection ended before an answer. Look at the value after it connects.',
+    )
+  })
+
+  it('names the title when the subject is not given', () => {
+    expect(outcomeText(reject('unknown'), undefined)).toBe(
+      'The connection ended before an answer. Look at the title after it connects.',
+    )
+  })
 })

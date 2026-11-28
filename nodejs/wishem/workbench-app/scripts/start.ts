@@ -303,6 +303,17 @@ const main = async () => {
     if (values['product-code'] === '') {
       throw new Error('--product-code must be a module')
     }
+    // The handler is in place before the start prints the addresses.
+    const stopState: { requested: boolean; run?: () => void } = { requested: false }
+    const stop = () => {
+      if (stopState.requested) {
+        return
+      }
+      stopState.requested = true
+      stopState.run?.()
+    }
+    process.on('SIGINT', stop)
+    process.on('SIGTERM', stop)
     const workbench = await startWorkbench({
       // pnpm runs the script in the package folder and sets INIT_CWD to the folder of the person.
       model: values.model === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.model),
@@ -314,12 +325,7 @@ const main = async () => {
       views: values.views === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.views),
       viewTypes: values['no-view-types'] !== true,
     })
-    let stopping = false
-    const stop = () => {
-      if (stopping) {
-        return
-      }
-      stopping = true
+    const stopWorkbench = () => {
       workbench.close().then(
         () => process.exit(0),
         (error: unknown) => {
@@ -329,9 +335,15 @@ const main = async () => {
       )
     }
     // Removes the exit handler of Vite, so that one handler stops both parts.
-    process.removeAllListeners('SIGTERM')
-    process.on('SIGINT', stop)
-    process.on('SIGTERM', stop)
+    for (const other of process.listeners('SIGTERM')) {
+      if (other !== stop) {
+        process.removeListener('SIGTERM', other)
+      }
+    }
+    stopState.run = stopWorkbench
+    if (stopState.requested) {
+      stopWorkbench()
+    }
   } catch (error) {
     if (!(error instanceof StartError)) {
       console.error(error instanceof Error ? `wishem: ${error.message}` : error)

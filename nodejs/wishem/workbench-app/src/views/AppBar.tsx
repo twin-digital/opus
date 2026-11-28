@@ -1,6 +1,6 @@
 import { AppBar } from '../components/AppBar.js'
 import type { Props } from './AppBar.view.gen.js'
-import { outcomeText } from './outcome-text.js'
+import { outcomeText } from '../outcome-text.js'
 
 const AppBarView = ({ title, wishem }: Props) => (
   <AppBar
