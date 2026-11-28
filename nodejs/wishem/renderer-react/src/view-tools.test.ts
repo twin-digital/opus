@@ -115,6 +115,15 @@ describe('createViewTools with a direct port', () => {
     expect(hub.record()).toEqual([])
   })
 
+  it('gives invalid for an empty name, and sends no input', async () => {
+    const { hub, input } = world()
+    const empty: ComponentTypeDefinition = { ...definition, fields: [{ id: FLD_TITLE, label: '???', type: 'string' }] }
+    const tools = createViewTools({ input, entity: E1, componentType: CT, definition: empty })
+
+    expect(await tools.setField('', 'x')).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.record()).toEqual([])
+  })
+
   it('gives the outcome ok with the sequence number of the hub', async () => {
     const { input } = world()
     const tools = toolsFor(input)
