@@ -101,8 +101,9 @@ describe('the test guide: the command loads the product code', () => {
       .filter((line) => line !== '')
       .map(Number)
 
-  const start = (args: string[]): Run => {
+  const start = (args: string[], cwd?: string): Run => {
     const child = spawn(process.execPath, [cli, 'start', model, ...args, '--port', '0'], {
+      cwd,
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -195,48 +196,42 @@ describe('the test guide: the command loads the product code', () => {
       client.close()
     })
     const pids = new Set<number>()
-    for (const run of runs.splice(0)) {
-      const group = run.child.pid ?? 0
-      if (Number.isInteger(group) && group > 1) {
+    try {
+      for (const run of runs.splice(0)) {
+        const group = run.child.pid ?? 0
+        if (Number.isInteger(group) && group > 1) {
+          try {
+            // The group holds the command, the check child, and each product construct process.
+            process.kill(-group, 'SIGKILL')
+          } catch {
+            // the group ended
+          }
+        }
+        for (const match of run.output().matchAll(/runs in the process (\d+)/g)) {
+          pids.add(Number(match[1]))
+        }
+        await ended(run, 5000)
+      }
+      for (const file of ['loaded.txt', 'loop-pid.txt']) {
         try {
-          process.kill(-group, 'SIGKILL')
+          readFileSync(path.join(folder, file), 'utf8')
+            .split('\n')
+            .filter((line) => line !== '')
+            .forEach((line) => pids.add(Number(line)))
         } catch {
-          // the group ended
+          // the file does not exist
         }
       }
-      await ended(run, 10000)
-      for (const match of run.output().matchAll(/runs in the process (\d+)/g)) {
-        pids.add(Number(match[1]))
+      for (const pid of pids) {
+        await until(
+          () => !alive(pid),
+          () => `the process ${String(pid)} is alive`,
+          5000,
+        )
       }
+    } finally {
+      rmSync(folder, { recursive: true, force: true })
     }
-    for (const file of ['loaded.txt', 'loop-pid.txt']) {
-      try {
-        readFileSync(path.join(folder, file), 'utf8')
-          .split('\n')
-          .filter((line) => line !== '')
-          .forEach((line) => pids.add(Number(line)))
-      } catch {
-        // the file does not exist
-      }
-    }
-    for (const pid of pids) {
-      if (!Number.isInteger(pid) || pid <= 1) {
-        continue
-      }
-      try {
-        process.kill(pid, 'SIGKILL')
-      } catch {
-        // the process ended
-      }
-    }
-    for (const pid of pids) {
-      await until(
-        () => !alive(pid),
-        () => `the process ${String(pid)} is alive`,
-        5000,
-      )
-    }
-    rmSync(folder, { recursive: true, force: true })
   })
 
   it('does the steps 1, 6, and 7', { timeout: 60000 }, async () => {
@@ -290,7 +285,29 @@ describe('the test guide: the command loads the product code', () => {
     expect(Object.keys(again.port.read())).toContain('constructs')
     expect(alive(second.pid)).toBe(false)
     expect(run.child.exitCode).toBeNull()
+
+    // A stop and a start give the status running again.
+    writeCode(`return { ...f, '${COUNT_FIELD}': f['${COUNT_FIELD}'] + 1 }`)
+    expect(await command.port.submit(constructInputs.stop('play'))).toMatchObject({ ok: true })
+    const recovered = await startPlay(run, command, false)
+    expect(alive(recovered.pid)).toBe(true)
+    expect(entryOf(command)?.status).toBe('running')
   })
+
+  it(
+    'resolves a product code path that starts with a dot from the folder of the process',
+    { timeout: 40000 },
+    async () => {
+      const run = start(['--product', product, '--product-code', './code.mjs'], folder)
+      await until(
+        () => run.output().includes('link at') || run.child.exitCode !== null,
+        () => run.output(),
+      )
+      expect(run.output()).toContain('wishem: product code ./code.mjs\n')
+      expect(run.output()).toContain('link at')
+      expect(loaded()).toHaveLength(1)
+    },
+  )
 
   it('does the step 10: the product code as a package name', { timeout: 40000 }, async () => {
     const { run, address } = await started('@thrashplay/wishem-sample-product')
