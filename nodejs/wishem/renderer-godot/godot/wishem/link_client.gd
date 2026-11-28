@@ -66,6 +66,11 @@ func poll(now_ms: int) -> void:
 		_service()
 
 
+## The sequence number of the last input of the link. It is 0 before the first `welcome`.
+func seq() -> int:
+	return _seq
+
+
 ## Closes the connection. The client opens no new link and reports nothing after that.
 func close() -> void:
 	if _phase == Phase.CLOSED:

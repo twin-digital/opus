@@ -323,3 +323,12 @@ func test_a_list_with_no_subsystem_gives_an_error_and_no_socket() -> void:
 	h.poll_at(100000)
 	assert_equal(h.sockets.size(), 0)
 	assert_equal(h.down_count, 0)
+
+
+func test_seq_gives_the_number_of_the_last_input() -> void:
+	var h := Fake.Harness.new()
+	assert_equal(h.client.seq(), 0, "before the link")
+	h.link({"seq": 3})
+	assert_equal(h.client.seq(), 3, "after welcome")
+	h.receive(_applied(4))
+	assert_equal(h.client.seq(), 4, "after applied")
