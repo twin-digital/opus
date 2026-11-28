@@ -2,7 +2,7 @@ import type { Channel } from '@thrashplay/wishem-hub'
 
 /** The part of `process` and of `ChildProcess` that `ipcChannel` uses. */
 export interface IpcEndpoint {
-  send(message: object): boolean
+  send(message: object, callback?: (error: Error | null) => void): boolean
   on(event: 'message', listener: (message: unknown) => void): void
   on(event: 'disconnect', listener: () => void): void
   off(event: 'message' | 'disconnect', listener: (...args: never[]) => void): void
@@ -68,7 +68,11 @@ export const ipcChannel = (endpoint: IpcEndpoint): Channel => {
           const texts = outgoing
           outgoing = []
           if (!closed && texts.length > 0) {
-            endpoint.send({ t: 'link', texts })
+            endpoint.send({ t: 'link', texts }, (error) => {
+              if (error) {
+                onDisconnect()
+              }
+            })
           }
         })
       }

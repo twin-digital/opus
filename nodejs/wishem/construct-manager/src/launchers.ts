@@ -124,6 +124,29 @@ export const childProcessLauncher =
       }
     }
 
+    // An error of the child process or of a send ends the construct.
+    let reportError: (text: string) => void = () => undefined
+    const errored = new Promise<string>((resolve) => {
+      reportError = resolve
+    })
+    const stopped = Promise.race([closed, errored])
+    const fail = (error: unknown) => {
+      reportError(`The process of the construct had an error: ${messageOf(error)}`)
+      try {
+        child.kill('SIGKILL')
+      } catch {
+        // The process is gone.
+      }
+    }
+    child.on('error', fail)
+    const sendToChild = (message: object) => {
+      child.send(message, (error) => {
+        if (error) {
+          fail(error)
+        }
+      })
+    }
+
     const kill = async (): Promise<void> => {
       if (!finished) {
         child.kill('SIGKILL')
@@ -138,8 +161,8 @@ export const childProcessLauncher =
         throw new Error('The process of the construct did not start.')
       }
       hooks.onProcess?.(child.pid)
-      const ready = waitFor(child, closed, 'ready')
-      child.send({
+      const ready = waitFor(child, stopped, 'ready')
+      sendToChild({
         t: 'start',
         id: start.id,
         model: start.model,
@@ -152,8 +175,8 @@ export const childProcessLauncher =
         { id: CONSTRUCT_MANAGER_ID, kind: 'input' },
         { id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' },
       ])
-      const serving = waitFor(child, closed, 'serving')
-      child.send({ t: 'serve' })
+      const serving = waitFor(child, stopped, 'serving')
+      sendToChild({ t: 'serve' })
       linkUrl = String((await serving).linkUrl)
     } catch (error) {
       link?.close()
@@ -174,7 +197,7 @@ export const childProcessLauncher =
       pid,
       input,
       reader,
-      ended: closed.then((text) => (closeCalled ? new Promise<string>(() => undefined) : text)),
+      ended: stopped.then((text) => (closeCalled ? new Promise<string>(() => undefined) : text)),
       close: () => {
         closing ??= (async () => {
           closeCalled = true

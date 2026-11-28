@@ -7,9 +7,11 @@ import type { IpcEndpoint } from './ipc-channel.js'
 const makeEndpoint = () => {
   const emitter = new EventEmitter()
   const sent: object[] = []
+  const failure: { error?: Error } = {}
   const endpoint = {
-    send: (message) => {
+    send: (message: object, callback?: (error: Error | null) => void) => {
       sent.push(message)
+      callback?.(failure.error ?? null)
       return true
     },
     on: (event: string, listener: unknown) => {
@@ -19,10 +21,24 @@ const makeEndpoint = () => {
       emitter.off(event, listener as (...args: unknown[]) => void)
     },
   } as IpcEndpoint
-  return { endpoint, sent, emitter }
+  return { endpoint, sent, emitter, failure }
 }
 
 describe('ipcChannel', () => {
+  it('closes and runs onClose once when a send fails, and sends nothing after', async () => {
+    const { endpoint, sent, failure } = makeEndpoint()
+    const channel = ipcChannel(endpoint)
+    const onClose = vi.fn()
+    channel.onClose(onClose)
+    failure.error = new Error('channel closed')
+    channel.send('a')
+    await Promise.resolve()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    channel.send('b')
+    await Promise.resolve()
+    expect(sent).toEqual([{ t: 'link', texts: ['a'] }])
+  })
+
   it('sends the texts of one turn as one link message, in order', async () => {
     const { endpoint, sent } = makeEndpoint()
     const channel = ipcChannel(endpoint)

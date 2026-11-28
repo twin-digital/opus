@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -60,6 +61,8 @@ describe('the product construct process', () => {
   const launched: LaunchedConstruct[] = []
   const links: RemoteLink[] = []
   const sockets: WebSocket[] = []
+  const spawned: ChildProcess[] = []
+  const grandchildren: number[] = []
   let folder = ''
 
   const launch = async (
@@ -90,6 +93,14 @@ describe('the product construct process', () => {
   }
 
   afterEach(async () => {
+    for (const parent of spawned.splice(0)) {
+      parent.kill('SIGKILL')
+    }
+    for (const pid of grandchildren.splice(0)) {
+      if (alive(pid)) {
+        process.kill(pid, 'SIGKILL')
+      }
+    }
     for (const link of links.splice(0)) {
       link.close()
     }
@@ -173,17 +184,18 @@ describe('the product construct process', () => {
 
   it('shows no tick to the manager before the first one that it sees has the sequence number 1', async () => {
     await setup()
-    const construct = await launch()
+    const construct = await launch({}, {}, false)
     const seen: { type: string; seq: number }[] = []
     construct.reader.subscribe((event: HubEvent) => {
       if (event.type === 'applied') {
         seen.push({ type: event.input.type, seq: event.input.seq })
       }
     })
+    await construct.input.submit(timeInputs.setRunning(true))
     await vi.waitFor(() => {
-      expect(seen.length).toBeGreaterThan(0)
+      expect(seen.some((item) => item.type === 'time/advance')).toBe(true)
     })
-    expect(seen[0]).toEqual({ type: 'time/advance', seq: 1 })
+    expect(seen[0]).toEqual({ type: 'time/set-running', seq: 1 })
   })
 
   it('applies the inputs of one turn with no tick between them, in 20 runs', async () => {
@@ -296,6 +308,7 @@ setInterval(() => {}, 1000)
 `,
     )
     const parent = spawn(process.execPath, [script], { stdio: ['ignore', 'pipe', 'inherit'] })
+    spawned.push(parent)
     const info = await new Promise<{ pid: number; linkUrl: string }>((resolve, reject) => {
       let text = ''
       parent.stdout.on('data', (chunk: Buffer) => {
@@ -309,6 +322,7 @@ setInterval(() => {}, 1000)
         reject(new Error('The parent script ended.'))
       })
     })
+    grandchildren.push(info.pid)
     expect(alive(info.pid)).toBe(true)
     parent.kill('SIGKILL')
     await vi.waitFor(
