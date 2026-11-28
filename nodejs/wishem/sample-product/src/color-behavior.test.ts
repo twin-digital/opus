@@ -65,6 +65,13 @@ describe('colorBehavior', () => {
     colorBehavior.update(fields, tickOf(1))
     expect(fields).toEqual({ [COLOR_FIELD]: COLORS[0] })
   })
+
+  it('keeps a field that is not the color', () => {
+    expect(colorBehavior.update({ [COLOR_FIELD]: COLORS[0], other: 'kept' }, tickOf(1))).toEqual({
+      [COLOR_FIELD]: COLORS[1],
+      other: 'kept',
+    })
+  })
 })
 
 describe('the color in a hub', () => {
