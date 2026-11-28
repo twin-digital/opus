@@ -89,6 +89,16 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the PixiJS page imports values of `@thrashplay/wishem-renderer-pixi`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`
 - **THEN** the container diagram shows the PixiJS page as a container in a web browser, the container `renderer-pixi` as a TypeScript package, and a relationship from the PixiJS page to each of the three packages with the label "Builds on [import]"
 
+#### Scenario: The Godot process runs the construct of the Godot application
+
+- **WHEN** the `start` script of `@thrashplay/wishem-renderer-godot` runs the construct of the Godot application in a Node.js process
+- **THEN** the container diagram shows the Godot process as a Node.js container, a relationship from the designer to it, a relationship from it to `host-nodejs` with the label "Serves the link with [import]", and relationships from it to `clock`, `core`, and `hub`, each with the label "Builds on [import]"
+
+#### Scenario: The Godot application connects through the Godot runner
+
+- **WHEN** the `godot` script of `@thrashplay/wishem-renderer-godot` starts the Godot application in Docker and carries the bytes of its link to the Godot process
+- **THEN** the container diagram shows the Godot runner as a Node.js container and the Godot application as a Godot container, a relationship from the designer to the Godot runner, a relationship from the Godot runner to the Godot application with the label "Starts and copies the screenshots [Docker]", a relationship from the Godot application to the Godot runner with the label "Connects to the hub [WebSocket link]", and a relationship from the Godot runner to the Godot process with the label "Carries the link [TCP]"
+
 #### Scenario: The workbench process runs product constructs with the construct manager
 
 - **WHEN** the workbench process imports values of `@thrashplay/wishem-construct-manager`, and that package imports values of `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-clock`, and `serveHub` of `@thrashplay/wishem-host-nodejs`
