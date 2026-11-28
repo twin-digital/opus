@@ -68,6 +68,22 @@ Task 5: fix round 1/5 (1 addressed, 0 open — I5; commits fe30576..2f037fc). Re
 Task 5: minor (deferred): the label of the arrow of the workbench process to renderer-react (x=873) touches the lines at x=830 and x=916 by about 0.4 px.
 Task 5: complete (commits 5e44b49..2f037fc, review clean)
 
+Task 6: dispatched (implementer: sonnet), base 0a0d3630
+
+Task 6: implementer DONE_WITH_CONCERNS, commit 60d307d8 (test:ui 1 passed, about 5 s; lint, typecheck pass; browser-server.ts exits 1 with the Docker message when docker is missing; RED "A snapshot doesn't exist"; baselines tick-0 #1d4ed8 and tick-1 #b91c1c). Concerns: a renderer that skips update fails at step 2, not step 3 (the scenario is still caught); the README says each fault "makes step 3 fail", which is exact only for the input; a Vite "ws proxy error: read ECONNRESET" in the failing run only. Review dispatched (sonnet).
+
+Task 6: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify, checked by the lead: the scenario "The renderer does not follow the store" says the screenshot after one step equals the one before; the injected fault skipped each update, so the test failed at step 2 (it catches the fault); Decision 18 names step 3 only for the link, the proxy, and the input. The baselines and the fault runs are in the report. No gap.
+Task 6: minor (deferred): README.md:58 says a fault of the renderer makes step 3 fail (it can be step 2); `Connected (link 1)` ties the test to link 1; the second canvas.screenshot compare is redundant; `animations: 'disabled'` restates the default; README.md:62 "a baseline from a different computer is the same" is loose.
+Task 6: complete (commits 0a0d363..60d307d, review clean)
+
+Main merged (de2e9534, subagent: six conflicts resolved — CLAUDE.md, the architecture README, render.mjs, the two SVGs, host-nodejs/src/start-construct.ts; the diagram has 13 containers, 1040 by 2090, no overlap; host-nodejs 261 tests and workbench-app 247 tests pass; sync and update-readme give no change).
+Task 6: finding T6-1 (Important, found at the merge): the test run of pixi-page exits 1, because Vitest also loads the Playwright file tests/pixi-page.spec.ts (87 Vitest tests pass); the check lint-build-test of the pull request fails. workbench-app limits Vitest to src/ with vitest.config.d/50-react.ts. Task 6: fix round 1 dispatched (new implementer, sonnet), base de2e9534.
+
+Task 6: fix round 1/5 (1 addressed, 0 open — T6-1; commits de2e953..830920e; vitest.config.d/50-tests.ts limits Vitest to src/). Re-review (sonnet): no new breakage.
+Task 6: complete (commits 0a0d363..830920e, review clean)
+
+Main merged again (10ea6879: #620, #621; no conflict). Final review: dispatched (opus), range bdbc697f..HEAD.
+
 ## State at the end of the session of 2026-11-27
 
 - NEXT STEP: the scoped re-review of fix round 1 (review package 0c52ebd6..4de8f972, re-review instructions of the skill, the finding I1 above). Then Task 2 is complete, and Task 3 (the construct in a Node.js process) starts.
