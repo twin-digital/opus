@@ -225,7 +225,7 @@ export const validateModel = (data: unknown): ValidationResult => {
             }
           })
           if (problems.length === before) {
-            component[fieldId] = value as FieldValue
+            component[fieldId] = [...(value as Id[])]
           }
         } else {
           const valuePath = [...componentPath, fieldId]
