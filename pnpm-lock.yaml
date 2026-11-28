@@ -3503,6 +3503,9 @@ importers:
       '@thrashplay/wishem-core':
         specifier: workspace:*
         version: link:../core
+      '@thrashplay/wishem-host-nodejs':
+        specifier: workspace:*
+        version: link:../host-nodejs
       '@thrashplay/wishem-hub':
         specifier: workspace:*
         version: link:../hub

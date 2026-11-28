@@ -16,6 +16,7 @@ No command installs Godot on your computer. Each command that needs Godot uses t
 
 | Script        | Command                       | Docker | Purpose                                                 |
 | ------------- | ----------------------------- | ------ | ------------------------------------------------------- |
+| `start`       | `node scripts/start.ts`       | No     | Start the construct in a Node.js process.               |
 | `godot:image` | `node scripts/godot.ts image` | Yes    | Build the image when it is missing.                     |
 | `test`        | `opus-test`                   | No     | Run the Vitest tests of `src/`.                         |
 | `test:godot`  | `node scripts/godot.ts test`  | Yes    | Run the GDScript tests in the image.                    |
@@ -139,3 +140,47 @@ var renderer := Renderer.new(port, views, self, func() -> Vector2: return get_vi
 2. Write `godot/views/<Name>.view.json` with the kind `godot` and the ID of the component type.
 3. Write a test `godot/tests/test_<name>.gd`. Test `update` on a node that `create` makes.
 4. Run `pnpm test:godot`.
+
+## The construct
+
+The construct is the hub that the Godot application draws. It is the code in `src/construct/`.
+
+- It holds one component type `Clear color` with the field `Color`, and one entity with this component.
+- The hub runs in a Node.js process. Godot does not run a hub. The application reaches the hub through the link.
+- The process serves the link at `ws://127.0.0.1:4749/link` with `serveHub` of `@thrashplay/wishem-host-nodejs`.
+- The model is in code. Each start begins at tick 0 with the first color.
+
+### The model
+
+```ts
+export const CONSTRUCT_MODEL: Model = {
+  definitions: [
+    { id: CLEAR_COLOR_TYPE, label: 'Clear color', fields: [{ id: COLOR_FIELD, label: 'Color', type: 'string' }] },
+  ],
+  entities: [{ id: SCREEN_ENTITY, components: { [CLEAR_COLOR_TYPE]: { [COLOR_FIELD]: COLORS[0] } } }],
+}
+```
+
+`CLEAR_COLOR_TYPE` is the component type of the view `ClearColor`.
+
+### The color rule
+
+`withColorRule` wraps the store. It has the ID `store` and applies each store input and `time/advance`. For each tick, it sets `Color` to `COLORS[ticks % 4]`: `#1d4ed8`, `#b91c1c`, `#15803d`, `#a16207`. The rule reads only the parts `store` and `time`, so a rewind gives the color of the target tick.
+
+### The clock
+
+The clock sends `time/advance` of 500 milliseconds for each 500 milliseconds of real time while `time` has `running` set to `true`. A client of the link starts and stops it with `time/set-running`.
+
+### The command
+
+```
+pnpm --filter @thrashplay/wishem-renderer-godot start [--port <number>] [--paused]
+```
+
+- The command prints `wishem: link at ws://127.0.0.1:4749/link`.
+- `--port` changes the port. The value 0 lets the system select a port.
+- `--paused` starts the time with `running` set to `false`.
+- When the port is in use, the command prints `wishem: port <port> is in use` and ends with exit code 1.
+- On `SIGINT` or `SIGTERM`, the command stops the clock and the hub. Each link gets `stopping`. The command ends with exit code 0.
+
+`startGodotConstruct({ port, paused })` gives the same construct to a program.

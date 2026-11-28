@@ -32,6 +32,7 @@
     "godot:image": "node scripts/godot.ts image",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "start": "exec node scripts/start.ts",
     "test": "opus-test",
     "test:godot": "node scripts/godot.ts test",
     "test:ui": "pnpm test:godot",
@@ -41,6 +42,7 @@
   "dependencies": {
     "@thrashplay/wishem-clock": "workspace:*",
     "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
     "@thrashplay/wishem-hub": "workspace:*"
   },
   "devDependencies": {
