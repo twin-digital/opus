@@ -81,8 +81,8 @@ The owner decided on 2026-11-28 that the view has arrows. The view `packages-lig
 
 - The ports of a card are spaced evenly on its edge, in the order of the x of the other end of each arrow. A card is wide enough for its ports.
 - Each arrow has its own track in each channel and its own lane. Two arrows never share a line. Two arrows can cross at a right angle.
-- The label of a band is in the top part of its head, above the column of its first card. No lane or track goes through the label.
-- The layout constants (the column width, the gutter width, the space between two tracks or two lanes, the height of a channel) start at values that make the fit checks pass. The implementer changes them until the image is clear. The view is 880 pixels wide. Its height grows with the channels.
+- A band has no head. The label of a band is in a column at the left of its cards, and the label can have more than one line. No lane or track goes through the label.
+- The layout constants (the column width, the gutter width, the space between two tracks or two lanes, the height of a channel) start at values that make the fit checks pass. The implementer changes them until the image is clear. A card is 176 pixels wide, a gutter is 96 pixels wide, a lane is 11 pixels from the next lane, and a track is 12 pixels from the next track. The view is 1040 pixels wide. Its height grows with the channels.
 
 **The checks of the routes.** The script throws an error and writes no file in each of these cases, as the fit check does:
 

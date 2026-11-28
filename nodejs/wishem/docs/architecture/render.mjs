@@ -99,6 +99,7 @@ const buildColors = (tokens, theme) => {
     componentBorder: mix(c.line, c.accentText, 0.6),
     flow: c.makerText,
     quiet: c.controlBorder,
+    uses: c.fgMuted,
   }
 }
 
@@ -512,10 +513,10 @@ const LEGEND_H = 44
 /** A small sample of a shape, a boundary, or a relationship. `cy` is the middle of the sample. */
 const sample = (c, kind, x, cy) => {
   const box = { x, y: cy - SAMPLE_H / 2, w: SAMPLE_W, h: SAMPLE_H }
-  if (kind === 'flow' || kind === 'quiet') {
+  if (kind === 'flow' || kind === 'quiet' || kind === 'uses') {
     const color = c[kind]
     return [
-      `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W - HEAD_LENGTH + 1)} ${num(cy)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`,
+      `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W - HEAD_LENGTH + 1)} ${num(cy)}" stroke="${color}" stroke-width="${kind === 'uses' ? '2' : '2.5'}" stroke-linecap="round"/>`,
       `<polygon points="${arrowHead([x + SAMPLE_W, cy], 1, 0)}" fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round"/>`,
     ].join('\n')
   }
@@ -571,9 +572,18 @@ const legend = (c, item) => {
 // Package dependency view: bands and cards
 // ---------------------------------------------------------------------------
 
-const BAND = { x: 24, w: 832, top: 64, pad: 14, spacing: 14 }
-const GRID = { columns: 3, left: 124, cardW: 176, gutter: 64 }
-const ROUTE = { portGap: 12, stagger: 3, trackGap: 7, trackClear: 6, channelPad: 28, laneGap: 7, portClear: 6, edge: 8 }
+const BAND = { x: 24, w: 992, top: 64, pad: 14, spacing: 14 }
+const GRID = { columns: 3, left: 124, cardW: 176, gutter: 96 }
+const ROUTE = {
+  portGap: 14,
+  stagger: 4,
+  trackGap: 12,
+  trackClear: 6,
+  channelPad: 28,
+  laneGap: 11,
+  portClear: 6,
+  edge: 8,
+}
 const LABEL = { x: 16, w: 100, line: 16, top: 24 }
 const LABEL_LINES_MAX = 6
 const CARD_PAD = 8
@@ -1570,7 +1580,7 @@ const packagesDiagram = (packages, layerOf) => {
       points = [from, [route.out, first], [route.lane, first], [route.lane, last], [route.in, last], to]
     }
     route.points = points
-    return { kind: 'arrow', tone: 'quiet', width: 1.75, points, uses: { from: route.edge.from, to: route.edge.to } }
+    return { kind: 'arrow', tone: 'uses', width: 2, points, uses: { from: route.edge.from, to: route.edge.to } }
   })
   checkRoutes(routes, cards, bandItems)
 
@@ -1579,7 +1589,7 @@ const packagesDiagram = (packages, layerOf) => {
     name: 'packages',
     title: 'Package dependency view: Wishem',
     description: `The view shows ${String(packages.length)} packages in ${String(packageLayers.length)} layers: ${names}. Layer 1 is at the bottom and layer ${String(packageLayers.length)} is at the top. Each of the ${String(routes.length)} arrows goes down from a package to a package that it uses at run time, in dependencies or peerDependencies. A package uses only packages in its own layer or in a lower layer. The line Tests with on a card names the packages that its package has only in devDependencies.`,
-    width: WIDTH_PX,
+    width: BAND.w + 2 * BAND.x,
     height: y + LEGEND_H + 24,
     items: [
       ...bandItems,
@@ -1593,7 +1603,7 @@ const packagesDiagram = (packages, layerOf) => {
         entries: [
           ['band', 'Layer'],
           ['card', 'Package'],
-          ['quiet', 'Uses at run time [dependencies, peerDependencies]'],
+          ['uses', 'Uses at run time [dependencies, peerDependencies]'],
         ],
       },
     ],
