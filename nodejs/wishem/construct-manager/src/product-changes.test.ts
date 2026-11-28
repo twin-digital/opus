@@ -152,6 +152,16 @@ describe('productChanges', () => {
     expect(productChanges(before, after)).toEqual([setField(E_1, CT_A, F_C, 'm'), clearField(E_1, CT_A, F_A)])
   })
 
+  it('gives the clear-field inputs of one component in the order of its fields', () => {
+    const F_C = 'fld_cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+    const before = base()
+    before.definitions[0].fields.push({ id: F_C, label: 'c', type: 'string' })
+    before.entities[0].components[CT_A][F_C] = 'k'
+    const after = clone(before)
+    after.entities[0].components[CT_A] = {}
+    expect(productChanges(before, after)).toEqual([clearField(E_1, CT_A, F_A), clearField(E_1, CT_A, F_C)])
+  })
+
   it('gives the inputs in the order of the entities and the components', () => {
     const after = clone(base())
     drop(after, 0, CT_B, F_B)
