@@ -9,7 +9,10 @@ import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { RemoteLink } from '@thrashplay/wishem-hub'
 import { runGodot } from '@thrashplay/wishem-renderer-godot'
 import type { GodotRun } from '@thrashplay/wishem-renderer-godot'
-import { COLORS } from '@thrashplay/wishem-sample-product'
+import { storeInputs } from '@thrashplay/wishem-core'
+import type { Model } from '@thrashplay/wishem-core'
+import { COLORS, COLOR_FIELD, COLOR_TYPE, SAMPLE_ENTITY } from '@thrashplay/wishem-sample-product'
+import { FALLBACK_COLOR } from '@thrashplay/wishem-sample-product/color-cases'
 import {
   PACKAGE_DIR,
   PIXI_PAGE_DIR,
@@ -162,6 +165,40 @@ await test('the three renderers draw the state of the hub', async () => {
     const stoppedTicks = ticks()
     await sleep(1500)
     assert.equal(ticks(), stoppedTicks, 'the clock stays stopped')
+
+    // Step 14: a value that is not a color gives the fallback color.
+    const store = storeInputs()
+    const submitOk = async (input: ReturnType<typeof store.setField>) => {
+      assert.equal((await port.submit(input)).ok, true, `${input.type} is applied`)
+    }
+    const setColor = (value: string) =>
+      submitOk(store.setField({ entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD, value }))
+    await setColor('red')
+    await colors(FALLBACK_COLOR, POLL_MS)
+
+    // Step 15: a color after the fallback is drawn again.
+    await setColor('#15803d')
+    await colors('#15803d', POLL_MS)
+
+    // Step 16: no value gives the fallback color.
+    const model = () => structuredClone(port.read().store as Model)
+    const noValue = model()
+    const components = noValue.entities.find((e) => e.id === SAMPLE_ENTITY)?.components
+    assert.notEqual(components, undefined, 'the sample entity has components')
+    ;(components as Record<string, unknown>)[COLOR_TYPE] = {}
+    await submitOk(store.replaceModel(noValue))
+    await colors(FALLBACK_COLOR, POLL_MS)
+
+    // Step 17: a label that gives an empty name gives the fallback color.
+    const emptyName = model()
+    const colorType = emptyName.definitions.find((d) => d.id === COLOR_TYPE)
+    const colorDefinition = colorType?.fields.find((f) => f.id === COLOR_FIELD)
+    assert.notEqual(colorDefinition, undefined, 'the color type has the color field')
+    ;(colorDefinition as { label: string }).label = '???'
+    const entityFields = emptyName.entities.find((e) => e.id === SAMPLE_ENTITY)?.components[COLOR_TYPE]
+    ;(entityFields as Record<string, unknown>)[COLOR_FIELD] = '#1d4ed8'
+    await submitOk(store.replaceModel(emptyName))
+    await colors(FALLBACK_COLOR, POLL_MS)
   } finally {
     // Step 11: close in this order.
     link?.close()
