@@ -255,6 +255,10 @@ A component uses roles only. A role gives the purpose of a color, for example `b
 
 - `AppBar` (`title`, `onRename`, `initial`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis. With `onRename`, the title is a button. `initial` sets the first state of the edit, for the style guide and the tests.
 - `ZeroState` (`label`, `message`): a mono label and one line of text in the center of the space that it gets. Both texts use `fg-muted`.
+- `FieldRow` (`field`, `value`, `options`, `onChange`, `initial`): one field of a component, with a control for its type (text, number, check box, or reference select). It sends the value with `onChange` and shows the phase: saved, saving, or not saved with a reason. `initial` sets the first phase, for the style guide and the tests.
+- `EntityList` (`items`, `selected`, `onSelect`): the list of entities. Each item shows a name and a short ID. The selected item has a bar at the start edge.
+- `EntityInspector` (`entity`, `options`, `onChange`): the full ID and the components of one entity, each with a `FieldRow` for each field. With no `entity`, it shows "Select an entity to change it."
+- `ProductPanel` (`model`, `selected`, `onSelect`, `onChange`): the list and the inspector of the entities of a model. It makes the names and the options from the model, and it sends a `SetFieldPayload` with `onChange`.
 
 A new component goes in the Components section of the style guide, in each of its states, in the same change. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.
 

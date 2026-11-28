@@ -5,7 +5,7 @@ export type ChangeOutcome = { saved: true } | { saved: false; reason: string }
 
 export interface ReferenceOption {
   id: Id
-  /** For example `Color, Counter · e_99969ed3`. */
+  /** For example `Counter, Color · e_99969ed3`. */
   text: string
 }
 

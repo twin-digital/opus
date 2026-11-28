@@ -37,7 +37,7 @@ The workbench construct mounts a product (#536) and runs its constructs (#538), 
 
 ## Impact
 
-- `nodejs/wishem/workbench-app`: new `src/components/EntityList.tsx`, `FieldRow.tsx`, `EntityInspector.tsx`, `ProductPanel.tsx`, new `src/tools/ProductTool.tsx`, `src/tools/use-part.ts`, `src/tools/entity-name.ts`, their tests; `src/Page.tsx`, `src/views/outcome-text.ts`, the style guide (`src/style-guide/sections/Components.tsx`), `scripts/e2e-server.ts`, `playwright.config.ts`, new `tests/product.spec.ts`, the screenshot baselines, and the README.
+- `nodejs/wishem/workbench-app`: new `src/components/EntityList.tsx`, `FieldRow.tsx`, `EntityInspector.tsx`, `ProductPanel.tsx`, new `src/tools/ProductTool.tsx`, `src/tools/use-part.ts`, `src/components/entity-name.ts`, their tests; `src/Page.tsx`, `src/views/outcome-text.ts`, the style guide (`src/style-guide/sections/Components.tsx`), `scripts/e2e-server.ts`, `playwright.config.ts`, new `tests/product.spec.ts`, the screenshot baselines, and the README.
 - `nodejs/wishem/renderer-react`: `src/view-tools.ts`, `src/index.ts`, the tests, and the README (the export `sendInput`).
 - Documents: `nodejs/wishem/docs/architecture/` (README, `render.mjs`, and the SVG files of the component diagram of the page), `glossary.md`, `concepts.md`, and the new `nodejs/wishem/docs/milestones/a4-workbench/page-driver.mjs`.
 - The changeset.

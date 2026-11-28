@@ -25,7 +25,7 @@ Interfaces: produces `FieldRow`, `FieldRowProps`, `ChangeOutcome`, `ReferenceOpt
 
 ## Task 3: The entity list, the inspector, and the product panel
 
-Files: `nodejs/wishem/workbench-app/src/components/EntityList.tsx`, `EntityInspector.tsx`, `ProductPanel.tsx`, their `*.test.tsx` files, `src/tools/entity-name.ts`, `src/tools/entity-name.test.ts`, `src/style-guide/sections/Components.tsx`, `tests/__screenshots__/components-light.png`, `components-dark.png`
+Files: `nodejs/wishem/workbench-app/src/components/EntityList.tsx`, `EntityInspector.tsx`, `ProductPanel.tsx`, their `*.test.tsx` files, `src/components/entity-name.ts`, `src/components/entity-name.test.ts`, `src/style-guide/sections/Components.tsx`, `tests/__screenshots__/components-light.png`, `components-dark.png`
 Interfaces: consumes `FieldRow` of Task 2; produces `EntityList`, `EntityInspector`, `ProductPanel` and their props, `entityName`, and `shortId` (design.md, "Interfaces", Decision 6)
 
 - [ ] 3.1 Write the tests of `entityName` and `shortId` (the sample entity gives `Color, Counter` and `e_99969ed3`, the order of the definitions, `No components`). Write the unit tests of `EntityList` (one button for each item, `aria-current` on the selected item only, Enter and Space call `onSelect` and keep the focus, the zero state `No entities yet.`, the `nav` named `Entities`), of `EntityInspector` (the heading, the full ID, one `fieldset` for each component in the order of the definitions with its `legend`, one row for each field, the zero state `Select an entity to change it.`, `onChange` gets the component type and the field), and of `ProductPanel` (the items, the options `<name> · <short ID>` of each reference row, the selection, and `onChange` with a `SetFieldPayload`). Verify that they fail.

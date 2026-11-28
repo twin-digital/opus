@@ -83,7 +83,7 @@ The private function `send` of `view-tools.ts` becomes the export `sendInput(inp
 
 ### 6. The name and the short ID of an entity
 
-An entity has no name in the model. The list gives the labels of the component types of its components, in the order of the definitions, with `, ` between them (`Color, Counter`). An entity with no component is `No components`. The short ID is the first 10 characters (`e_99969ed3`), as `link-client.mjs` prints. The inspector shows the full ID.
+An entity has no name in the model. The list gives the labels of the component types of its components, in the order of the definitions, with `, ` between them (`Counter, Color`). An entity with no component is `No components`. The short ID is the first 10 characters (`e_99969ed3`), as `link-client.mjs` prints. The inspector shows the full ID.
 
 - Reason: the labels are what the designer sees in the definitions. Two entities with the same component types have the same name, so the short ID is always beside it.
 - Alternative: a field `name` of a component type of the product. Rejected: the panel would need a rule for a field that a product does not declare.
@@ -157,7 +157,7 @@ Owner: `@thrashplay/wishem-workbench-app` (not exported from the package).
 /** `subject` default: 'the title'. */
 export const outcomeText: (outcome: Extract<InputOutcome, { ok: false }>, subject?: string) => string
 
-// src/tools/entity-name.ts
+// src/components/entity-name.ts
 /** The labels of the component types of the entity, in the order of the definitions, or 'No components'. */
 export const entityName: (entity: Entity, definitions: readonly ComponentTypeDefinition[]) => string
 /** The first 10 characters of the ID. */
@@ -180,7 +180,7 @@ export const ProductTool: (props: ProductToolProps) => ReactNode
 export type ChangeOutcome = { saved: true } | { saved: false; reason: string }
 export interface ReferenceOption {
   id: Id
-  /** For example `Color, Counter · e_99969ed3`. */
+  /** For example `Counter, Color · e_99969ed3`. */
   text: string
 }
 export interface FieldRowProps {
@@ -274,7 +274,7 @@ sequenceDiagram
   participant M as Construct manager
   participant C as Product construct play
 
-  D->>T: select Color, Counter
+  D->>T: select Counter, Color
   D->>T: type 7 in count, Enter
   T->>T: Number("7") is finite; 7 differs from 0
   T->>T: row phase saving
@@ -393,9 +393,9 @@ The output of `page-driver.mjs` after `select:e_99969ed3 type:Counter.count=7`:
 ```text
 step 1 select:e_99969ed3: done
 step 2 type:Counter.count=7: done
-entities: Color, Counter e_99969ed3 [selected]
-Color.color = #1d4ed8
+entities: Counter, Color e_99969ed3 [selected]
 Counter.count = 7
+Color.color = #1d4ed8
 ```
 
 ## Package Impact
@@ -417,14 +417,14 @@ Wide viewport (1280 pixels), with the sample entity selected:
 +--------------------------------------------------------------------------------------+
 | wishem.                                                                              |  app bar, night
 +---------------------------+----------------------------------------------------------+
-| ENTITIES               1  | Color, Counter                                           |  surface
+| ENTITIES               1  | Counter, Color                                           |  surface
 |                           | E_99969ED3-F499-4DBB-BF6D-958DB4542884                   |
-| |Color, Counter           |                                                          |
-| |E_99969ED3               | Color                                                    |  legend of the group
-|                           |   color     STRING   [#1d4ed8                      ]    |
-|                           |                                                          |
-|                           | Counter                                                  |
+| |Counter, Color           |                                                          |
+| |E_99969ED3               | Counter                                                  |  legend of the group
 |                           |   count     NUMBER   [0                             ]    |
+|                           |                                                          |
+|                           | Color                                                    |
+|                           |   color     STRING   [#1d4ed8                      ]    |
 |                           |                                                          |
 +---------------------------+----------------------------------------------------------+
   288 px, line at the right   the remaining width
@@ -437,7 +437,7 @@ Nothing selected:
 ```text
 +---------------------------+----------------------------------------------------------+
 | ENTITIES               1  |                                                          |
-| Color, Counter            |                      INSPECTOR                           |
+| Counter, Color            |                      INSPECTOR                           |
 | E_99969ED3                |            Select an entity to change it.                |
 +---------------------------+----------------------------------------------------------+
 ```
@@ -465,17 +465,17 @@ Narrow viewport (390 pixels):
 | wishem.                            |
 +------------------------------------+
 | ENTITIES                        1  |
-| |Color, Counter                    |
+| |Counter, Color                    |
 | |E_99969ED3                        |
 +------------------------------------+
-| Color, Counter                     |
+| Counter, Color                     |
 | E_99969ED3-F499-...                |  wraps
-| Color                              |
-| color   STRING                     |
-| [#1d4ed8                         ] |
 | Counter                            |
 | count   NUMBER                     |
 | [0                               ] |
+| Color                              |
+| color   STRING                     |
+| [#1d4ed8                         ] |
 +------------------------------------+
 ```
 
@@ -602,7 +602,7 @@ Result: `state: types: AppBar | entities: e_c0d5e6f1 AppBar{title="Wishem"}`.
 $PAGE shot:.superpowers/a4/nothing-selected.png select:e_99969ed3 shot:.superpowers/a4/selected-light.png
 ```
 
-Result: the lines `entities: Color, Counter e_99969ed3 [selected]`, `Color.color = #1d4ed8`, and `Counter.count = 0`. `nothing-selected.png` shows the list with one item and the text `Select an entity to change it.` `selected-light.png` shows the wireframe of option A. Terminal 3 prints no line.
+Result: the lines `entities: Counter, Color e_99969ed3 [selected]`, `Counter.count = 0`, and `Color.color = #1d4ed8`. `nothing-selected.png` shows the list with one item and the text `Select an entity to change it.` `selected-light.png` shows the wireframe of option A. Terminal 3 prints no line.
 
 ### 3. A change in the page, the file, and the source in the record
 
@@ -611,7 +611,7 @@ $PAGE select:e_99969ed3 type:Counter.count=7
 grep -o "\"$CF\": *[0-9]*" .superpowers/a4/product/state.json
 ```
 
-Result: `Counter.count = 7`. Terminal 3 prints `applied #1 product/set-field from page-<16 hex>-input`. The `grep` prints `"fld_ef085a2e-22ef-4409-bac4-9cd5648d0705": 7`.
+Result: `Counter.count = 7`. Terminal 3 prints `applied #1 product/set-field from page-<16 hex>-input` and a `state:` line. The `grep` prints `"fld_ef085a2e-22ef-4409-bac4-9cd5648d0705": 7`.
 
 ### 4. A hand edit after the change in the page
 
@@ -620,7 +620,7 @@ sed -i 's/#1d4ed8/#047857/' .superpowers/a4/product/state.json
 $PAGE select:e_99969ed3
 ```
 
-Result: terminal 3 prints `applied #2 product/replace-model from product-files`. The driver prints `Color.color = #047857` and `Counter.count = 7`.
+Result: terminal 3 prints `applied #2 product/replace-model from product-files` and a `state:` line. The driver prints `Counter.count = 7` and `Color.color = #047857`.
 
 ### 5. A hand edit while the designer types
 
@@ -628,7 +628,7 @@ Result: terminal 3 prints `applied #2 product/replace-model from product-files`.
 $PAGE select:e_99969ed3 typeonly:Counter.count=12 "exec:sed -i 's/\"$CF\": 7/\"$CF\": 5/' .superpowers/a4/product/state.json" wait:1500 print escape:Counter.count
 ```
 
-Result: the first state (after `print`) has `Counter.count = 12`. The last state has `Counter.count = 5`. Terminal 3 prints one `product/replace-model from product-files` and no `product/set-field`.
+Result: the first state (after `print`) has `Counter.count = 12`. The last state has `Counter.count = 5`. Terminal 3 prints one `product/replace-model from product-files` (with a `state:` line) and no `product/set-field`.
 
 ### 6. Text that is not a number
 
@@ -656,7 +656,7 @@ $PAGE select:e_99969ed3 type:Color.color=#b91c1c
 node $RAW --url $PLAY --once | grep -o "$COLOR_RAW\|$COUNT_RAW"
 ```
 
-Result: the first count is `5` or more. Terminal 3 prints `applied #<N> product/set-field from page-<16 hex>-input` (write down `N`). The last command prints `#b91c1c` and a count that is larger than the first count (the count was not reset). `grep -c '#b91c1c' .superpowers/a4/product/state.json` prints `1`.
+Result: the first count is `5` or more. Terminal 3 prints the lines `applied #.. constructs/start` and `applied #.. constructs/report`, then `applied #<N> product/set-field from page-<16 hex>-input` and a `state:` line after each `applied` line (write down `N`). The last command prints `#b91c1c` and a count that is larger than the first count (the count was not reset). `grep -c '#b91c1c' .superpowers/a4/product/state.json` prints `1`.
 
 ### 9. A rewind of the workbench is an undo of the change in the panel
 
@@ -666,7 +666,7 @@ $PAGE select:e_99969ed3
 node $RAW --url $PLAY --once | grep -o "$COLOR_RAW"
 ```
 
-Result: `result: {"ok":true,...}`. The driver prints `Color.color = #047857`. `state.json` holds `#047857`. The product construct holds `#047857`, because the construct manager sends the difference.
+Result: `result: {"ok":true,...}`, then `title now: "Wishem"`. The driver prints `Color.color = #047857`. `state.json` holds `#047857`. The product construct holds `#047857`, because the construct manager sends the difference.
 
 ### 10. New field types: a boolean and a reference
 
@@ -692,7 +692,7 @@ $PAGE select:e_5f0c1d2e check:Switch.on choose:Switch.target=e_5f0c1d2e shot:.su
 grep -c '"fld_1e4a7b20-3c5d-4e6f-9a8b-7c6d5e4f3a21": true' .superpowers/a4/product/state.json
 ```
 
-Result: the driver prints `entities: Color, Counter e_99969ed3; Switch e_5f0c1d2e [selected]`, `Switch.on = true`, and `Switch.target = Switch · e_5f0c1d2e`. Terminal 3 prints two `product/set-field` lines from `page-<16 hex>-input`. The `grep` prints `1`, and `state.json` holds `"e_5f0c1d2e-3a4b-4c5d-8e6f-7a8b9c0d1e2f"` as the target.
+Result: the driver prints `entities: Counter, Color e_99969ed3; Switch e_5f0c1d2e [selected]`, `Switch.on = true`, and `Switch.target = Switch · e_5f0c1d2e`. Terminal 3 prints two `product/set-field` lines from `page-<16 hex>-input`, each with a `state:` line after it. The `grep` prints `1`, and `state.json` holds `"e_5f0c1d2e-3a4b-4c5d-8e6f-7a8b9c0d1e2f"` as the target.
 
 ### 11. A hand edit removes the selected entity
 
@@ -700,12 +700,12 @@ Result: the driver prints `entities: Color, Counter e_99969ed3; Switch e_5f0c1d2
 $PAGE select:e_5f0c1d2e "exec:node -e 'const fs=require(\"fs\");const p=\".superpowers/a4/product/state.json\";const s=JSON.parse(fs.readFileSync(p,\"utf8\"));s.entities=s.entities.slice(0,1);fs.writeFileSync(p,JSON.stringify(s,null,2))'" wait:1500
 ```
 
-Result: `entities: Color, Counter e_99969ed3` (no `[selected]`) and `inspector: Select an entity to change it.`
+Result: `entities: Counter, Color e_99969ed3` (no `[selected]`) and `inspector: Select an entity to change it.`
 
 ### 12. A change while the workbench does not run
 
 ```sh
-$PAGE select:e_99969ed3 "exec:pkill -INT -f 'node scripts/start.ts'" wait:2000 type:Counter.count=8
+$PAGE select:e_99969ed3 "exec:pkill -INT -f 'node scripts/[s]tart.ts'" wait:2000 type:Counter.count=8
 ```
 
 Result: terminal 1 stops, and terminal 3 prints `link closed`. The driver prints `Counter.count = 8` and `alert: The value is not saved. The workbench does not run. Start it, and try again.` The count in `state.json` is not `8`.

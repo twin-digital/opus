@@ -1,5 +1,5 @@
 import type { Id, Model, SetFieldPayload } from '@thrashplay/wishem-core'
-import { entityName, shortId } from '../tools/entity-name.js'
+import { entityName, shortId } from './entity-name.js'
 import { EntityInspector, type InspectedComponent } from './EntityInspector.js'
 import { EntityList } from './EntityList.js'
 import type { ChangeOutcome, ReferenceOption } from './FieldRow.js'
