@@ -931,4 +931,56 @@ describe('startRenderer: warnings through a link', () => {
     expect(warn).toHaveBeenCalledTimes(1)
     link.close()
   })
+
+  it('warns one time for two labels with one name, and not again after an input or a model without the second field', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const model: Model = {
+      definitions: [
+        {
+          id: CLEAR_COLOR,
+          label: 'Clear color',
+          fields: [
+            { id: COLOR_FIELD, label: 'Color', type: 'string' },
+            { id: SECOND_FIELD, label: 'color', type: 'string' },
+          ],
+        },
+      ],
+      entities: [{ id: E1, components: { [CLEAR_COLOR]: { [COLOR_FIELD]: BLUE, [SECOND_FIELD]: RED } } }],
+    }
+    const { hub, editor } = makeHub(model)
+    const [clientChannel, hubChannel] = createChannelPair()
+    serveLink(hub, hubChannel)
+    const link = await openLink(clientChannel, [{ id: 'remote-screen', kind: 'output' }])
+    const view = makeView()
+
+    startRenderer({
+      port: link.ports['remote-screen'],
+      views: tableOf(view),
+      stage: new Container(),
+      viewport: VIEWPORT,
+    })
+
+    expect(warn.mock.calls).toEqual([
+      [
+        `wishem: the sidecar ClearColor.view.json: the fields ${COLOR_FIELD} and ${SECOND_FIELD} of the component type ${CLEAR_COLOR} give the same name "color". The prop has the value of the first field.`,
+      ],
+    ])
+    expect(view.update.mock.calls.at(-1)?.[1]).toEqual({ color: BLUE })
+
+    await editor.submit(
+      storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: GREEN }),
+    )
+    await vi.waitFor(() => {
+      expect(view.update.mock.calls.at(-1)?.[1]).toEqual({ color: GREEN })
+    })
+    expect(warn).toHaveBeenCalledTimes(1)
+
+    const single = modelOf(entity(E1, GREEN))
+    await editor.submit(storeInputs().replaceModel(single))
+    await vi.waitFor(() => {
+      expect(link.ports['remote-screen'].read().store).toEqual(single)
+    })
+    expect(warn).toHaveBeenCalledTimes(1)
+    link.close()
+  })
 })
