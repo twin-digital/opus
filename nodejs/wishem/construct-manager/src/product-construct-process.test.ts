@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { fork, spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
@@ -78,6 +78,84 @@ const alive = (pid: number): boolean => {
 }
 
 const portOf = (linkUrl: string) => Number(new URL(linkUrl).port)
+
+const PROCESS_FILE = fileURLToPath(new URL('../dist/product-construct-process.js', import.meta.url))
+
+describe('the messages of the product construct process', () => {
+  const children: ChildProcess[] = []
+
+  afterEach(() => {
+    for (const child of children.splice(0)) {
+      child.kill('SIGKILL')
+    }
+  })
+
+  const rawChild = () => {
+    const child = fork(PROCESS_FILE, [], { execArgv: [], stdio: ['ignore', 'ignore', 'ignore', 'ipc'] })
+    children.push(child)
+    const messages: { t: string; message?: string; count?: number }[] = []
+    child.on('message', (message: { t: string }) => messages.push(message))
+    const exit = new Promise<number | null>((resolve) => {
+      child.once('exit', (code) => {
+        resolve(code)
+      })
+    })
+    const seen = (type: string) =>
+      vi.waitFor(() => {
+        expect(messages.map((message) => message.t)).toContain(type)
+      })
+    return { child, messages, exit, seen }
+  }
+
+  it('sends failed and ends with the exit code 1 when the product code is missing', async () => {
+    const { child, messages, exit, seen } = rawChild()
+    child.send({ t: 'start', id: 'play', model, running: true, productCode: 'file:///missing/product.mjs' })
+    await seen('failed')
+    expect(messages.find((message) => message.t === 'failed')?.message).toContain('missing')
+    expect(await exit).toBe(1)
+  })
+
+  it('sends failed and ends with the exit code 1 for serve before start', async () => {
+    const { child, messages, exit, seen } = rawChild()
+    child.send({ t: 'serve' })
+    await seen('failed')
+    expect(messages[0]).toEqual({ t: 'failed', message: 'The construct has not started.' })
+    expect(await exit).toBe(1)
+  })
+
+  it('ends with the exit code 0 on stop', async () => {
+    const { child, seen, exit } = rawChild()
+    child.send({ t: 'start', id: 'play', model, running: true })
+    await seen('ready')
+    child.send({ t: 'serve' })
+    await seen('serving')
+    child.send({ t: 'stop' })
+    expect(await exit).toBe(0)
+  })
+
+  it('answers a check and ends with the exit code 0', async () => {
+    const { child, messages, exit } = rawChild()
+    child.send({ t: 'check', productCode: PRODUCT_CODE })
+    expect(await exit).toBe(0)
+    expect(messages).toEqual([{ t: 'checked', count: 2 }])
+  })
+
+  it('writes a line and ends with the exit code 1 when it runs with no IPC channel', async () => {
+    const child = spawn(process.execPath, [PROCESS_FILE], { stdio: ['ignore', 'ignore', 'pipe'] })
+    children.push(child)
+    let text = ''
+    child.stderr.on('data', (chunk: Buffer) => {
+      text += chunk.toString()
+    })
+    const code = await new Promise<number | null>((resolve) => {
+      child.once('exit', (exitCode) => {
+        resolve(exitCode)
+      })
+    })
+    expect(code).toBe(1)
+    expect(text).toContain('runs as a child process with an IPC channel')
+  })
+})
 
 describe('the product construct process', () => {
   const launched: LaunchedConstruct[] = []
