@@ -1454,7 +1454,7 @@ const entitiesModelFolder = {
   name: 'entities-model-folder',
   title: 'Entity diagram: the model folder',
   description:
-    'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference has zero or one entity, and an entity has zero or more field values that refer to it.',
+    'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference-list has zero or more entities, and an entity has zero or more field values that refer to it.',
   width: WIDTH_PX,
   height: 632,
   items: [
@@ -1468,7 +1468,7 @@ const entitiesModelFolder = {
     link(top(eEntity), 'one', bottom(eComponent), 'many'),
     link(right(eComponent), 'one', left(eValue), 'many'),
     link(bottom(eField), 'one', top(eValue), 'many'),
-    link(bottom(eValue, 698), 'many', right(eEntity), 'zero-or-one', { line: 'Refers to', at: [518, 420] }),
+    link(bottom(eValue, 698), 'many', right(eEntity), 'many', { line: 'Refers to', at: [518, 420] }),
     {
       kind: 'legend',
       x: 24,
@@ -1480,7 +1480,6 @@ const entitiesModelFolder = {
         ['fk', 'Foreign key'],
         ['one', 'One'],
         ['many', 'Zero or more'],
-        ['zero-or-one', 'Zero or one'],
       ],
     },
   ],

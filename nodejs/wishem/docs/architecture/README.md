@@ -237,7 +237,7 @@ node nodejs/wishem/docs/architecture/render.mjs --check
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="entities-model-folder-dark.svg">
-  <img alt="Entity diagram of the model folder. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference refers to zero or one entity." src="entities-model-folder-light.svg">
+  <img alt="Entity diagram of the model folder. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference-list refers to zero or more entities." src="entities-model-folder-light.svg">
 </picture>
 
 The diagram applies to each model folder: the model folder of the workbench and the product model folder have the same entities. The sidecars are source files of `workbench-app`, so the diagram shows no entity for them.
@@ -249,9 +249,9 @@ The keys of a `FieldDefinition`, a `Component`, and a `FieldValue` include the I
 The diagram does not show these fields:
 
 - `ComponentTypeDefinition` has a `label` and a list of `fields`.
-- `FieldDefinition` has a `label` and a `type`. The `type` is `string`, `number`, `boolean`, or `reference`.
+- `FieldDefinition` has a `label` and a `type`. The `type` is `string`, `number`, `boolean`, `reference`, or `reference-list`.
 
-The model has these rules, and the diagram does not show them. The field of a `FieldValue` must be a field of the component type of its `Component`. A value agrees with the type of its field: a string, a finite number, a boolean, or, for a `reference`, the ID of an entity of the model. The entity can be the entity of the value. The line "Refers to" shows this rule: a `FieldValue` of the type `reference` names zero or one `Entity`, and an `Entity` can be named by zero or more `FieldValue` records. An entity has at most one component of each component type. A component can have no value for a field.
+The model has these rules, and the diagram does not show them. The field of a `FieldValue` must be a field of the component type of its `Component`. A value agrees with the type of its field: a string, a finite number, a boolean, the ID of an entity of the model for a `reference`, or a list of IDs of entities of the model for a `reference-list`, with no ID two times. The entity can be the entity of the value. The line "Refers to" shows this rule: a `FieldValue` of the type `reference` or `reference-list` names zero or more `Entity` records, and an `Entity` can be named by zero or more `FieldValue` records. An entity has at most one component of each component type. A component can have no value for a field.
 
 | Entity                    | Purpose                                                                  | Schema                                                                    |
 | ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |

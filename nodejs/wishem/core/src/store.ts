@@ -212,7 +212,7 @@ const setField = (part: Model, payload: unknown): Model => {
   const target = locate(part, payload, ['value'])
   const { value } = target.fields
   const component = componentOf(target)
-  if (component?.[target.field] === value) {
+  if (component !== undefined && Object.hasOwn(component, target.field) && isEqual(component[target.field], value)) {
     return part
   }
   return withComponent(part, target, { ...component, [target.field]: value as FieldValue })

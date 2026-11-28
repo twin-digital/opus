@@ -8,7 +8,7 @@ The package uses no Node.js API. It runs in a web browser and in Node.js.
 
 A model is data with two parts.
 
-- `definitions`: a list of component types. Each component type has an `id`, a `label`, and a list of `fields`. Each field has an `id`, a `label`, and a `type`. The types are `string`, `number`, `boolean`, and `reference`. A value of a `reference` field is the ID of an entity of the model.
+- `definitions`: a list of component types. Each component type has an `id`, a `label`, and a list of `fields`. Each field has an `id`, a `label`, and a `type`. The types are `string`, `number`, `boolean`, `reference`, and `reference-list`. A value of a `reference` field is the ID of an entity of the model. A value of a `reference-list` field is a list of entity IDs of the model. The list holds no ID two times, and its order is part of the value. `[]` is a correct value and is different from an omitted field.
 - `entities`: a list of entities. Each entity has an `id` and a `components` record. The record maps the ID of a component type to a record. That record maps the ID of a field to a value.
 
 Each ID has a prefix for its kind, an underscore, and a UUID in lowercase. The prefix is `ct` for a component type, `fld` for a field, and `e` for an entity.
@@ -89,7 +89,7 @@ const refused = await form.submit(storeInputs().removeEntity('e_00000000-0000-40
 - `ModelError`: the error with the list `problems`. `createStore` throws it for a first model that is not correct.
 - `createStore(options)`: makes the store, a model subsystem for a hub. See "The store".
 - `storeInputs(id)`: gives the functions that make the five inputs of a store.
-- `isEqual(a, b)`: compares two models by canonical JSON.
+- `isEqual(a, b)`: compares two values by canonical JSON. The store uses it for models and for the values of `set-field`.
 
 ## No Node.js API
 

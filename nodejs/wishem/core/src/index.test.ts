@@ -10,8 +10,8 @@ describe('the package exports', () => {
     expect(api.isEqual).toBeTypeOf('function')
   })
 
-  it('gives FIELD_TYPES with the four field types', () => {
-    expect(api.FIELD_TYPES).toEqual(['string', 'number', 'boolean', 'reference'])
+  it('gives FIELD_TYPES with the five field types', () => {
+    expect(api.FIELD_TYPES).toEqual(['string', 'number', 'boolean', 'reference', 'reference-list'])
   })
 
   it('does not give createCore', () => {
@@ -30,6 +30,16 @@ describe('the package exports', () => {
 })
 
 describe('isEqual', () => {
+  it('compares any two values', () => {
+    expect(api.isEqual(['a', 'b'], ['a', 'b'])).toBe(true)
+    expect(api.isEqual(['a', 'b'], ['b', 'a'])).toBe(false)
+    expect(api.isEqual([], [])).toBe(true)
+    expect(api.isEqual(3, '3')).toBe(false)
+    expect(api.isEqual('x', 'x')).toBe(true)
+    expect(api.isEqual(false, false)).toBe(true)
+    expect(api.isEqual(false, 0)).toBe(false)
+  })
+
   it('compares by canonical JSON', () => {
     const a = { definitions: [], entities: [] }
     expect(api.isEqual(a, { entities: [], definitions: [] })).toBe(true)

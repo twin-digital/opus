@@ -103,8 +103,8 @@ describe('a store in a hub', () => {
   })
 })
 
-describe('a store with the four field types in a hub', () => {
-  const F = ['string', 'number', 'boolean', 'reference'].map((type, i) => ({
+describe('a store with the five field types in a hub', () => {
+  const F = ['string', 'number', 'boolean', 'reference', 'reference-list'].map((type, i) => ({
     id: `fld_0000000${i}-0000-4000-8000-000000000000`,
     label: type,
     type,
@@ -112,7 +112,10 @@ describe('a store with the four field types in a hub', () => {
   const typed = {
     definitions: [{ id: CT, label: 'Item', fields: F }],
     entities: [
-      { id: ENT, components: { [CT]: { [F[0].id]: 'x', [F[1].id]: 3, [F[2].id]: false, [F[3].id]: ENT2 } } },
+      {
+        id: ENT,
+        components: { [CT]: { [F[0].id]: 'x', [F[1].id]: 3, [F[2].id]: false, [F[3].id]: ENT2, [F[4].id]: [ENT2] } },
+      },
       { id: ENT2, components: {} },
     ],
   }
@@ -128,6 +131,7 @@ describe('a store with the four field types in a hub', () => {
     ['number', 1, 3],
     ['boolean', 2, false],
     ['reference', 3, ENT2],
+    ['reference-list', 4, [ENT2]],
   ])('accepts and records the same value of a %s field and keeps the part', async (_type, index, value) => {
     const { hub, form } = startTyped()
     const before = hub.read().store
@@ -137,6 +141,38 @@ describe('a store with the four field types in a hub', () => {
     expect(result).toEqual({ ok: true, seq: 1 })
     expect(hub.record()).toHaveLength(1)
     expect(hub.read().store).toBe(before)
+  })
+
+  it('keeps the same part object for an equal list in a new object', async () => {
+    const { hub, form } = startTyped()
+    const before = hub.read().store
+    const result = await form.submit(
+      storeInputs().setField({ entity: ENT, componentType: CT, field: F[4].id, value: [...[ENT2]] }),
+    )
+    expect(result.ok).toBe(true)
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('gives a new part for the same IDs in a new order', async () => {
+    const hub = createHub({
+      subsystems: [
+        createStore({
+          model: {
+            ...typed,
+            entities: [
+              { id: ENT, components: { [CT]: { [F[4].id]: [ENT2, ENT] } } },
+              { id: ENT2, components: {} },
+            ],
+          },
+        }),
+      ],
+    })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+    const before = hub.read().store
+    await form.submit(storeInputs().setField({ entity: ENT, componentType: CT, field: F[4].id, value: [ENT, ENT2] }))
+    expect(hub.read().store).not.toBe(before)
+    expect(JSON.stringify(hub.read().store)).toContain(`"${F[4].id}":["${ENT}","${ENT2}"]`)
   })
 
   it('refuses the removal of an entity that another entity refers to and keeps the part', async () => {

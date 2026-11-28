@@ -334,6 +334,8 @@ describe('add-entity', () => {
 
 const FLD3 = 'fld_22222222-3333-4444-8555-666666666666'
 const FLD4 = 'fld_33333333-4444-4555-8666-777777777777'
+const FLD5 = 'fld_44444444-5555-4666-8777-888888888888'
+const ENT3 = 'e_bbbbbbbb-cccc-4ddd-8eee-ffffffffffff'
 
 /** A model with a field of each type, a `list` entity that holds a reference, and a `task` entity. */
 const typedModel = (list: Record<string, unknown> = { [FLD4]: ENT2 }): Model =>
@@ -347,6 +349,7 @@ const typedModel = (list: Record<string, unknown> = { [FLD4]: ENT2 }): Model =>
           { id: FLD2, label: 'count', type: 'number' },
           { id: FLD3, label: 'done', type: 'boolean' },
           { id: FLD4, label: 'next', type: 'reference' },
+          { id: FLD5, label: 'cards', type: 'reference-list' },
         ],
       },
     ],
@@ -371,6 +374,34 @@ describe('remove-entity with references', () => {
     const store = createStore({ model: typedModel({ [FLD4]: ENT }) })
     const next = send(store, store.initial, 'store/remove-entity', { entity: ENT })
     expect(next.entities.map((entity) => entity.id)).toEqual([ENT2])
+  })
+})
+
+/** A model with a `deck` entity that holds a `reference-list` field, and two card entities. */
+const listModel = (cards?: string[]): Model => ({
+  definitions: [{ id: CT, label: 'Deck', fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] }],
+  entities: [
+    { id: ENT, components: { [CT]: cards === undefined ? {} : { [FLD5]: cards } } },
+    { id: ENT2, components: {} },
+    { id: ENT3, components: {} },
+  ],
+})
+
+describe('remove-entity with a reference-list', () => {
+  it('refuses an entity that a list of a different entity names, and keeps the part', () => {
+    const store = createStore({ model: listModel([ENT2, ENT3]) })
+    const error = refusal(() => send(store, store.initial, 'store/remove-entity', { entity: ENT2 }))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.message).toContain(ENT)
+    expect(error.problems[0]?.message).toContain('"cards"')
+    expect(error.problems[0]?.message).toContain(ENT2)
+    expect(store.initial.entities).toHaveLength(3)
+  })
+
+  it('removes an entity whose list names only its own entity', () => {
+    const store = createStore({ model: listModel([ENT]) })
+    const next = send(store, store.initial, 'store/remove-entity', { entity: ENT })
+    expect(next.entities.map((entity) => entity.id)).toEqual([ENT2, ENT3])
   })
 })
 
@@ -478,8 +509,9 @@ describe('set-field', () => {
     expect(twice).toBe(once)
   })
 
-  describe('with the four field types', () => {
+  describe('with the five field types', () => {
     const setTyped = (field: string, value: unknown) => ({ entity: ENT, componentType: CT, field, value })
+    const setList = (value: unknown) => setTyped(FLD5, value)
 
     it('sets a number and a boolean', () => {
       const store = createStore({ model: typedModel() })
@@ -493,9 +525,41 @@ describe('set-field', () => {
       ['number', FLD2, 3],
       ['boolean', FLD3, false],
       ['reference', FLD4, ENT2],
+      ['reference-list', FLD5, [ENT2]],
     ])('returns the same part object for the same value of a %s field', (_type, field, value) => {
-      const store = createStore({ model: typedModel({ [FLD]: 'x', [FLD2]: 3, [FLD3]: false, [FLD4]: ENT2 }) })
+      const store = createStore({
+        model: typedModel({ [FLD]: 'x', [FLD2]: 3, [FLD3]: false, [FLD4]: ENT2, [FLD5]: [ENT2] }),
+      })
       expect(send(store, store.initial, 'store/set-field', setTyped(field, value))).toBe(store.initial)
+    })
+
+    it('sets a list, and gives the same part object for an equal list in a new object', () => {
+      const store = createStore({ model: listModel([ENT2, ENT3]) })
+      const same = send(store, store.initial, 'store/set-field', setList([ENT2, ENT3]))
+      expect(same).toBe(store.initial)
+    })
+
+    it('gives the new order for the same IDs in a different order', () => {
+      const store = createStore({ model: listModel([ENT2, ENT3]) })
+      const next = send(store, store.initial, 'store/set-field', setList([ENT3, ENT2]))
+      expect(next).not.toBe(store.initial)
+      expect(next.entities[0]?.components[CT]?.[FLD5]).toEqual([ENT3, ENT2])
+      expect(next.entities[1]).toBe(store.initial.entities[1])
+    })
+
+    it('sets a list on a field with no value, and sets an empty list', () => {
+      const store = createStore({ model: listModel() })
+      const filled = send(store, store.initial, 'store/set-field', setList([ENT2]))
+      expect(filled.entities[0]?.components[CT]?.[FLD5]).toEqual([ENT2])
+      const empty = send(store, filled, 'store/set-field', setList([]))
+      expect(empty.entities[0]?.components[CT]?.[FLD5]).toEqual([])
+      expect(send(store, empty, 'store/set-field', setList([]))).toBe(empty)
+    })
+
+    it('refuses a list with an ID two times', () => {
+      const store = createStore({ model: listModel() })
+      const error = refusal(() => send(store, store.initial, 'store/set-field', setList([ENT2, ENT2])))
+      expect(error.problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD5, 1])
     })
 
     it('returns the same part object for a reference set two times in a row', () => {
