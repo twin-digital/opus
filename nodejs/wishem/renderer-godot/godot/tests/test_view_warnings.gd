@@ -27,8 +27,23 @@ func test_gives_the_warnings_in_the_order_of_the_fields() -> void:
 	assert_equal(warnings[1]["fields"], ["fld_1"])
 
 
-func test_gives_no_warning_for_a_view_with_no_definition() -> void:
-	assert_equal(ViewWarnings.view_warnings(_table(), []), [])
+func test_gives_a_warning_for_a_view_with_no_definition() -> void:
+	assert_equal(ViewWarnings.view_warnings(_table(), []), [{"kind": "component-type-not-defined", "sidecar": "A.view.json", "componentType": CT1}])
+
+
+func test_sorts_the_warning_of_a_missing_definition_before_a_later_sidecar() -> void:
+	var table := {
+		"ct_b": {"sidecar": "B.view.json", "view": RefCounted.new()},
+		CT1: {"sidecar": "A.view.json", "view": RefCounted.new()},
+	}
+	var definition := _definition(["???"])
+	definition["id"] = "ct_b"
+	var warnings := ViewWarnings.view_warnings(table, [definition])
+	assert_equal(warnings.size(), 2)
+	assert_equal(warnings[0]["kind"], "component-type-not-defined")
+	assert_equal(warnings[0]["sidecar"], "A.view.json")
+	assert_equal(warnings[1]["kind"], "empty-name")
+	assert_equal(warnings[1]["sidecar"], "B.view.json")
 
 
 func test_describes_the_warning_in_one_line() -> void:
@@ -36,4 +51,12 @@ func test_describes_the_warning_in_one_line() -> void:
 	assert_equal(
 		ViewWarnings.describe_warning(warnings[0]),
 		"wishem: the sidecar A.view.json: the label of the field fld_0 of the component type %s gives an empty name. The view does not get the field." % CT1,
+	)
+
+
+func test_describes_the_warning_of_a_missing_definition() -> void:
+	var warnings := ViewWarnings.view_warnings(_table(), [])
+	assert_equal(
+		ViewWarnings.describe_warning(warnings[0]),
+		"wishem: the sidecar A.view.json names the component type %s, which no definition has. No view is drawn for it." % CT1,
 	)

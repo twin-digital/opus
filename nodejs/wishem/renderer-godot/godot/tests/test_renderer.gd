@@ -192,6 +192,7 @@ func test_a_state_with_no_store_gives_no_node_and_no_error() -> void:
 	var renderer := Renderer.new(FakePort.new({"other": {}}), _table(view), host, _size)
 	assert_equal(_children(host).size(), 0)
 	assert_equal(renderer.errors, [])
+	assert_equal(renderer.warnings, [])
 	assert_equal(view.creates, 0)
 	renderer.stop()
 	host.free()
@@ -342,5 +343,22 @@ func test_writes_no_warning_for_a_model_with_no_problem() -> void:
 	var port := FakePort.new({"store": _store([_entity("e1", {CT: {COLOR: "#112233"}})])})
 	var renderer := Renderer.new(port, _table(RectView.new()), host, _size)
 	assert_equal(renderer.warnings, [])
+	renderer.stop()
+	host.free()
+
+
+func test_warns_for_a_sidecar_with_no_definition_and_draws_the_other_views() -> void:
+	var host := _host()
+	var table: Dictionary = Views.collect_from("res://tests/views/ok", ["Box.view.json", "Ring.view.json"])["views"]
+	var port := FakePort.new({"store": _store([_entity("e1", {OTHER: {COLOR: "a"}})], [_definition(OTHER)])})
+	var renderer := Renderer.new(port, table, host, _size)
+	var line := "wishem: the sidecar Box.view.json names the component type %s, which no definition has. No view is drawn for it." % CT
+	assert_equal(renderer.warnings, [line])
+	assert_equal(_children(host).size(), 1)
+	port.apply(_store([_entity("e1", {OTHER: {COLOR: "b"}})], [_definition(OTHER)]))
+	assert_equal(renderer.warnings, [line], "a changed value writes no line")
+	port.apply(_store([_entity("e1", {OTHER: {COLOR: "b"}, CT: {COLOR: "c"}})], [_definition(OTHER), _definition(CT, "Color")]))
+	assert_equal(renderer.warnings, [line], "a new definition writes no line")
+	assert_equal(_children(host).size(), 2)
 	renderer.stop()
 	host.free()

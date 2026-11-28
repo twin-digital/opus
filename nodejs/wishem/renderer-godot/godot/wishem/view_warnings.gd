@@ -12,9 +12,10 @@ static func view_warnings(views: Dictionary, definitions: Array) -> Array:
 		by_id[definition["id"]] = definition
 	var warnings: Array = []
 	for type: String in views:
-		if not by_id.has(type):
-			continue
 		var sidecar: String = views[type]["sidecar"]
+		if not by_id.has(type):
+			warnings.append({"kind": "component-type-not-defined", "sidecar": sidecar, "componentType": type})
+			continue
 		for problem: Dictionary in Views.prop_names(by_id[type])["problems"]:
 			if problem["kind"] == "empty-name":
 				warnings.append({"kind": "empty-name", "sidecar": sidecar, "componentType": type, "fields": [problem["field"]]})
@@ -29,6 +30,8 @@ static func view_warnings(views: Dictionary, definitions: Array) -> Array:
 static func describe_warning(warning: Dictionary) -> String:
 	var fields: Array = warning.get("fields", [])
 	match warning["kind"]:
+		"component-type-not-defined":
+			return "wishem: the sidecar %s names the component type %s, which no definition has. No view is drawn for it." % [warning["sidecar"], warning["componentType"]]
 		"empty-name":
 			return "wishem: the sidecar %s: the label of the field %s of the component type %s gives an empty name. The view does not get the field." % [warning["sidecar"], fields[0], warning["componentType"]]
 	return ""
