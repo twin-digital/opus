@@ -1,9 +1,10 @@
 import { REWIND_INPUT_TYPE, type Port } from '@thrashplay/wishem-hub'
 import { TIME_ID, timeInputs } from './time.js'
 
-// Timer functions that Node.js and a web browser both give, declared so that no Node.js types are needed.
+// Timer functions and the monotonic clock that Node.js and a web browser both give, declared so that no Node.js types are needed.
 declare function setInterval(callback: () => void, intervalMs: number): unknown
 declare function clearInterval(handle: unknown): void
+declare const performance: { now(): number }
 
 export interface ClockTimer {
   /** Calls `callback` at the interval. Returns a function that stops the calls. */
@@ -17,7 +18,7 @@ export interface ClockOptions {
   maxTicksPerCall?: number
   /** Default: `setInterval`. */
   timer?: ClockTimer
-  /** Real time in milliseconds. Default: `Date.now`. */
+  /** Real time in milliseconds. Default: `performance.now()`, a monotonic clock. */
   now?: () => number
 }
 
@@ -51,7 +52,7 @@ const isRunning = (part: unknown): boolean =>
  * or when an option is not correct.
  */
 export const startClock = (port: Port, options: ClockOptions = {}): Clock => {
-  const { stepMs = 50, maxTicksPerCall = 5, timer = defaultTimer, now = Date.now } = options
+  const { stepMs = 50, maxTicksPerCall = 5, timer = defaultTimer, now = () => performance.now() } = options
   requirePositive('stepMs', stepMs)
   requirePositive('maxTicksPerCall', maxTicksPerCall)
   if (!Number.isInteger(maxTicksPerCall)) {
