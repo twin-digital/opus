@@ -249,6 +249,15 @@ describe('the start script of the workbench', () => {
     expect(await refuses('127.0.0.1', Number(new URL(link).port))).toBe(true)
   })
 
+  it('stops with exit code 0 when a second signal comes during the stop', { timeout: 30000 }, async () => {
+    const { run } = await startReady()
+
+    run.child.kill('SIGINT')
+    run.child.kill('SIGINT')
+
+    expect(await run.exit).toBe(0)
+  })
+
   it('stops with exit code 0 on a terminate signal', { timeout: 30000 }, async () => {
     const { run } = await startReady()
 
@@ -1165,7 +1174,7 @@ describe('the start script of the workbench', () => {
       scripts: Record<string, string>
     }
 
-    expect(manifest.scripts.start).toBe('node scripts/start.ts')
+    expect(manifest.scripts.start).toBe('exec node scripts/start.ts')
     expect(existsSync(script)).toBe(true)
   })
 
