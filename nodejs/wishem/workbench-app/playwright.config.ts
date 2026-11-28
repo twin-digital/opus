@@ -9,6 +9,8 @@ if (!wsEndpoint) {
 const WORKBENCH_URL = 'http://127.0.0.1:4180'
 // The workbench with the sample product mounted (`--product`).
 const PRODUCT_URL = 'http://127.0.0.1:4184'
+// The workbench with the sample product, its code, and its views (`--run`).
+const RUN_URL = 'http://127.0.0.1:4186'
 
 const server = (command: string, url: string) => ({
   command,
@@ -32,6 +34,7 @@ export default defineConfig({
   webServer: [
     server('node scripts/e2e-server.ts', WORKBENCH_URL),
     server('node scripts/e2e-server.ts --product', PRODUCT_URL),
+    server('node scripts/e2e-server.ts --run', RUN_URL),
   ],
   expect: {
     // The default of Playwright, stated because the design requires it.
@@ -66,6 +69,15 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         baseURL: PRODUCT_URL,
+        connectOptions: { wsEndpoint, exposeNetwork: '<loopback>' },
+      },
+    },
+    {
+      name: 'run',
+      testMatch: 'run.guide.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: RUN_URL,
         connectOptions: { wsEndpoint, exposeNetwork: '<loopback>' },
       },
     },

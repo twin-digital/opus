@@ -1,20 +1,31 @@
 // Starts the workbench for the browser tests, on a copy of the model folder in `.e2e-model/`.
-// Usage: node e2e-server.ts [--product]
+// Usage: node e2e-server.ts [--product | --run]
 // With `--product`, the workbench mounts a copy of the sample product from `.e2e-product/`, and its model is in
 // `.e2e-product-model/`.
+// With `--run`, the workbench mounts a copy of the sample product from `.e2e-run-product/`, with the product code and
+// the views of the sample product, and its model is in `.e2e-run-model/`.
 import { cp } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { modelFolder } from '@thrashplay/wishem-workbench'
 
-const { values } = parseArgs({ options: { product: { type: 'boolean' } } })
-const withProduct = values.product === true
+const { values } = parseArgs({ options: { product: { type: 'boolean' }, run: { type: 'boolean' } } })
+const withRun = values.run === true
+const withProduct = values.product === true || withRun
 
 /** The port of the page. `playwright.config.ts` uses the same numbers. */
-const PAGE_PORT = withProduct ? 4184 : 4180
+const PAGE_PORT =
+  withRun ? 4186
+  : withProduct ? 4184
+  : 4180
 const root = resolve(import.meta.dirname, '..')
-const copy = resolve(root, withProduct ? '.e2e-product-model' : '.e2e-model')
-const productCopy = resolve(root, '.e2e-product')
+const copy = resolve(
+  root,
+  withRun ? '.e2e-run-model'
+  : withProduct ? '.e2e-product-model'
+  : '.e2e-model',
+)
+const productCopy = resolve(root, withRun ? '.e2e-run-product' : '.e2e-product')
 
 // Overwrites files. Deletes nothing.
 await cp(modelFolder, copy, { recursive: true })
@@ -30,6 +41,8 @@ const { startWorkbench } = (await import(startModule)) as typeof import('./start
 const workbench = await startWorkbench({
   model: copy,
   product: withProduct ? productCopy : undefined,
+  productCode: withRun ? '@thrashplay/wishem-sample-product' : undefined,
+  productViews: withRun ? resolve(root, '..', 'sample-product', 'views', 'react') : undefined,
   port: PAGE_PORT,
   hubPort: 0,
   viewTypes: false,

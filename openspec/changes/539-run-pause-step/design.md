@@ -804,7 +804,7 @@ Terminal 3 prints `applied #<N> constructs/rewind` for the second command: write
 node $RAW --once --send '{"type":"constructs/stop","payload":{"construct":"play"}}'
 ```
 
-Result: terminal 4 prints the `stopping` event and `link closed`. Terminal 1 prints `wishem: construct play stopped`. The `curl` command of step 1 prints `404` again.
+Result: terminal 4 prints `link closed`. Terminal 1 prints `wishem: construct play stopped`. The `curl` command of step 1 prints `404` again.
 
 ### 12. A narrow viewport in dark mode, and an edit of a product view
 
@@ -814,7 +814,7 @@ $PAGE --width 390 --scheme dark run waitfor:Running pause shot:.superpowers/a4ru
 
 Result: `narrow-dark.png` shows the run area above the product panel in dark mode, with the buttons in one or two rows and no horizontal scroll bar.
 
-Then: `$PAGE waitfor:Paused "exec:sed -i 's/Count /Count: /' nodejs/wishem/sample-product/views/react/Count.tsx" wait:2000 print`. Result: `stage: ...; Count: <c>`, and the `run:` line is the same as before the edit. Then run `git checkout nodejs/wishem/sample-product/views/react/Count.tsx`.
+Then: `$PAGE waitfor:Paused "exec:sed -i 's/<p>Count /<p>Count: /' nodejs/wishem/sample-product/views/react/Count.tsx" wait:2000 print`. Result: `stage: ...; Count: <c>`, and the `run:` line is the same as before the edit. Then run `git checkout nodejs/wishem/sample-product/views/react/Count.tsx`.
 
 ### 13. The option errors
 
