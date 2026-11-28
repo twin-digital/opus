@@ -67,14 +67,14 @@ rules:
     - >-
       When the change adds, removes, or moves an element or a relationship at the C4 context or
       container level (a person, an external system, a process, a service, a deployable unit, a
-      store of persisted data), the change MUST add or
-      update the product's architecture document and its diagrams, per `docs/diagrams.md`, and
+      store of persisted data), the change MUST add or update the product's architecture document and its diagrams, per `docs/diagrams.md`, and
       list `<product>/architecture/diagrams` as a new or modified capability. A product gets its
       first architecture document when it first has two containers. When the change adds,
       removes, or renames an entity or a relationship in a store of persisted data, it MUST update
       the entity diagram of that store and list `<product>/architecture/diagrams` the same way.
       When the change adds or removes a package, or a dependency between packages, it MUST run
-      the render script of the package dependency view, and the check fails when it does not.
+      the render script of the package dependency view. The check `render.mjs --check` fails when
+      the files are not current.
       Other changes inside one container need neither.
   design:
     - >-
@@ -134,7 +134,8 @@ rules:
       shows it). A change that alters the C4 context or container level, or the entities of a
       store, modifies the requirement of each affected diagram.
       A change that adds or removes a package, or a dependency between packages, runs the render
-      script of the package dependency view, and the check fails when it does not.
+      script of the package dependency view. The check `render.mjs --check` fails when the files
+      are not current.
   tasks:
     - >-
       Each task that adds or changes a UI component or design token also updates the product's
@@ -148,7 +149,8 @@ rules:
       implementer looks at a rendered image of each changed diagram in each theme, per the
       `diagrams` skill. Never defer diagram work to a later task.
       Each task that adds or removes a package, or a dependency between packages, runs the render
-      script of the package dependency view, and the check fails when it does not.
+      script of the package dependency view. The check `render.mjs --check` fails when the files
+      are not current.
 
 # Per-operation guidance (optional)
 # Add advisory guidance for how apply and archive work should be conducted.

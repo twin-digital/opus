@@ -261,7 +261,7 @@ No decision meets the three conditions of "When to ask the owner". A user of Wis
 
 - Reason: the tests of `docs-check` run only when a package that `docs-check` depends on changes. A change to `render.mjs`, to an SVG file, or to `README.md` in `nodejs/wishem/docs/` alone changes no package. The merge checks run on each pull request. The owner permitted this step in #696.
 - The script uses only `node:` modules, and it reads the `package.json` files and `tokens.css` of the checkout. It needs no build.
-- `autonomous-flow.md` does not change: each other change to a workflow still needs the permission of the owner.
+- This change makes one change to `autonomous-flow.md`: the "Reviews" rule of Decision 9. It makes no other change to a workflow. Each other change to a workflow needs the permission of the owner.
 
 ## Interfaces
 
