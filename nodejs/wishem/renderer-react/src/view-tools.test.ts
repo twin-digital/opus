@@ -7,6 +7,7 @@ import {
   serveLink,
   type Channel,
   type Hub,
+  LinkClosedError,
   type Port,
   type RemoteLink,
 } from '@thrashplay/wishem-hub'
@@ -14,6 +15,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createViewTools,
   RESERVED_PROP_NAMES,
+  sendInput,
   stubViewTools,
   type InputPort,
   type ViewToolsCall,
@@ -292,5 +294,34 @@ describe('stubViewTools', () => {
       { kind: 'setField', name: 'done', value: true },
     ]
     expect(calls).toEqual(expected)
+  })
+})
+
+describe('sendInput', () => {
+  it('gives the outcome ok of the hub for an accepted input', async () => {
+    const { hub, input } = world()
+    const outcome = await sendInput(input, { type: 'time/set-running', payload: true })
+
+    expect(outcome.ok).toBe(true)
+    expect(hub.record()).toHaveLength(1)
+  })
+
+  it('gives the refusal of the hub for a refused input', async () => {
+    const { input } = world()
+    expect(await sendInput(input, { type: 'nothing/here' })).toMatchObject({ ok: false, reason: 'unknown-type' })
+  })
+
+  it('gives unknown for a LinkClosedError', async () => {
+    const port: InputPort = { submit: () => Promise.reject(new LinkClosedError()) }
+    expect(await sendInput(port, { type: 'a/b' })).toEqual({ ok: false, reason: 'unknown', problems: [] })
+  })
+
+  it('gives failed for each other error', async () => {
+    const port: InputPort = { submit: () => Promise.reject(new Error('boom')) }
+    expect(await sendInput(port, { type: 'a/b' })).toEqual({ ok: false, reason: 'failed', problems: [] })
+  })
+
+  it('gives not-permitted with no port, and calls no submit', async () => {
+    expect(await sendInput(undefined, { type: 'a/b' })).toEqual({ ok: false, reason: 'not-permitted', problems: [] })
   })
 })
