@@ -331,7 +331,7 @@ A game loop has these jobs: a fixed step, an accumulator, a catch-up with a limi
 | Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                                                                              | Built                                                               |
 | Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                                                                     | Built                                                               |
 | Pause, step, rewind   | The part `time` (`running`) and the inputs `time/set-running` and `hub/rewind`. After `time/set-running` and `hub/rewind`, and when the clock starts, the clock measures real time again. | Built                                                               |
-| Update of the rules   | One model subsystem, the update subsystem. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.                                                    | Not built ([#617](https://github.com/twin-digital/opus/issues/617)) |
+| Update of the rules   | One model subsystem, the update subsystem. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.                                                    | Built ([#617](https://github.com/twin-digital/opus/issues/617))     |
 | Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                                                                   | Built, with no interpolation                                        |
 
 ### Fixed step
@@ -346,7 +346,6 @@ The accumulator keeps the time of the construct near the real time. When the tim
 
 ### Not built
 
-- **The update subsystem.** A tick changes only the part `time`. A rule that reacts to `time/advance` is a model subsystem that wraps the store. The count rule of the sample product is the first. The color rule of the PixiJS construct is the next rule. [#540](https://github.com/twin-digital/opus/issues/540) adds it. These rules are native behaviors in a first form, and each one wraps the store by itself. No part owns the order between them.
 - **Interpolation.** No renderer draws a frame between two ticks.
 - **A step length that changes.** The step length is set when the clock starts. A product cannot ask for a different rate while it runs.
 - **The cost of a tick.** Each tick is an input in the record and goes to each listener and through each link. The cost for each tick of each listener is not measured. The record has a limit ([#533](https://github.com/twin-digital/opus/issues/533)).
@@ -355,7 +354,7 @@ The accumulator keeps the time of the construct near the real time. When the tim
 
 One model subsystem is the update subsystem. It runs the behaviors in an order that the specification of the update subsystem gives. A behavior is data and code that this subsystem runs. It is not a subsystem. (rule R22)
 
-The count rule and the color rule move into the update subsystem as its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
+The count behavior of the sample product and the color behavior of the PixiJS construct are its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
 
 ### Decision: interpolation in a renderer (**Agreed**)
 
@@ -535,7 +534,7 @@ A person can view and edit the code behind a behavior. The edit makes a new vers
 
 A native behavior is not locked. The designer can give it a new prompt. The agent then writes a new version, and the behavior is not native. (**Agreed**)
 
-The count rule of the sample product is a native behavior in a first form. It stands in for the behavior feature (issue #481).
+The count behavior of the sample product is a native behavior that the update subsystem runs. It stands in for the behavior feature (issue #481).
 
 The agent starts the new version from the current code, as for each other prompt change (rule R11). A hand edit to code has the same problems as a hand edit to a generated room: the prompt does not describe it, and a later change can remove it. (**Proposed**)
 
