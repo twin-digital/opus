@@ -14,7 +14,7 @@ describe('checkBehaviors', () => {
   it('refuses a value that is not an array', () => {
     for (const value of [undefined, null, {}, 'a', 3]) {
       expect(() => checkBehaviors(value)).toThrow(TypeError)
-      expect(() => checkBehaviors(value)).toThrow(/array/)
+      expect(() => checkBehaviors(value)).toThrow(/not a list/)
     }
   })
 

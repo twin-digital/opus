@@ -842,9 +842,7 @@ describe('the start script of the workbench', () => {
         }),
       ).rejects.toThrow(StartError)
 
-      expect(lines.at(-1)).toBe(
-        'wishem: the product code has no correct list behaviors: The behaviors must be an array.',
-      )
+      expect(lines.at(-1)).toBe('wishem: the product code has no correct list behaviors: The behaviors are not a list.')
       expect(vite.createServer).not.toHaveBeenCalled()
       expect(await refuses('127.0.0.1', hubPort)).toBe(true)
     })

@@ -105,3 +105,13 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 
 - **WHEN** `@thrashplay/wishem-sample-product` imports only types of `@thrashplay/wishem-update`
 - **THEN** the container diagram shows no relationship from `sample-product` to `update`, and the dependency list of the architecture document names the dependency
+
+#### Scenario: The Godot process runs the construct of the Godot application
+
+- **WHEN** the `start` script of `@thrashplay/wishem-renderer-godot` runs the construct of the Godot application in a Node.js process
+- **THEN** the container diagram shows the Godot process as a Node.js container, a relationship from the designer to it, a relationship from it to `host-nodejs` with the label "Serves the link with [import]", and relationships from it to `clock`, `core`, and `hub`, each with the label "Builds on [import]"
+
+#### Scenario: The Godot application connects through the Godot runner
+
+- **WHEN** the `godot` script of `@thrashplay/wishem-renderer-godot` starts the Godot application in Docker and carries the bytes of its link to the Godot process
+- **THEN** the container diagram shows the Godot runner as a Node.js container and the Godot application as a Godot container, a relationship from the designer to the Godot runner, a relationship from the Godot runner to the Godot application with the label "Starts and copies the screenshots [Docker]", a relationship from the Godot application to the Godot runner with the label "Connects to the hub [WebSocket link]", and a relationship from the Godot runner to the Godot process with the label "Carries the link [TCP]"

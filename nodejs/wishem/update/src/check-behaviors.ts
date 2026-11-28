@@ -5,7 +5,7 @@ const isText = (value: unknown): value is string => typeof value === 'string' &&
 /** Returns the list, or throws a `TypeError` that names the first problem. */
 export const checkBehaviors = (value: unknown): readonly NativeBehavior[] => {
   if (!Array.isArray(value)) {
-    throw new TypeError('The behaviors must be an array.')
+    throw new TypeError('The behaviors are not a list.')
   }
   const ids = new Set<string>()
   value.forEach((item: unknown, position) => {

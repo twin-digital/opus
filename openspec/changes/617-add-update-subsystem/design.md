@@ -481,7 +481,7 @@ Set the variables in both terminals. Result: the build ends with no failed task.
 5. **A rewind gives the color of the target.** `node $REWIND --url ws://127.0.0.1:4748/link --seq 1`. Result: `"ok":true`. Read as in step 2. Result: `#b91c1c` and `"ticks":1`.
 6. **A bad tick changes nothing.** Send `{"type":"time/advance","payload":{"ms":0}}`. Result: `"ok":false,"reason":"invalid"`, and the read gives `#b91c1c` and `"ticks":1`.
 7. **The page draws the behavior.** Open `http://127.0.0.1:5174/` and press the period key. Result: the canvas changes from red to green. Press the space key. Result: the color changes two times each second. With Docker, `pnpm --filter @thrashplay/wishem-pixi-page test:ui` passes with the baselines that the change did not touch.
-8. **The stop.** Press Ctrl+C in terminal 1. Result: the command `node scripts/start.ts` ends with exit code 0. `pnpm` reports the signal (#624).
+8. **The stop.** Press Ctrl+C in terminal 1. Result: the command `node scripts/start.ts` ends with exit code 0. `pnpm` reports no signal and exits with code 0.
 
 ### Part 2: the count behavior in a product construct of the workbench
 
