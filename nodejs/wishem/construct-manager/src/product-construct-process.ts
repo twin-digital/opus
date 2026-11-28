@@ -93,6 +93,25 @@ const onStart = async (message: StartMessage): Promise<void> => {
   }
 }
 
+const check = async (productCode: string): Promise<object> => {
+  let loaded: { behaviors?: unknown }
+  try {
+    loaded = (await import(productCode)) as { behaviors?: unknown }
+  } catch (error) {
+    return { t: 'refused', reason: 'load', message: messageOf(error) }
+  }
+  try {
+    return { t: 'checked', count: checkBehaviors(loaded.behaviors).length }
+  } catch (error) {
+    return { t: 'refused', reason: 'behaviors', message: messageOf(error) }
+  }
+}
+
+const onCheck = async (productCode: string): Promise<void> => {
+  await send(await check(productCode))
+  process.exit(0)
+}
+
 const onServe = async (): Promise<void> => {
   try {
     if (hub === undefined) {
@@ -121,6 +140,10 @@ process.on('message', (message: unknown) => {
     void onStart(message as StartMessage)
   } else if (t === 'serve') {
     void onServe()
+  } else if (t === 'ping') {
+    void send({ t: 'pong' })
+  } else if (t === 'check') {
+    void onCheck(String((message as { productCode?: unknown }).productCode))
   } else if (t === 'stop') {
     void end(0)
   }

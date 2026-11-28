@@ -148,4 +148,22 @@ The launcher gives each line of the standard output and the standard error of th
 
 The child ends when its IPC channel disconnects. This happens when the parent ends for any cause, also `SIGKILL`. `ended` resolves with a message when the child ends and no `close()` was called.
 
+### The faults of a product construct process
+
+Each fault gives `ended` a message, and the manager reports `failed`. The launcher does not start the construct again.
+
+| Fault                                                                                  | Result                                                                                                |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| The process ends                                                                       | `The process of the construct ended with the exit code <code>.` or `... with the signal <signal>.`    |
+| No `serving` in `startMs` (default 10000)                                              | The launch rejects with `The construct did not start in <n> seconds.` The launcher kills the process. |
+| No `pong` in `answerMs` (default 5000) after a ping, sent each `pingMs` (default 1000) | `ended` resolves with `The construct did not answer in <n> seconds.` The launcher kills the process.  |
+| No result of a `submit` in `answerMs`                                                  | The `submit` of `input` rejects with the same message. The launcher kills the process.                |
+| The process does not end in `stopMs` after `close()`                                   | The launcher sends `SIGKILL`.                                                                         |
+
+A new process loads the current product code file. A running construct keeps the code that it loaded.
+
+## The check of the product code
+
+`checkProductCode(url, { answerMs })` imports the product code in a short child process and checks the behaviors. It never rejects. It gives `{ ok: true, count }`, or `{ ok: false, reason, message }`. `reason` is `load` (the import failed, or the check did not end in `answerMs`, default 5000) or `behaviors` (the message of `checkBehaviors`). The process ends in each case.
+
 `inProcessLauncher(options)` runs the construct in this process with `startProductConstruct`, for tests with a fake clock. Its `LaunchedConstruct` also has `hub`.
