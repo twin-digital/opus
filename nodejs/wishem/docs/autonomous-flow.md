@@ -70,7 +70,7 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 - If the resource log (`~/.local/state/wishem/resources.csv`) shows memory above 80 % or CPU throttling above 20 % for ten minutes, the lead agent goes back to one slot and adds a note to **Process notes**.
 
 - The system moves a foreground command of a subagent to the background after approximately 180 seconds, and the subagent then loses the result. Thus each command, with its wait for the lock, ends in less than 150 seconds. Divide a longer job into parts, for example one package for each command.
-- The script stops the wait for a slot after 15 seconds, with exit code 1 and no run of the command. The agent then tries the same command again, at most 40 times.
+- The script stops the wait for a slot after 15 seconds, with exit code 75 and no run of the command. The agent then tries the same command again, at most 40 times. Each other exit code is the exit code of the command: do not run the command again for it.
 - A command that does not end holds the lock. `timeout 140` stops the command after 140 seconds, with exit code 124.
 - A subagent that gets exit code 124, or that does not get the lock in 40 tries, does not try again. It stops and reports the result, with the output of `lslocks`, which shows the process that holds the lock.
 - When a subagent reports such a result, the lead agent finds the process that holds the lock, stops it if it does not end, adds a note to **Process notes**, and starts the task again.
