@@ -398,3 +398,18 @@ describe('a start whose clock cannot start (#685)', () => {
     expect(await canListen(port)).toBe(true)
   })
 })
+
+describe('startProductClock', () => {
+  it('stops the clock and closes the clock port on stop', () => {
+    const clock = makeClock()
+    const hub = createProductHub({ model, behaviors, running: true })
+    hub.start()
+    const started = startProductClock(hub, { stepMs: 50, timer: clock.timer, now: clock.now })
+    expect(clock.active).toBe(1)
+    expect(() => hub.attach({ id: 'clock', kind: 'input' })).toThrow()
+    started.stop()
+    expect(clock.active).toBe(0)
+    expect(() => hub.attach({ id: 'clock', kind: 'input' })).not.toThrow()
+    hub.stop()
+  })
+})
