@@ -563,7 +563,7 @@ When the working state starts and the text has focus, focus SHALL move to `Stop`
 
 ### Requirement: The disabled state of the prompt box
 
-A disabled prompt box SHALL dim its text area and its button, and the two SHALL NOT react. The caller SHALL be able to give a reason, which the hint line shows in the place of the hint text. The reason SHALL NOT be dimmed. When the working state and the disabled state are true together, the box SHALL show the disabled state.
+A disabled prompt box SHALL dim its text area and its button, and the two SHALL NOT react. The two SHALL be out of the tab order, and the box SHALL NOT show the focus look. The caller SHALL be able to give a reason, which the hint line shows in the place of the hint text. The reason SHALL NOT be dimmed. When the working state and the disabled state are true together, the box SHALL show the disabled state.
 
 #### Scenario: Not connected
 
@@ -812,7 +812,7 @@ The product panel SHALL show the entity list and the inspector on `surface`, wit
 
 ### Requirement: The button
 
-The button SHALL show its label in control text, with the radius of 4 pixels. Its look in each variant and state SHALL follow "The button variants" and "The states of a button". A maker button marks an action of the designer. A disabled button SHALL keep the focus and its place in the tab order, SHALL have `aria-disabled`, and SHALL NOT call its function.
+The button SHALL show its label in control text, with the radius of 4 pixels. Its look in each variant and state SHALL follow "The button variants" and "The states of a button". A maker button marks an action of the designer. A disabled button SHALL have the native `disabled` attribute, SHALL be out of the tab order, and SHALL NOT call a handler of its caller. A button that sets `focusableWhenDisabled` SHALL have `aria-disabled` and not the native attribute when it is disabled, SHALL keep the focus and its place in the tab order, and SHALL NOT call a handler of its caller.
 
 #### Scenario: A maker button
 
@@ -822,7 +822,12 @@ The button SHALL show its label in control text, with the radius of 4 pixels. It
 #### Scenario: A disabled button
 
 - **WHEN** a disabled button gets a click, Enter, or Space
-- **THEN** it does not call its function, and it keeps the focus
+- **THEN** it does not call its function, and it is out of the tab order
+
+#### Scenario: A disabled button that stays focusable
+
+- **WHEN** a disabled button that sets `focusableWhenDisabled` gets a click, Enter, or Space
+- **THEN** it does not call its function, it keeps the focus, and it has `aria-disabled`
 
 ### Requirement: The run bar
 

@@ -141,6 +141,13 @@ describe('RunBar', () => {
     expect(buttons().map((b) => b.getAttribute('aria-busy'))).toEqual([null, null, 'true', null])
   })
 
+  it('reaches an enabled control that is busy with the arrow keys', () => {
+    draw({ busy: 'step' })
+    buttons()[1]?.focus()
+    press('ArrowRight')
+    expect(document.activeElement).toBe(buttons()[2])
+  })
+
   it('shows the alert line below the toolbar in danger-text', () => {
     draw({ alert: 'Two behaviors have the ID sample-product/count.' })
     const alert = container.querySelector('[role="alert"]')

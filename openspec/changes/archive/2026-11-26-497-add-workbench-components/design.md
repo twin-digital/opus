@@ -220,10 +220,11 @@ For the focus ring, the test also clicks the button and checks that it has no ou
 `main` added its own `Button`, the product panel, the run controls, and the list control while this change was in work. The merge keeps one button and both sets of requirements in `component-catalog`.
 
 - The button of this change stays. It takes `accessibleName` from the button of `main`.
-- A disabled button has `aria-disabled` and not the native `disabled` attribute. It keeps the focus and its place in the tab order, and it ignores a click, Enter, and Space. The run bar and the field row of `main` need this behavior. It replaces the native `disabled` of this change.
+- A disabled button has the native `disabled` attribute and is out of the tab order. This is the agreed behavior. The prop `focusableWhenDisabled` is opt-in. A disabled button with this prop has `aria-disabled`, keeps the focus and its place in the tab order, and ignores a click, Enter, and Space. The run bar and the field row set it, because the roving tab stop and the focus after a press need it. The prompt box does not set it, so its disabled button leaves the tab order.
+- A disabled or loading button calls no `onClick`, `onKeyDown`, `onKeyUp`, `onMouseDown`, `onMouseUp`, `onPointerDown`, or `onPointerUp` of its caller. A loading button has `aria-busy` and no `aria-disabled`.
 - The callers of `main` use `children` for `label`, `onClick` for `onPress`, `loading` for `busy`, and `neutral` for `plain`.
 - The look of this change replaces the look of the button of `main`: control text, not UI text; a `maker` fill with `on-fill` text, not a `maker` border with `maker-text`; a focus ring in `maker-text`, not `accent`; a dimmed disabled button, not a label in `fg-muted`.
-- The requirement "The button" of `main` keeps the label, the disabled behavior, and `aria-disabled`, and refers to "The button variants" and "The states of a button" for the look. The field row and the list control use neutral buttons.
+- The requirement "The button" of `main` keeps the label and the disabled behavior, and refers to "The button variants" and "The states of a button" for the look. The field row and the list control use neutral buttons.
 - `Section` has the boolean prop `stacked` of `main`, not the `layout` prop of D11.
 - The specimens of `main` are in the files `ProductPanelSpecimens.tsx` and `RunControls.tsx` of `src/style-guide/sections/components/`. The app bar specimens of `main` are in `AppBarAndZeroState.tsx`.
 

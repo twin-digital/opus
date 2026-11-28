@@ -302,6 +302,7 @@ export const FieldRow = ({ field, value, options = [], onChange, onListChange, o
                     <Button
                       accessibleName={`Remove ${option?.text ?? item}`}
                       disabled={listDisabled}
+                      focusableWhenDisabled
                       onClick={() => {
                         changeList(
                           { operation: 'remove-reference', reference: item },
@@ -338,6 +339,7 @@ export const FieldRow = ({ field, value, options = [], onChange, onListChange, o
           <span className='shrink-0'>
             <Button
               disabled={listDisabled || available.length === 0}
+              focusableWhenDisabled
               onClick={() => {
                 if (picked !== '') {
                   changeList(
@@ -422,6 +424,7 @@ export const FieldRow = ({ field, value, options = [], onChange, onListChange, o
             <Button
               accessibleName={`Clear ${field.label}`}
               disabled={!onClear || saving || value === undefined}
+              focusableWhenDisabled
               onClick={clear}
             >
               Clear

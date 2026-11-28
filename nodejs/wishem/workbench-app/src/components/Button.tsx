@@ -13,9 +13,15 @@ export interface ButtonProps extends Native<'button'> {
    */
   loading?: boolean
   /**
-   * Dims the button and ignores clicks, Enter, and Space. The button keeps the focus and its place in the tab order.
+   * Dims the button and passes the native `disabled` attribute to its element. The button leaves the tab order and
+   * calls no handler.
    */
   disabled?: boolean
+  /**
+   * With `disabled`, uses `aria-disabled` and not the native attribute. The button keeps the focus and its place in
+   * the tab order, and calls no handler.
+   */
+  focusableWhenDisabled?: boolean
   /**
    * The accessible name. It starts with the label. Default: the label.
    */
@@ -45,6 +51,8 @@ const variantClass: Record<ButtonVariant, { look: string; states: string }> = {
   },
 }
 
+const inertHandlers = ['onKeyDown', 'onKeyUp', 'onMouseDown', 'onMouseUp', 'onPointerDown', 'onPointerUp'] as const
+
 const stateClass = (variant: ButtonVariant, loading: boolean, disabled: boolean) => {
   if (loading) {
     return 'cursor-progress'
@@ -62,30 +70,38 @@ export const Button = ({
   variant = 'neutral',
   loading = false,
   disabled = false,
+  focusableWhenDisabled = false,
   accessibleName,
   type = 'button',
   onClick,
   children,
   ...rest
-}: ButtonProps) => (
-  <button
-    {...rest}
-    type={type}
-    aria-label={accessibleName ?? rest['aria-label']}
-    aria-busy={loading ? true : rest['aria-busy']}
-    aria-disabled={loading || disabled ? true : rest['aria-disabled']}
-    data-loading={loading ? '' : undefined}
-    data-disabled={disabled ? '' : undefined}
-    onClick={(event) => {
-      if (loading || disabled) {
-        event.preventDefault()
-        return
-      }
-      onClick?.(event)
-    }}
-    className={`${baseClass} ${variantClass[variant].look} ${stateClass(variant, loading, disabled)}`}
-  >
-    {loading && <Spinner />}
-    {children}
-  </button>
-)
+}: ButtonProps) => {
+  const inert = loading || disabled
+  // A disabled or loading button drops these handlers of the caller.
+  const dropped = inert ? Object.fromEntries(inertHandlers.map((name) => [name, undefined])) : {}
+  return (
+    <button
+      {...rest}
+      {...dropped}
+      type={type}
+      disabled={disabled && !focusableWhenDisabled}
+      aria-label={accessibleName ?? rest['aria-label']}
+      aria-busy={loading ? true : rest['aria-busy']}
+      aria-disabled={disabled && focusableWhenDisabled ? true : rest['aria-disabled']}
+      data-loading={loading ? '' : undefined}
+      data-disabled={disabled ? '' : undefined}
+      onClick={(event) => {
+        if (inert) {
+          event.preventDefault()
+          return
+        }
+        onClick?.(event)
+      }}
+      className={`${baseClass} ${variantClass[variant].look} ${stateClass(variant, loading, disabled)}`}
+    >
+      {loading && <Spinner />}
+      {children}
+    </button>
+  )
+}

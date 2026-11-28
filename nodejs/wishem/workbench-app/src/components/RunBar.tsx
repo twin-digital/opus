@@ -92,6 +92,7 @@ export const RunBar = ({ state, busy, alert, onControl }: RunBarProps) => {
               key={index}
               variant={maker ? 'maker' : 'neutral'}
               disabled={!enabled.has(control)}
+              focusableWhenDisabled
               loading={busy === control}
               tabIndex={index === stop ? 0 : -1}
               onClick={() => onControl?.(control)}

@@ -807,6 +807,23 @@ test.describe('prompt box', () => {
         theme === 'light' ? 'rgb(91, 91, 112)' : 'rgb(163, 163, 184)',
       )
     })
+
+    test(`${theme}: Tab skips the disabled box and the box shows no focus look`, async ({ page }) => {
+      const box = scope(page).getByTestId('prompt-disabled')
+      const send = box.getByRole('button', { name: 'Make a wish' })
+      await send.evaluate((element) => {
+        const probe = document.createElement('button')
+        probe.setAttribute('data-probe', '')
+        element.closest('[data-testid="prompt-disabled"]')?.prepend(probe)
+        probe.focus()
+      })
+      await page.keyboard.press('Tab')
+      await expect(send).not.toBeFocused()
+      await expect(box.locator(':focus-within')).toHaveCount(0)
+      await box.locator('[data-probe]').evaluate((element) => {
+        element.remove()
+      })
+    })
   }
 })
 
