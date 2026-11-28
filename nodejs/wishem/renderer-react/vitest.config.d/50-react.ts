@@ -1,11 +1,11 @@
 import react from '@vitejs/plugin-react'
-import { defaultClientConditions } from 'vite'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    conditions: ['source', ...defaultClientConditions],
+    // After "source": the client conditions of Vite
+    conditions: ['source', 'module', 'browser', 'development|production'],
   },
   test: {
     environment: 'jsdom',

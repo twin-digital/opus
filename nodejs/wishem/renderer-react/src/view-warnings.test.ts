@@ -201,6 +201,7 @@ describe('describeWarning', () => {
     expect(line).toContain(E_B)
     expect(line).toContain(E_A)
     expect(line).toContain('already on the path')
+    expect(line).toContain('The view gets no picture for it.')
   })
 
   it('names the sidecar file, the field, the component type, and the name for a reserved name', () => {
@@ -215,6 +216,7 @@ describe('describeWarning', () => {
     expect(line).toContain(FIELD_B)
     expect(line).toContain(APP_BAR)
     expect(line).toContain('reserved name "wishem"')
+    expect(line).toContain('The view does not get the field.')
   })
 
   it('names the sidecar file, the field, and the component type for an empty name', () => {
@@ -228,6 +230,7 @@ describe('describeWarning', () => {
     expect(line).toContain(FIELD_B)
     expect(line).toContain(APP_BAR)
     expect(line).toContain('empty name')
+    expect(line).toContain('The view does not get the field.')
   })
 
   it('names the sidecar file and the ID for a component type that is not defined', () => {
@@ -251,5 +254,6 @@ describe('describeWarning', () => {
     expect(line).toContain(FIELD_B)
     expect(line).toContain(APP_BAR)
     expect(line).toContain('same name "maxHealth"')
+    expect(line).toContain('The prop has the value of the first field.')
   })
 })
