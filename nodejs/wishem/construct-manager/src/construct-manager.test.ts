@@ -390,6 +390,61 @@ describe('attachConstructManager', () => {
     expect(manager.running.has('play')).toBe(true)
   })
 
+  it('keeps the new start when a stop and a start come while the end of the old construct is reported', async () => {
+    clock = makeClock()
+    lines = []
+    sockets = []
+    links = []
+    hub = createHub({
+      subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
+    })
+    hub.start()
+    tester = hub.attach({ id: 'tester', kind: 'input' })
+    const inner = inProcessLauncher({ behaviors, timer: clock.timer, now: clock.now })
+    let endNow: (message: string) => void = () => undefined
+    let releaseClose: () => void = () => undefined
+    let first = true
+    manager = attachConstructManager({
+      hub,
+      log: (line) => lines.push(line),
+      launch: async (startArgs, hooks) => {
+        const launched = await inner(startArgs, hooks)
+        if (!first) {
+          return launched
+        }
+        first = false
+        const gate = new Promise<void>((resolve) => {
+          releaseClose = resolve
+        })
+        const ended = new Promise<string>((resolve) => {
+          endNow = resolve
+        })
+        return {
+          id: launched.id,
+          linkUrl: launched.linkUrl,
+          pid: launched.pid,
+          input: launched.input,
+          reader: launched.reader,
+          ended,
+          close: async () => {
+            await gate
+            await launched.close()
+          },
+        }
+      },
+    })
+    await start()
+    endNow('The process of the construct ended with the exit code 3.')
+    await settle()
+    expect((await tester.submit(constructInputs.stop('play'))).ok).toBe(true)
+    expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
+    releaseClose()
+    await eventually(() => entry('play')?.status === 'running')
+    await settle()
+    expect(entry('play')).toMatchObject({ want: 'running', status: 'running' })
+    expect(manager.running.has('play')).toBe(true)
+  })
+
   it('sends one set-field for a changed value, and keeps the count that the ticks advanced', async () => {
     setup()
     await start()

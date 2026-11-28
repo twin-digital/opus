@@ -188,7 +188,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     try {
       await item.construct.close().catch(() => undefined)
       log(`wishem: construct ${id} failed: ${message}`)
-      await report({ construct: id, status: 'failed', message }).catch((error: unknown) => {
+      await report({ construct: id, status: 'failed', message, startSeq: item.startSeq }).catch((error: unknown) => {
         log(`wishem: construct manager: ${messageOf(error)}`)
       })
     } finally {
@@ -213,7 +213,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     } catch (error) {
       const message = messageOf(error)
       log(`wishem: construct ${id} failed: ${message}`)
-      await report({ construct: id, status: 'failed', message })
+      await report({ construct: id, status: 'failed', message, startSeq: entry.startSeq })
       return
     }
     const item: Live = {
@@ -243,7 +243,9 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     })
     live.set(id, item)
     running.set(id, construct)
-    void construct.ended.then((message) => ended(id, item, message))
+    void construct.ended.then((message) => {
+      enqueueEnd(id, item, message)
+    })
     log(`wishem: construct ${id} runs, link at ${construct.linkUrl}`)
     await report(liveReport(id, item))
   }
@@ -303,6 +305,14 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
   function enqueue(recorded: RecordedInput | undefined): void {
     chain = chain
       .then(() => handle(recorded))
+      .catch((error: unknown) => {
+        log(`wishem: construct manager: ${messageOf(error)}`)
+      })
+  }
+
+  function enqueueEnd(id: string, item: Live, message: string): void {
+    chain = chain
+      .then(() => ended(id, item, message))
       .catch((error: unknown) => {
         log(`wishem: construct manager: ${messageOf(error)}`)
       })
