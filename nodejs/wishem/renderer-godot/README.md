@@ -108,9 +108,18 @@ The sidecar `<name>.view.json` attaches the view to a component type:
 
 `Views.collect_views(folder)` of `godot/wishem/views.gd` reads the sidecars of a folder. It gives `{ "views": { <ID>: { "sidecar", "view" } }, "errors": [String] }`. It ignores a sidecar of another kind. Each error names the file. The renderer draws no view that has an error. Two sidecars with one component type are an error, and neither view is drawn.
 
+A sidecar can name a component type that has no definition. The view draws nothing, and the renderer writes one warning for it with `push_warning`: `wishem: the sidecar <sidecar> names the component type <component type ID>, which no definition has. No view is drawn for it.`
+
+With no part `store`, the renderer writes no warning. The renderer writes the warnings again only when their text changes, and keeps each line in `renderer.warnings`. The renderer sorts the warnings by sidecar, then component type, then name, then kind, and then the position (the order of the fields). "The props" describes the two other warnings.
+
 ### The props
 
-A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. A label with no letter or digit gives no prop. For two fields with one name, the first field gives the value.
+A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. The renderer gives no warning for a name that starts with a digit.
+
+Two problems of a label give a warning. The renderer writes each warning with `push_warning`:
+
+- A label with no letter or digit gives no prop: `wishem: the sidecar <sidecar>: the label of the field <field ID> of the component type <component type ID> gives an empty name. The view does not get the field.`
+- For two fields with one name, the first field gives the value. Each later field gives one warning: `wishem: the sidecar <sidecar>: the fields <first field ID> and <later field ID> of the component type <component type ID> give the same name "<name>". The prop has the value of the first field.`
 
 ### Use
 
@@ -125,6 +134,7 @@ var renderer := Renderer.new(port, views, self, func() -> Vector2: return get_vi
 - The renderer adds one `Control` to the root node. It keeps one node for each component that has a view, in the order of the entities and then the definitions.
 - It calls the views only when the part `store` is a different object. It makes the node of a new component. It removes and frees the node of a component that is gone.
 - When `create` gives no node, the renderer writes one error with `push_error` and keeps the text in `renderer.errors`. The other views draw.
+- The renderer keeps the text of each warning that it wrote with `push_warning` in `renderer.warnings`.
 
 `entity_at(point)` gives `{ "entity": String, "componentType": String }` for the top visible `Control` that holds the point. It gives an empty dictionary when no visible node holds the point, and after `stop()`.
 
@@ -193,7 +203,7 @@ The limit: one connection at a time. For a short time between two connections, n
 
 ## The screenshot test
 
-`tests/godot.ui.test.ts` runs the sample construct and the Godot application, and checks the pictures of the application.
+`tests/godot.ui.test.ts` runs the sample construct and the Godot application. The first test checks the pictures of the application. The second test checks the view warnings.
 
 ### Run
 
@@ -228,3 +238,17 @@ pnpm --filter @thrashplay/wishem-renderer-godot test:ui
 - The application draws the state of the hub and each change of the state, and it draws no picture when the state is the same.
 - The application connects again after the loss of the link and draws the new state.
 - The runner leaves no container.
+
+### The test of the view warnings
+
+The second test, `the Godot application writes the view warnings`, runs after the first test, so only one container runs at a time. It writes the pictures to `.out/warning-shots/`. It changes the model with the option `edit` of `startSampleConstruct`. It compares the lines that start with `WARNING: wishem:` with the exact text of each warning.
+
+1. Link 1: the model has no definition of the `Color` component type. The only warning line is `component-type-not-defined`. One `time/advance` of 500 writes no new warning line.
+2. Link 2: the construct restarts on the same port, and the `Color` definition has the extra fields `Color` and `???`. The warning lines are `empty-name` and `same-name`, in this order. The shots are `#1d4ed8` and, after one tick, `#b91c1c`. The tick writes no new warning line.
+3. Link 3: the construct restarts with the model of the model folder. The application writes no warning line.
+
+What the test proves:
+
+- The line of `push_warning` reaches the output of the `godot` command.
+- A tick does not repeat a warning.
+- A new link writes the warnings again, because each link has a new renderer.

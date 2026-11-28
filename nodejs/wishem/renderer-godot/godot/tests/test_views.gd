@@ -170,3 +170,29 @@ func test_the_order_of_the_files_does_not_change_the_table() -> void:
 	assert_equal(backward["errors"], forward["errors"])
 	assert_equal(backward["views"].keys(), forward["views"].keys())
 	assert_equal(backward["views"][CT2]["sidecar"], "Gamma.view.json")
+
+
+func _name_list(result: Dictionary) -> Array:
+	var names: Array = []
+	for entry: Dictionary in result["names"]:
+		names.append(entry["name"])
+	return names
+
+
+func test_prop_names_gives_a_problem_for_each_empty_name() -> void:
+	var result := Views.prop_names(_definition(["Color", "???", "--"]))
+	assert_equal(_name_list(result), ["color"])
+	assert_equal(result["problems"], [{"kind": "empty-name", "field": "fld_1"}, {"kind": "empty-name", "field": "fld_2"}])
+
+
+func test_prop_names_keeps_the_first_field_for_two_labels_with_one_name() -> void:
+	var result := Views.prop_names(_definition(["Max health", "max-health"]))
+	assert_equal(_name_list(result), ["maxHealth"])
+	assert_equal(result["names"][0]["field"]["id"], "fld_0")
+	assert_equal(result["problems"], [{"kind": "same-name", "name": "maxHealth", "fields": ["fld_0", "fld_1"]}])
+
+
+func test_props_and_prop_names_accept_a_label_that_starts_with_a_digit() -> void:
+	var definition := _definition(["2nd line"])
+	assert_equal(Views.props(definition, {"fld_0": "v"}), {"2ndLine": "v"})
+	assert_equal(Views.prop_names(definition)["problems"], [])
