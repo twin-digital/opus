@@ -39,6 +39,8 @@ The protocol has no maximum size for a message. The message `welcome` holds the 
 
 Each number of version 1 is an integer from 0 to 2^53 - 1. This applies to `protocol`, `seq`, `request`, and the target of `hub/rewind`. A JSON parser that gives each number as a floating-point number (for example the parser of GDScript) can give `3.0` for `3`. Convert each such number to an integer before you compare it or send it.
 
+A message of the hub side is malformed when `protocol` or `seq` of `welcome`, `seq` of the input of `applied`, or `request` of `result` is not an integer from 0 to 2^53 - 1.
+
 ### No keepalive
 
 The hub side sends no WebSocket ping. The hub side has no time limit for `hello`. A client that must find a lost connection uses the ping of its WebSocket library.
@@ -115,7 +117,7 @@ The status `created` means that the hub did not start. The client then gets the 
 
 The client keeps `seq` and `state` of `welcome`. The number `seq` is the sequence number of the first state of the client. The first `applied` message has the number `seq` plus 1. A client that tells its program about the state gives `seq` to its program.
 
-A `welcome` message is malformed when `state` is not an object or `seq` is not an integer. Close the connection, wait, and open a new link. See "A client that connects again".
+A `welcome` message is malformed when `status` is not `created` or `running`, `state` is not an object, or `seq` is not an integer from 0 to 2^53 - 1. Close the connection, wait, and open a new link. See "A client that connects again".
 
 ```json
 { "t": "welcome", "protocol": 1, "status": "running", "seq": 3, "state": { "counter": { "count": 6 } } }
@@ -214,7 +216,14 @@ The hub side sends `result` as the answer to one `submit`. The message has the k
 | `result`  | object    | The result of the hub. See below.                        |
 | `error`   | text      | The text of an error. The hub failed to apply the input. |
 
-A `result` message is malformed when it has none of the keys `result` and `error`. The hub side sends one of the two keys. A `result` message whose `request` matches no `submit` is not malformed. Ignore it and keep the link open.
+A `result` message is malformed when one of these is true:
+
+- `request` is not an integer from 0 to 2^53 - 1.
+- It has both keys `result` and `error`, or neither of them. A key with the value `null` is present.
+- `result` is present and is not an object with a boolean `ok`.
+- `error` is present and is not text.
+
+The hub side sends one of the two keys. A `result` message whose `request` matches no `submit` is not malformed. Ignore it and keep the link open.
 
 The key `result` has one of two forms:
 
