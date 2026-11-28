@@ -1,11 +1,14 @@
 // Starts the construct of the workbench and the page server in one Node.js process.
 // Usage: node start.ts [--model <folder>] [--product <folder>] [--product-code <module>] [--port <number>] [--hub-port <number>]
-//   [--views <folder>] [--no-view-types]
-import type { AddressInfo } from 'node:net'
+//   [--product-views <folder>] [--views <folder>] [--no-view-types]
+import { existsSync, readdirSync, statSync } from 'node:fs'
+import type { IncomingMessage } from 'node:http'
+import { connect, type AddressInfo, type Socket } from 'node:net'
+import type { Duplex } from 'node:stream'
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
-import { createServer, type ViteDevServer } from 'vite'
+import { createServer, searchForWorkspaceRoot, type Plugin, type ViteDevServer } from 'vite'
 import { attachConstructManager, type ConstructManager } from '@thrashplay/wishem-construct-manager/node'
 import { createConstructList } from '@thrashplay/wishem-construct-manager'
 import { ModelError, type Model } from '@thrashplay/wishem-core'
@@ -24,6 +27,8 @@ export interface WorkbenchOptions {
   product?: string
   /** The module with the export `behaviors`: a package name, or a path that starts with `.` or `/`. Needs `product`. */
   productCode?: string
+  /** The folder of the React views and sidecars of the product. Needs `product`. Default: no views. */
+  productViews?: string
   /** Default 5173. Use 0 to let the system select a port. */
   port?: number
   /** Default 4747. Use 0 to let the system select a port. */
@@ -52,6 +57,10 @@ const DEFAULT_HUB_PORT = 4747
 const PAGE_ADDRESS = '127.0.0.1'
 const packageRoot = resolve(import.meta.dirname, '..')
 const SIDECAR_SUFFIX = '.view.json'
+const VIEW_SUFFIX = '.tsx'
+const TEST_VIEW_SUFFIX = '.test.tsx'
+const PRODUCT_VIEWS_PATH = '/@wishem/product-views.json'
+const PRODUCT_LINK_PATH = /^\/constructs\/([^/]+)\/link$/
 
 const isPathValue = (value: string) => value.startsWith('.') || value.startsWith('/')
 
@@ -72,6 +81,105 @@ const loadProductCode = async (value: string, log: (line: string) => void): Prom
     const reason = error instanceof Error ? error.message : String(error)
     log(`wishem: the product code has no correct list behaviors: ${reason}`)
     throw new StartError('the product code has no correct list behaviors')
+  }
+}
+
+interface ProductViewPair {
+  sidecar: string
+  view: string
+}
+
+/** The pairs of a sidecar and a view file in the folder. */
+const productViewPairs = (folder: string): ProductViewPair[] => {
+  const names = readdirSync(folder)
+  return names
+    .filter((name) => name.endsWith(SIDECAR_SUFFIX))
+    .map((name) => name.slice(0, -SIDECAR_SUFFIX.length))
+    .filter((base) => names.includes(`${base}${VIEW_SUFFIX}`))
+    .sort()
+    .map((base) => ({
+      sidecar: `/@fs${resolve(folder, `${base}${SIDECAR_SUFFIX}`)}`,
+      view: `/@fs${resolve(folder, `${base}${VIEW_SUFFIX}`)}`,
+    }))
+}
+
+const isProductViewFile = (path: string) =>
+  path.endsWith(SIDECAR_SUFFIX) || (path.endsWith(VIEW_SUFFIX) && !path.endsWith(TEST_VIEW_SUFFIX))
+
+/** Answers the list of the product views and reloads the page when a sidecar or a view file appears or goes. */
+const productViewsPlugin = (folder: string | undefined): Plugin => ({
+  name: 'wishem-product-views',
+  configureServer: (server) => {
+    server.middlewares.use(PRODUCT_VIEWS_PATH, (request, response, next) => {
+      if (request.method !== 'GET') {
+        next()
+        return
+      }
+      response.setHeader('Content-Type', 'application/json')
+      response.setHeader('Cache-Control', 'no-store')
+      response.end(JSON.stringify({ views: folder === undefined ? [] : productViewPairs(folder) }))
+    })
+    if (folder === undefined) {
+      return
+    }
+    const reload = (path: string) => {
+      if (dirname(path) === folder && isProductViewFile(path)) {
+        server.ws.send({ type: 'full-reload' })
+      }
+    }
+    server.watcher.add(folder)
+    server.watcher.on('add', reload).on('unlink', reload)
+  },
+})
+
+const NOT_FOUND = 'HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n'
+
+/** Passes the WebSocket at `/constructs/<id>/link` to the link of the running product construct `<id>`. */
+const passProductLinks = (server: ViteDevServer, manager: ConstructManager | undefined) => {
+  const open = new Set<Socket>()
+  const idOf = (request: IncomingMessage) => {
+    const path = (request.url ?? '').split('?')[0] ?? ''
+    const encoded = PRODUCT_LINK_PATH.exec(path)?.[1]
+    try {
+      return encoded === undefined ? undefined : decodeURIComponent(encoded)
+    } catch {
+      return ''
+    }
+  }
+
+  server.httpServer?.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+    const id = idOf(request)
+    if (id === undefined) {
+      return
+    }
+    const construct = manager?.running.get(id)
+    if (construct === undefined) {
+      socket.end(NOT_FOUND)
+      return
+    }
+    const target = connect({ host: PAGE_ADDRESS, port: Number(new URL(construct.linkUrl).port) })
+    open.add(target)
+    target.once('close', () => open.delete(target))
+    target.once('connect', () => {
+      const headers = request.rawHeaders.reduce(
+        (text, value, index) => `${text}${index % 2 === 0 ? `${value}: ` : `${value}\r\n`}`,
+        '',
+      )
+      target.write(`GET /link HTTP/1.1\r\n${headers}\r\n`)
+      target.write(head)
+      target.pipe(socket)
+      socket.pipe(target)
+    })
+    target.on('error', () => socket.destroy())
+    socket.on('error', () => target.destroy())
+    target.once('close', () => socket.destroy())
+    socket.once('close', () => target.destroy())
+  })
+
+  return {
+    close: () => {
+      open.forEach((target) => target.destroy())
+    },
   }
 }
 
@@ -162,6 +270,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     model = modelFolder,
     product,
     productCode,
+    productViews,
     port = DEFAULT_PAGE_PORT,
     hubPort = DEFAULT_HUB_PORT,
     views = resolve(packageRoot, 'src', 'views'),
@@ -178,6 +287,11 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     throw new StartError('--product-code needs --product')
   }
 
+  if (productViews !== undefined && product === undefined) {
+    log('wishem: --product-views needs --product')
+    throw new StartError('--product-views needs --product')
+  }
+
   log(`wishem: model ${model}`)
   if (product !== undefined) {
     log(`wishem: product ${product}`)
@@ -186,6 +300,13 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   if (productCode !== undefined) {
     log(`wishem: product code ${productCode}`)
     behaviors = await loadProductCode(productCode, log)
+  }
+  if (productViews !== undefined) {
+    if (!existsSync(productViews) || !statSync(productViews).isDirectory()) {
+      log(`wishem: the product views folder ${productViews} does not exist`)
+      throw new StartError('the product views folder does not exist')
+    }
+    log(`wishem: product views ${productViews}`)
   }
 
   let construct
@@ -222,11 +343,15 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
 
   const proxy = { target: construct.url, ws: true, changeOrigin: false }
   let server: ViteDevServer | undefined
+  let links: { close: () => void } | undefined
   try {
     server = await createServer({
       root: packageRoot,
       logLevel: 'warn',
+      plugins: [productViewsPlugin(productViews)],
+      ...(productViews === undefined ? {} : { resolve: { dedupe: ['react', 'react-dom'] } }),
       server: {
+        ...(productViews === undefined ? {} : { fs: { allow: [searchForWorkspaceRoot(packageRoot), productViews] } }),
         host: PAGE_ADDRESS,
         port,
         strictPort: true,
@@ -234,6 +359,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
       },
     })
     await server.listen()
+    links = passProductLinks(server, manager)
   } catch (error) {
     // Each part closes. The start error below is the one to report.
     await server?.close().catch(() => undefined)
@@ -264,6 +390,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
         }
       } finally {
         try {
+          links.close()
           await server.close()
         } finally {
           await construct.close()
@@ -291,6 +418,7 @@ const main = async () => {
         model: { type: 'string' },
         product: { type: 'string' },
         'product-code': { type: 'string' },
+        'product-views': { type: 'string' },
         port: { type: 'string' },
         'hub-port': { type: 'string' },
         views: { type: 'string' },
@@ -299,6 +427,9 @@ const main = async () => {
     })
     if (values.product === '') {
       throw new Error('--product must be a folder')
+    }
+    if (values['product-views'] === '') {
+      throw new Error('--product-views must be a folder')
     }
     if (values['product-code'] === '') {
       throw new Error('--product-code must be a module')
@@ -320,6 +451,10 @@ const main = async () => {
       product:
         values.product === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.product),
       productCode: values['product-code'],
+      productViews:
+        values['product-views'] === undefined ?
+          undefined
+        : resolve(process.env.INIT_CWD ?? process.cwd(), values['product-views']),
       port: parsePort('--port', values.port, DEFAULT_PAGE_PORT),
       hubPort: parsePort('--hub-port', values['hub-port'], DEFAULT_HUB_PORT),
       views: values.views === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.views),
