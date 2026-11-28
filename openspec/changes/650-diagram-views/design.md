@@ -2,7 +2,7 @@
 
 ## Context
 
-See `proposal.md`, "Why". The owner decided #649 with option A on 2026-11-28 and asked for all three views in #650. This plan starts from `main` at `0f1c57db`, after #617 (the update subsystem).
+See `proposal.md`, "Why". The owner decided #649 with option A on 2026-11-28 and asked for all three views in #650. This plan starts from `main` at `0f1c57db`, after #617 (the update subsystem). After Tasks 1 and 2, the owner made two more decisions on 2026-11-28: the package dependency view has arrows (Decision 3), and the merge checks run the check (#696, Decision 11).
 
 The facts that shape the approach:
 
@@ -11,7 +11,8 @@ The facts that shape the approach:
 - The architecture document holds a hand-written list of the dependencies of each package, below the table of the containers.
 - `nodejs/wishem/` has 13 packages. No package has a Wishem package in `peerDependencies`. All packages are private.
 - CI runs `turbo run build`, `lint`, and `test` with `--affected`. A task runs when a file of its package changed, or a file of a package that it depends on. A file in `nodejs/wishem/docs/` is in no package.
-- `autonomous-flow.md` does not permit a change to the CI workflows. The permission of #649 names `docs/diagrams.md`, `.claude/skills/diagrams/`, the root `CLAUDE.md`, and `openspec/config.yaml`. It does not name a workflow.
+- `autonomous-flow.md` does not permit a change to the CI workflows without the permission of the owner. The permission of #649 names `docs/diagrams.md`, `.claude/skills/diagrams/`, the root `CLAUDE.md`, and `openspec/config.yaml`. The permission of #696 names one step in `.github/workflows/merge-checks.yaml`.
+- `merge-checks.yaml` runs on each pull request against `main`, for each change. Its job `merge-checks` checks out the repository and runs `./.github/actions/setup` (Node.js and the install).
 - The `lint` command of a package runs ESLint on each file of the package folder.
 
 ## Goals / Non-Goals
@@ -27,7 +28,7 @@ The facts that shape the approach:
 
 - No change to product code. No package other than the new `docs-check` changes.
 - No change to the system context diagram, the dynamic diagram, the component diagram of the page, or the entity diagram.
-- No change to a CI workflow. See Decision 6 and "Follow-up" in `tasks.md`.
+- No change to a CI workflow other than the one step of Decision 11.
 - No check of imports in the source files. The view shows the declared dependencies of `package.json`.
 
 ## Decisions
@@ -52,42 +53,71 @@ Each card of a container gets one more line below the type: `Package: <name>`, f
 
 The diagram is about 880 pixels wide, as the other diagrams. The layout is the work of Task 2. With 10 cards, three columns are sufficient.
 
-### 3. The package dependency view: layer bands and cards, with no arrows
+### 3. The package dependency view: layer bands, cards, and an arrow for each runtime dependency
 
-The view `packages-light.svg` and `packages-dark.svg` has one tinted band for each layer, from the highest layer at the top to the lowest layer at the bottom. The label of a band is `Layer <n>: <name>`. Each band holds the cards of its packages, at most four in a row, in the order of the names. A card has three parts:
+The owner decided on 2026-11-28 that the view has arrows. The view `packages-light.svg` and `packages-dark.svg` has one tinted band for each layer, from the highest layer at the top to the lowest layer at the bottom. The label of a band is `Layer <n>: <name>`. Each band holds the cards of its packages. Each runtime dependency is one arrow.
 
-- The name of the package folder, for example `construct-manager`, in the name size.
-- `Uses: <names>`: each Wishem package in `dependencies` or `peerDependencies`, in the order of the names. With none: `Uses: no package of Wishem`.
-- `Tests with: <names>`: each Wishem package that is only in `devDependencies`. With none, the card has no such line. When the list holds each other package, the line is `Tests with: each other package`.
+**The arrows.** An arrow goes from the card of a package to the card of each Wishem package in its `dependencies` or `peerDependencies`. The arrow starts on the bottom edge of the card of the package, and its head touches the top edge of the card of the dependency. Thus each arrow goes down. With the `package.json` files at the time of this revision, the view has 38 arrows.
 
-The lists wrap. All cards of the view have the height of the card that needs the most lines. The fit check of the script applies.
+- Reason: the layer rule (Decision 4) makes each runtime dependency go to the same layer or a lower layer. When each arrow goes down, a reader knows the direction before the reader finds the head.
+- All arrows have one style: a thin line in the quiet color, with a head. The view has no primary path, so no arrow uses the accent color.
+- An arrow has no label chip. The legend gives the meaning of the arrow: `Uses at run time [dependencies, peerDependencies]`. Reason: each arrow of the view has the same meaning. The label rule of the `diagrams` skill (a short label on each relationship) is for a C4 diagram, where the relationships have different meanings. 38 chips with the same words give no information, and they need room that the lanes do not have. The `MIN_PLAIN` check applies to each arrow.
+- Each arrow is a group `<g class="uses" data-from="<package>" data-to="<dependency>">` with a `<title>` `<package> uses <dependency>`. The tests read the two attributes. A web browser shows the `<title>` when a reader points at the arrow.
+
+**The test dependencies are text, not arrows.** A card shows the name of its package. When the package has a Wishem package only in `devDependencies`, the card also shows the line `Tests with: <names>` (or `Tests with: each other package`). The card has no line `Uses:`, because the arrows show it.
+
+- Reason: the view stays clear only without them. `docs-check` alone has 13 test dependencies, one to each other package. With them, the view has 57 arrows. A test dependency can go to any layer (Decision 4), so its arrow can go up or stay in one row, and the rule "each arrow goes down" stops.
+- Rejected: dashed arrows for the test dependencies, with `docs-check` left out. Then the view leaves out some dependencies of one kind, and a reader must know the exception.
+
+**The rows.** A band holds one or more rows of cards. The rank of a package in its band is 1 when it uses no package of its band. Else its rank is 1 more than the highest rank of the packages of its band that it uses. Rank 1 is the lowest row of the band. Thus an arrow between two packages of one band also goes down. A rank with more than three packages takes more than one row, in the order of the cards. Packages of one rank do not use one another, so no arrow joins those rows.
+
+**The columns.** Each row has three columns, on one grid for the full view. The columns line up in each band, so each space between two columns (a gutter) is free from the top of the view to the bottom. The order of the cards: the lowest row in the order of the names; each higher row by the mean column of the cards that its packages use, with ties in the order of the names. Each card goes in the free column nearest to that mean.
+
+**The routes.** Each arrow is a set of vertical and horizontal lines with round corners:
+
+1. Down from its port on the bottom edge of the source card to its own track in the channel below the source row. A channel is the space between two rows.
+2. When the dependency is in the next row: along the track to the x of its port on the top edge of the target card, then down to the card.
+3. Else: along the track to its own lane, down the lane to its own track in the channel above the target row, along that track to the x of the port, then down to the card. A lane is a vertical line in a gutter, in a margin, or in a column that has no card in each row between the source and the target.
+
+- The ports of a card are spaced evenly on its edge, in the order of the x of the other end of each arrow. A card is wide enough for its ports.
+- Each arrow has its own track in each channel and its own lane. Two arrows never share a line. Two arrows can cross at a right angle.
+- The label of a band is in the top part of its head, above the column of its first card. No lane or track goes through the label.
+- The layout constants (the column width, the gutter width, the space between two tracks or two lanes, the height of a channel) start at values that make the fit checks pass. The implementer changes them until the image is clear. The view is 880 pixels wide. Its height grows with the channels.
+
+**The checks of the routes.** The script throws an error and writes no file in each of these cases, as the fit check does:
+
+| Problem                                                      | Message                                                         |
+| ------------------------------------------------------------ | --------------------------------------------------------------- |
+| A line of an arrow goes through a card that it does not join | `The arrow <a> -> <b> crosses the card <c>`                     |
+| A line of an arrow goes through the label of a band          | `The arrow <a> -> <b> crosses the label of the layer "<layer>"` |
+| Two arrows have a part of a line in common                   | `The arrows <a> -> <b> and <c> -> <d> share a line`             |
+| An arrow does not end lower than it starts                   | `The arrow <a> -> <b> does not go down`                         |
+
+The rows with the `package.json` files at the time of this revision, from the top. The order of the cards in a row is the work of the implementer.
 
 ```
-Package dependency view: Wishem
-+-- Layer 5: Checks ------------------------------------------------------------+
-| [docs-check]                                                                  |
-|  Uses: no package of Wishem                                                   |
-|  Tests with: each other package                                               |
-+-- Layer 4: Applications ------------------------------------------------------+
-| [pixi-page]           [workbench]           [workbench-app]                    |
-|  Uses: clock, core,    Uses: core,           Uses: construct-manager,          |
-|  host-nodejs, hub,     host-nodejs           core, host-nodejs, hub,           |
-|  renderer-pixi, update Tests with: hub       renderer-react, update, workbench |
-|                                              Tests with: sample-product        |
-+-- Layer 3: Hosts, renderers, and products ------------------------------------+
-| [construct-manager] [host-nodejs] [renderer-godot] [renderer-pixi]             |
-| [renderer-react] [sample-product]                                              |
-+-- Layer 2: Model and subsystems ----------------------------------------------+
-| [clock] [core] [update]                                                        |
-+-- Layer 1: Hub ---------------------------------------------------------------+
-| [hub]  Uses: no package of Wishem                                              |
-+-------------------------------------------------------------------------------+
+Package dependency view: Wishem                     (each arrow goes down)
++-- Layer 5: Checks -----------------------------------------------------+
+|  [docs-check / Tests with: each other package]                           |
++-- Layer 4: Applications ------------------------------------------------+
+|  [workbench-app / Tests with: sample-product]                            |
+|  [workbench / Tests with: hub]  [pixi-page]                              |
++-- Layer 3: Hosts, renderers, and products ------------------------------+
+|  [construct-manager / Tests with: sample-product]  [renderer-godot]      |
+|  [host-nodejs / Tests with: clock]  [renderer-pixi]  [renderer-react]    |
+|  [sample-product / Tests with: clock]                                    |
++-- Layer 2: Model and subsystems ----------------------------------------+
+|  [update]                                                                |
+|  [clock / Tests with: core]  [core]                                      |
++-- Layer 1: Hub ---------------------------------------------------------+
+|  [hub]                                                                   |
++-------------------------------------------------------------------------+
+Legend: layer (band), package (card), uses at run time (arrow)
 ```
 
-- Reason: the script makes the view from data, so the layout must be general. Each card shows its dependencies in text, so the view needs no path finder for about 40 arrows, and no arrow can cross a card. The layer of each band shows the direction: a package uses only packages in its band or below it.
-- Rejected: an arrow for each dependency. A general router that keeps the quality rules of `docs/diagrams.md` (no arrow crosses a card, a minimum length, a free chip) is a large piece of work. The current hand layout of the container diagram needed 3090 pixels of height for 30 arrows.
 - Rejected: a dependency matrix. It is hard to read for one package, and it needs rotated column labels.
-- The `desc` of each file gives the count of the packages and the layers, and the rule of the layers. The `alt` text of the document gives the same. Neither lists the dependencies, so the text does not go out of date.
+- Rejected: an arrow only for a dependency that no other path gives (a transitive reduction). The owner asked for the dependencies, and a test proves that each one has an arrow.
+- The `desc` of each file gives the count of the packages, of the layers, and of the arrows, the rule of the layers, and the meaning of the line `Tests with:`. The `alt` text of the document gives the same. Neither lists the dependencies, so the text does not go out of date.
 
 ### 4. The layers are data in `render.mjs`
 
@@ -118,6 +148,7 @@ The script does these checks on each run. A failed check prints one line for eac
 | The table of the packages in `README.md` has no row       | `render: the table of the packages has no row for <name>`                   |
 | A package is not a development dependency of `docs-check` | `render: <name> is not a development dependency of docs-check`              |
 | The folder name and the `name` field differ               | `render: the folder <folder> holds the package <name>`                      |
+| The runtime dependencies in one layer make a cycle        | `render: the packages of the layer "<layer>" use one another in a cycle`    |
 
 The table of the packages is the first table after the heading `## Package dependency view: Wishem` in `README.md`. A row is for a package when its first cell is the name of the package in backticks.
 
@@ -139,7 +170,7 @@ New package `nodejs/wishem/docs-check`, `@thrashplay/wishem-docs-check`, private
 
 - Reason: CI runs the tests of each package that a change affects. A change to the `package.json` of any Wishem package affects `docs-check`, because `docs-check` depends on it. Thus CI runs the check for each change to a dependency.
 - The root `turbo.json` gets the entry `@thrashplay/wishem-docs-check#test`, with the inputs of the default `test` task and `$TURBO_ROOT$/nodejs/wishem/*/package.json`, `$TURBO_ROOT$/nodejs/wishem/docs/architecture/**`, and `$TURBO_ROOT$/nodejs/wishem/workbench-app/src/styles/tokens.css`. Reason: the cache of the task must miss when one of these files changes. `autonomous-flow.md` permits an entry of `turbo.json` that names a Wishem package.
-- Rejected: a step in `merge-checks.yaml`. It runs on each pull request, but `autonomous-flow.md` does not permit a change to a workflow, and #649 did not permit one. See "Follow-up".
+- The merge checks also run the check (Decision 11). The tests of `docs-check` stay, because they also prove the checks of the script with copies of the files.
 - Rejected: a `package.json` in `nodejs/wishem/docs/`. The `lint` command would run ESLint with the type rules on each script of `docs/`.
 - Rejected: the test in `workbench-app`. It would need development dependencies on `pixi-page` and `renderer-godot`, and the application would hold a check of the documents.
 - The package has `src/index.ts`, which exports `renderScript`, the absolute path of `render.mjs`, and `architectureFolder`. The tests use them. No other package imports `docs-check`.
@@ -197,27 +228,40 @@ flowchart TB
 
 - The introduction says that a container is a unit that runs or a store of data, and that the package dependency view shows the packages.
 - The section of the container diagram loses each paragraph that explains an import, and the dependency list. The prose of each runtime path stays. The table gets the column "Packages" (Decision 2).
-- The section of the package dependency view has the picture, a short text about the layers and the rule, how to run the check, and the table of the packages: the package (in backticks), the layer, and the responsibility. The responsibility comes from the package list of `nodejs/wishem/CLAUDE.md`.
+- The section of the package dependency view has the picture, a short text about the layers and the rule, the arrows, and the line `Tests with:`, how the merge checks and the tests of `docs-check` run the check, how to run the check, and the table of the packages: the package (in backticks), the layer, and the responsibility. The responsibility comes from the package list of `nodejs/wishem/CLAUDE.md`.
 - The prose of the container section keeps the facts that are not imports, for example that a product construct is not a process.
 
 ### 9. The instructions for diagrams
 
-| File                                    | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docs/diagrams.md`                      | A container is a process, a service, a deployable unit, a browser application, or a store of persisted data. A library package is not a container. New row and section "The package dependency view" (not C4): required for a product that has an architecture document and two or more packages that depend on one another; a script makes it from the package manifests; a check fails when it is out of date. The file name `packages`. The order of the document. The table of the containers gives the packages of each container. |
-| `.claude/skills/diagrams/SKILL.md`      | Step 2 names the package dependency view. Step 3: for the view, the package manifests are the source, and the author does not draw it by hand. The render script runs a check mode. A checklist for the view. A common mistake: a library package as a container.                                                                                                                                                                                                                                                                       |
-| Root `CLAUDE.md`, section "Diagrams"    | One sentence more: a container is a unit that runs or a store, and the packages and their dependencies are in a generated package dependency view.                                                                                                                                                                                                                                                                                                                                                                                      |
-| `openspec/config.yaml`                  | The list in the `proposal` rule loses "or a package that other packages build on". A change that adds or removes a package, or a dependency between packages, runs the render script, and the check fails when it does not. The same in the `specs` and `tasks` rules.                                                                                                                                                                                                                                                                  |
-| `nodejs/wishem/docs/autonomous-flow.md` | "Reviews": the final reviewer compares the runtime units that the change adds or changes with the container diagram and its table, and runs `node nodejs/wishem/docs/architecture/render.mjs --check`. The check replaces the comparison of the imports by hand. The reason line stays.                                                                                                                                                                                                                                                 |
-| `nodejs/wishem/docs/README.md`          | The line of `architecture/` names the two component diagrams and the package dependency view.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `nodejs/wishem/CLAUDE.md`               | The package list gets `docs-check`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `render.mjs`                            | The header comment names the package dependency view and the option `--check`.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| File                                    | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/diagrams.md`                      | A container is a process, a service, a deployable unit, a browser application, or a store of persisted data. A library package is not a container. New row and section "The package dependency view" (not C4): required for a product that has an architecture document and two or more packages that depend on one another; a script makes it from the package manifests; an arrow for each runtime dependency, which goes down to a lower layer or row and crosses no card; no label chip on these arrows, and the legend gives their meaning; the test dependencies as text on the card; a check fails when it is out of date. The file name `packages`. The order of the document. The table of the containers gives the packages of each container. |
+| `.claude/skills/diagrams/SKILL.md`      | Step 2 names the package dependency view. Step 3: for the view, the package manifests are the source, and the author does not draw it by hand. The render script runs a check mode, and it fails when an arrow crosses a card or two arrows share a line. A checklist for the view: each runtime dependency has an arrow, each arrow goes down, and the legend gives the meaning of the arrow. A common mistake: a library package as a container.                                                                                                                                                                                                                                                                                                       |
+| Root `CLAUDE.md`, section "Diagrams"    | One sentence more: a container is a unit that runs or a store, and the packages and their dependencies are in a generated package dependency view.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `openspec/config.yaml`                  | The list in the `proposal` rule loses "or a package that other packages build on". A change that adds or removes a package, or a dependency between packages, runs the render script, and the check fails when it does not. The same in the `specs` and `tasks` rules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `nodejs/wishem/docs/autonomous-flow.md` | "Reviews": the final reviewer compares the runtime units that the change adds or changes with the container diagram and its table, and runs `node nodejs/wishem/docs/architecture/render.mjs --check`. The check replaces the comparison of the imports by hand. The reason line stays.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `nodejs/wishem/docs/README.md`          | The line of `architecture/` names the two component diagrams and the package dependency view.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `nodejs/wishem/CLAUDE.md`               | The package list gets `docs-check`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `render.mjs`                            | The header comment names the package dependency view and the option `--check`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 The text uses ASD-STE100 and describes the current state.
 
 ### 10. No question for the owner
 
-No decision meets the three conditions of "When to ask the owner". A user of Wishem does not see the documents. Each decision is easy to change later: the layout of a view, the names of the layers, and a private package of tests.
+No decision meets the three conditions of "When to ask the owner". A user of Wishem does not see the documents. Each decision is easy to change later: the layout of a view, the names of the layers, the test dependencies as text in place of arrows (Decision 3), and a private package of tests.
+
+### 11. The merge checks run the check
+
+`.github/workflows/merge-checks.yaml` gets one step in the job `merge-checks`, after the step `Setup dependencies`:
+
+```yaml
+- name: Fail if the Wishem architecture diagrams are out of date
+  run: node nodejs/wishem/docs/architecture/render.mjs --check
+```
+
+- Reason: the tests of `docs-check` run only when a package that `docs-check` depends on changes. A change to `render.mjs`, to an SVG file, or to `README.md` in `nodejs/wishem/docs/` alone changes no package. The merge checks run on each pull request. The owner permitted this step in #696.
+- The script uses only `node:` modules, and it reads the `package.json` files and `tokens.css` of the checkout. It needs no build.
+- `autonomous-flow.md` does not change: each other change to a workflow still needs the permission of the owner.
 
 ## Interfaces
 
@@ -311,21 +355,24 @@ $ echo $?
 
 ## Failure Modes
 
-| Failure                                              | Behavior                                                               | Recovery                                                                                       |
-| ---------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| A change alters a `package.json` and does not render | The tests of `docs-check` fail in CI.                                  | Run `render.mjs` and commit the SVG files.                                                     |
-| A change adds a package with no layer or no row      | `render.mjs` fails and writes no file.                                 | Add the package to a layer, to the table, and to the development dependencies of `docs-check`. |
-| A change alters only `render.mjs` or an SVG file     | CI does not run the tests of `docs-check`, because no package changed. | The final reviewer runs `render.mjs --check` (`autonomous-flow.md`, "Reviews").                |
-| A card or a band label does not fit                  | The fit check of the script fails and writes no file.                  | Change the layout constants of the view.                                                       |
+| Failure                                              | Behavior                                                     | Recovery                                                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| A change alters a `package.json` and does not render | The tests of `docs-check` fail in CI.                        | Run `render.mjs` and commit the SVG files.                                                     |
+| A change adds a package with no layer or no row      | `render.mjs` fails and writes no file.                       | Add the package to a layer, to the table, and to the development dependencies of `docs-check`. |
+| A change alters only `render.mjs` or an SVG file     | The step of `merge-checks.yaml` fails on the pull request.   | Run `render.mjs` and commit the SVG files.                                                     |
+| A card or a band label does not fit                  | The fit check of the script fails and writes no file.        | Change the layout constants of the view.                                                       |
+| A new dependency gives an arrow no free route        | A check of the routes (Decision 3) fails and writes no file. | Change the layout constants of the view: a wider gutter or a higher channel.                   |
 
 `render.mjs` is idempotent: a second run writes the same bytes. `--check` writes nothing.
 
 ## Risks / Trade-offs
 
-- [A change to `nodejs/wishem/docs/` alone does not run the check in CI] → The final reviewer runs it. A follow-up asks the owner about a step in `merge-checks.yaml`.
+- [A change to `nodejs/wishem/docs/` alone does not run the tests of `docs-check`] → The step of `merge-checks.yaml` runs the check on each pull request (Decision 11).
 - [`docs-check` depends on each Wishem package, so CI builds them when `docs-check` is affected] → The builds come from the cache of turbo when the packages did not change. The test task of `docs-check` does not depend on a build.
 - [The view shows declared dependencies, not imports] → A dependency that is declared but not imported shows in the view. Lint (`sherif`) and review find an unused dependency. The view states what `pnpm` installs, and that is the contract of the packages.
-- [Text lists in place of arrows are less visual] → The layer bands give the direction. A later change can add arrows when a router exists.
+- [38 arrows cross one another] → Each arrow has its own track and lane, with right angles only. The order of the cards puts a card near the cards that it uses. Each arrow has a `<title>`.
+- [The view is tall] → The height grows with the channels. A reader scrolls in one direction only, as in the container diagram.
+- [The test dependencies have no arrow] → The line `Tests with:` on each card gives them, and a test proves it.
 - [A new package must be added in four places: its folder, a layer, the table, and `docs-check`] → The script names each missing place.
 
 ## Package Impact
@@ -348,7 +395,7 @@ When #542 merges first, #650 does these steps:
 2. The container diagram of Task 2 starts from the containers of #542: the page, the workbench process, the model folder, the product model folder, the sample construct process, the React page server, the React page, the PixiJS process, the PixiJS page, the Godot runner, and the Godot application. No Godot process. The runtime relationships of #542 stay: "Passes the link [WebSocket]" from the React page server and from the PixiJS process to the sample construct process, "Carries the link [TCP]" from the Godot runner to the sample construct process, and "Reads [file system]" from the sample construct process to the product model folder. Each import relationship of #542 goes.
 3. Add `three-renderers` to the layer "Applications", to the table of the packages, and to the development dependencies of `docs-check`. Run `pnpm install`.
 4. In the delta spec of this change, the removed requirement becomes `### Requirement: The container diagram of Wishem`, the requirement that #542 adds. In "The container diagram of the runtime units", keep each scenario of a runtime unit of #542 and give it the rules of Decision 1: no import scenario, and no scenario of the Godot process.
-5. Run `node nodejs/wishem/docs/architecture/render.mjs`, then `--check`, and look at each changed image.
+5. Run `node nodejs/wishem/docs/architecture/render.mjs`, then `--check`, and look at each changed image. The arrows of `three-renderers` come from its `package.json`. When a check of the routes fails, change the layout constants of the view.
 6. Run `pnpm exec openspec validate 650-diagram-views --strict`.
 
 When #650 merges first, #542 does these steps (they agree with its design):
@@ -356,7 +403,7 @@ When #650 merges first, #542 does these steps (they agree with its design):
 1. Merge `main`. Write the container diagram of #542 in the form of #650: runtime units and relationships only, with the line `Package: <name>` on each card and the column "Packages" in the table.
 2. Add `three-renderers` to the layer "Applications", to the table of the packages, and to the development dependencies of `docs-check`. Otherwise `render.mjs` fails with the three lines of Decision 5.
 3. Its delta of `wishem/architecture/diagrams` modifies "The container diagram of the runtime units" of #650 in place of the removal of "The container diagram" and the addition of "The container diagram of Wishem". The modified requirement keeps each scenario of #650 that still applies, removes the scenario of the Godot process, and adds the runtime units of #542, with no import scenario.
-4. Run `render.mjs` and the tests of `docs-check`.
+4. Run `render.mjs` and the tests of `docs-check`. When a check of the routes fails, change the layout constants of the view.
 
 ### #537 (the workbench lists the things of the product, pull request #673, in apply)
 
@@ -390,7 +437,7 @@ The final reviewer does these steps on the branch and reports the real result of
 2. `node nodejs/wishem/docs/architecture/render.mjs --check; echo "exit $?"`. Result: `render: packages-light.svg is out of date`, `render: packages-dark.svg is out of date`, `render: run node nodejs/wishem/docs/architecture/render.mjs`, and `exit 1`.
 3. `git status --short`. Result: only ` M nodejs/wishem/renderer-pixi/package.json`. The check wrote no file.
 4. `flock -w 15 /tmp/wishem-heavy.lock timeout 140 pnpm exec turbo run test --filter @thrashplay/wishem-docs-check`. Result: turbo prints `cache miss, executing` for `@thrashplay/wishem-docs-check:test`, the test of the current document fails, and its message holds `packages-light.svg is out of date`. The other tests of the package pass.
-5. `node nodejs/wishem/docs/architecture/render.mjs`, then `grep -o 'Uses: clock, core, hub' nodejs/wishem/docs/architecture/packages-light.svg`. Result: one line `Uses: clock, core, hub` (or the first line of the wrapped text, which starts with `Uses: clock`).
+5. `node nodejs/wishem/docs/architecture/render.mjs`, then `grep -c 'data-from="renderer-pixi" data-to="clock"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `1`.
 6. `node nodejs/wishem/docs/architecture/render.mjs --check; echo "exit $?"`. Result: `exit 0`.
 7. `git checkout -- nodejs/wishem/renderer-pixi/package.json nodejs/wishem/docs/architecture/`. Then `--check` again. Result: `exit 0`.
 
@@ -403,6 +450,7 @@ The final reviewer does these steps on the branch and reports the real result of
 ### 5. A development dependency to a higher layer
 
 1. `grep -o 'Tests with: sample-product' nodejs/wishem/docs/architecture/packages-light.svg | head -1`. Result: one line. `construct-manager` and `workbench-app` test with `sample-product`, and the script accepts it.
+2. `grep -c 'data-to="sample-product"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `0`. A test dependency has no arrow.
 
 ### 6. A new package with no layer
 
@@ -433,7 +481,7 @@ The final reviewer does these steps on the branch and reports the real result of
 ### 11. Look at the images
 
 1. For `containers`, `packages`, and `components-workbench-process`, in each theme: `node .claude/skills/diagrams/scripts/rasterize.mjs --width 880 --background '#ffffff' --out .superpowers/images nodejs/wishem/docs/architecture/<name>-light.svg`, and the same with `--background '#0d1117'` for `<name>-dark.svg`. This needs Docker. Result: six PNG files.
-2. Open each image and do the checklist of the `diagrams` skill. Result: no item fails. In the package view, each band label and each card is readable, and `hub` is in the band at the bottom.
+2. Open each image and do the checklist of the `diagrams` skill. Result: no item fails. In the package view, each band label and each card is readable, `hub` is in the band at the bottom, each arrow goes down, no arrow crosses a card or a band label, and a reader can follow each arrow from its card to its head.
 3. `node .claude/skills/diagrams/scripts/check-svg.mjs nodejs/wishem/docs/architecture/packages-light.svg nodejs/wishem/docs/architecture/packages-dark.svg`, and the same for the two other diagrams. Result: no problem.
 
 ### 12. The instructions give one rule
@@ -441,3 +489,17 @@ The final reviewer does these steps on the branch and reports the real result of
 1. `grep -rn 'package that other packages build on' docs/diagrams.md .claude/skills/diagrams openspec/config.yaml CLAUDE.md nodejs/wishem/docs`. Result: no line.
 2. `grep -n 'render.mjs --check' nodejs/wishem/docs/autonomous-flow.md`. Result: one line in the section "Reviews".
 3. `grep -n -i 'package dependency view' docs/diagrams.md .claude/skills/diagrams/SKILL.md CLAUDE.md openspec/config.yaml nodejs/wishem/docs/README.md`. Result: at least one line in each file.
+
+### 13. The arrows of the package dependency view
+
+These results are the results after the change, from the `package.json` files at the time of this revision (2026-11-28).
+
+1. `grep -c 'class="uses"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `38`.
+2. `grep -c 'data-from="docs-check"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `0`.
+3. `grep -c 'data-from="hub"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `0`. `grep -c 'data-to="hub"' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `11`.
+4. `grep -c 'Uses:' nodejs/wishem/docs/architecture/packages-light.svg`. Result: `0`.
+
+### 14. The merge checks run the check
+
+1. `grep -n 'render.mjs --check' .github/workflows/merge-checks.yaml`. Result: one line, in the job `merge-checks`, after the step `Setup dependencies`.
+2. On the pull request, open the run of the workflow "Merge Checks". Result: the step `Fail if the Wishem architecture diagrams are out of date` passes, and its log holds `render: each file is current`.

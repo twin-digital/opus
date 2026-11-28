@@ -12,9 +12,10 @@ The container diagram of Wishem shows each package of `nodejs/wishem/` as a cont
 ## What Changes
 
 - The container diagram of Wishem shows only the runtime units and the stores: the processes, the pages, the applications, and the model folders. It shows only the runtime relationships: HTTP, the link, the file system, Docker, and a start of a process. No library package is a container. Each card names the package that holds the unit. The table of the containers gives each package whose code runs in the unit.
-- A new package dependency view (not C4) shows each package of `nodejs/wishem/` in its layer, with its dependencies. `render.mjs` makes it from the `package.json` files.
+- A new package dependency view (not C4) shows each package of `nodejs/wishem/` in its layer, with an arrow from each package to each package that it uses at run time. Each arrow goes down, and no arrow crosses a card. `render.mjs` makes it from the `package.json` files.
 - `render.mjs --check` fails when an SVG file differs from the output of the script, when a package has no layer, when a dependency goes to a higher layer, or when the architecture document has no table row for a package.
 - A new private package `@thrashplay/wishem-docs-check` runs the check in its tests. CI runs these tests, because the package has each other Wishem package as a development dependency.
+- The merge checks of each pull request run `render.mjs --check`. Thus a change to `nodejs/wishem/docs/` alone is also checked. The owner gave the permission for this step in #696.
 - A new component diagram of the workbench process shows the start script, the workbench construct, the storage subsystems, the construct manager, the product constructs, the update subsystem, the product code, the Vite development server, and the generator of the view types.
 - The component diagram of the page does not change.
 - Each set of diagram instructions gives the new rule: `docs/diagrams.md`, `.claude/skills/diagrams/SKILL.md`, the root `CLAUDE.md`, `openspec/config.yaml`, `nodejs/wishem/docs/autonomous-flow.md`, and `nodejs/wishem/docs/README.md`. The owner gave the permission for the files outside `nodejs/wishem/` in #649.
@@ -28,7 +29,7 @@ None.
 
 ### Modified Capabilities
 
-- `wishem/architecture/diagrams`: the requirement "The container diagram" is removed, and "The container diagram of the runtime units" replaces it; new requirements for the package dependency view, its layers, its check, and the component diagram of the workbench process; the requirement of the render script gets the option `--check`.
+- `wishem/architecture/diagrams`: the requirement "The container diagram" is removed, and "The container diagram of the runtime units" replaces it; new requirements for the package dependency view, the routes of its arrows, its layers, its check, the merge checks that run the check, and the component diagram of the workbench process; the requirement of the render script gets the option `--check`.
 
 ## Impact
 
@@ -36,5 +37,6 @@ None.
 - New package `nodejs/wishem/docs-check` (private, tests only), with an entry in the root `turbo.json` for the inputs of its test.
 - `nodejs/wishem/CLAUDE.md`, `nodejs/wishem/docs/README.md`, `nodejs/wishem/docs/autonomous-flow.md`.
 - Outside `nodejs/wishem/`, with the permission of #649: `docs/diagrams.md`, `.claude/skills/diagrams/SKILL.md`, the root `CLAUDE.md`, and `openspec/config.yaml`.
+- `.github/workflows/merge-checks.yaml`: one step, with the permission of #696.
 - No product code changes. No package is published.
 - Two in-flight changes also change `render.mjs` and the architecture document: #542 (pull request #674) and #537 (pull request #673). `design.md` gives the order.

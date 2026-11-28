@@ -97,36 +97,55 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 
 ### Requirement: The package dependency view
 
-The architecture document SHALL hold a package dependency view of Wishem, in `nodejs/wishem/docs/architecture/packages-light.svg` and `packages-dark.svg`. The view is not a C4 diagram. `render.mjs` SHALL make it from the `package.json` files of `nodejs/wishem/`. The view SHALL show each package in its layer, the Wishem packages that it uses at run time, and the Wishem packages that it uses only in development.
+The architecture document SHALL hold a package dependency view (not C4) of Wishem in `packages-light.svg` and `packages-dark.svg`, which `render.mjs` SHALL make from the `package.json` files of `nodejs/wishem/`. The view SHALL show each package in its layer, and one arrow for each Wishem package in the `dependencies` or `peerDependencies` of a package. A card SHALL name the Wishem packages that are only in its `devDependencies`, with no arrow.
 
 #### Scenario: A change adds a dependency
 
 - **WHEN** a change adds `@thrashplay/wishem-clock` to the `dependencies` of `@thrashplay/wishem-renderer-pixi`, and a person runs `render.mjs`
-- **THEN** the card of `renderer-pixi` names `clock` in the line of the packages that it uses
+- **THEN** the view shows an arrow from the card of `renderer-pixi` to the card of `clock`
+
+#### Scenario: Each runtime dependency has an arrow
+
+- **WHEN** a person compares the arrows of the view with the `package.json` files of `nodejs/wishem/`
+- **THEN** each Wishem package in the `dependencies` or `peerDependencies` of a package has exactly one arrow from that package, and the view has no other arrow
 
 #### Scenario: A development dependency
 
 - **WHEN** a package has a Wishem package in `devDependencies` only, as `host-nodejs` has `clock`
-- **THEN** the card of the package names it in the line of the packages that it tests with, and not in the line of the packages that it uses
+- **THEN** the card of the package names it in the line of the packages that it tests with, and the view shows no arrow from the package to it
 
 #### Scenario: A peer dependency
 
 - **WHEN** a package has a Wishem package in `peerDependencies`
-- **THEN** the card of the package names it in the line of the packages that it uses
+- **THEN** the view shows an arrow from the card of the package to the card of the peer dependency
 
 #### Scenario: A package with no Wishem dependency
 
 - **WHEN** a package depends on no other package of Wishem, as `hub`
-- **THEN** its card says that it uses no package of Wishem
+- **THEN** no arrow starts at its card
 
 #### Scenario: The table of the packages
 
 - **WHEN** a person reads the section of the package dependency view in the architecture document
 - **THEN** a table has one row for each package, with its name, its layer, and its responsibility
 
+### Requirement: The routes of the arrows
+
+Each arrow of the package dependency view SHALL go down, from the bottom edge of the card of the package to the top edge of the card of the dependency. No arrow SHALL cross a card or the label of a layer. No two arrows SHALL share a line.
+
+#### Scenario: A dependency in the same layer
+
+- **WHEN** `@thrashplay/wishem-update` uses `@thrashplay/wishem-core`, and the two packages are in one layer
+- **THEN** the card of `core` is in a lower row of the band than the card of `update`, and the arrow from `update` to `core` goes down
+
+#### Scenario: An arrow has no free route
+
+- **WHEN** the layout puts a line of an arrow through a card or through the label of a layer, or puts two arrows on one line
+- **THEN** the script writes no file, names the arrow, and ends with an error
+
 ### Requirement: The layers of the packages
 
-`render.mjs` SHALL hold one ordered list of layers, and each layer SHALL name its packages. Each package of `nodejs/wishem/` SHALL be in exactly one layer. A runtime dependency (`dependencies` or `peerDependencies`) SHALL go to a package in the same layer or a lower layer. A development dependency can go to any layer.
+`render.mjs` SHALL hold one ordered list of layers, and each layer SHALL name its packages. Each package of `nodejs/wishem/` SHALL be in exactly one layer. A runtime dependency (`dependencies` or `peerDependencies`) SHALL go to a package in the same layer or a lower layer. The runtime dependencies in one layer SHALL make no cycle. A development dependency can go to any layer.
 
 #### Scenario: A package has no layer
 
@@ -142,6 +161,11 @@ The architecture document SHALL hold a package dependency view of Wishem, in `no
 
 - **WHEN** `@thrashplay/wishem-hub` gets `@thrashplay/wishem-core` in its `dependencies`, and `core` is in a higher layer than `hub`
 - **THEN** the script writes no file, prints the two packages, and ends with exit code 1
+
+#### Scenario: The runtime dependencies in one layer make a cycle
+
+- **WHEN** two packages of one layer use each other in their `dependencies`
+- **THEN** the script writes no file, prints the name of the layer, and ends with exit code 1
 
 #### Scenario: A development dependency goes to a higher layer
 
@@ -176,6 +200,15 @@ The tests of `@thrashplay/wishem-docs-check` SHALL run `render.mjs --check`. The
 
 - **WHEN** each SVG file, the layers, and the table agree with the packages
 - **THEN** the tests of `@thrashplay/wishem-docs-check` pass
+
+### Requirement: The merge checks run the check
+
+The merge checks of each pull request against `main` SHALL run `node nodejs/wishem/docs/architecture/render.mjs --check`, so that a change to `nodejs/wishem/docs/` alone is also checked.
+
+#### Scenario: A pull request changes only the architecture folder
+
+- **WHEN** a pull request changes `render.mjs` or an SVG file in `nodejs/wishem/docs/architecture/` and changes no package, and an SVG file differs from the output of the script
+- **THEN** the merge checks of the pull request fail, and the log names the file
 
 ### Requirement: The component diagram of the workbench process
 
