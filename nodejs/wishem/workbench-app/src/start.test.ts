@@ -266,6 +266,23 @@ describe('the start script of the workbench', () => {
     expect(await run.exit).toBe(0)
   })
 
+  it(
+    'stops with exit code 0 on a terminate signal that arrives with the page address',
+    { timeout: 30000 },
+    async () => {
+      const run = start(['--port', '0', '--hub-port', '0'])
+      let sent = false
+      run.child.stdout?.on('data', () => {
+        if (!sent && run.output().includes('wishem: workbench at')) {
+          sent = true
+          run.child.kill('SIGTERM')
+        }
+      })
+
+      expect(await run.exit).toBe(0)
+    },
+  )
+
   it('names state.json and serves no page when the model is not valid JSON', { timeout: 30000 }, async () => {
     writeFileSync(join(model, 'state.json'), '{ not json')
     const run = start(['--port', '0', '--hub-port', '0'])

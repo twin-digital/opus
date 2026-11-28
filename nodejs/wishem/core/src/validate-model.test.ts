@@ -357,10 +357,11 @@ describe('validateModel', () => {
         ['NaN', Number.NaN],
         ['Infinity', Number.POSITIVE_INFINITY],
         ['-Infinity', Number.NEGATIVE_INFINITY],
-      ])('rejects %s for a number field', (_name, value) => {
+      ])('rejects %s for a number field', (name, value) => {
         const problems = errors(withValues({ [FLD2]: value }))
         expect(problems).toHaveLength(1)
         expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD2])
+        expect(problems[0]?.message).toContain(`has the value ${name} for the field`)
       })
 
       it('accepts a reference to a later entity and a reference of an entity to itself', () => {

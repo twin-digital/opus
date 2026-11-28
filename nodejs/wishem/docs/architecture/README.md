@@ -37,7 +37,7 @@ The construct of the workbench process is the construct of `host-nodejs` at run 
 
 The `start` script of `pixi-page` starts one Node.js process, the PixiJS process. That process holds the PixiJS construct (`startPixiConstruct`) and a Vite development server, with no HMR. The construct is a hub with the `time` subsystem, the update subsystem with a store and the color behavior, and the clock. It serves the link at `/link` through `serveHub` of `host-nodejs`. The Vite development server serves the PixiJS page and passes the WebSocket at `/link` to the construct, as the workbench process does.
 
-The product model folder is a second folder that the workbench process mounts. The option `--product <folder>` of the `start` script gives it. The construct holds its model as the store `product`, with a storage subsystem of its own, and the page ignores it. With no option, the workbench process mounts no product. `@thrashplay/wishem-sample-product` (`model/`) is the example folder.
+The product model folder is a second folder that the workbench process mounts. The option `--product <folder>` of the `start` script gives it. The construct holds its model as the store `product`, with a storage subsystem of its own, and the page shows it in the product panel. With no option, the workbench process mounts no product. `@thrashplay/wishem-sample-product` (`model/`) is the example folder.
 
 A product construct is not a process. It is a hub in the workbench process, with the parts `time` and `store`, the update subsystem with the behaviors of the product, a clock, and its own link on a port that the system selects. The workbench process serves the link of each product construct, and a renderer in a different process can connect to it. The construct manager starts and stops the product constructs that the construct list wants, and the workbench process stops them before it stops the workbench hub.
 
@@ -125,16 +125,16 @@ After a change to a definition file that the hub accepts, or to a sidecar, the `
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="components-page-dark.svg">
-  <img alt="Component diagram of the page of the workbench. The client of the hub connects to the workbench process through the WebSocket link. The renderer reads the part store from the output port that the client gives, and sends the inputs of the views through the input port. A view sends an input through the prop wishem. The renderer finds the view in the table of views, and mounts the view with props. The table of views reads the sidecars and collects the views. The views draw with the catalog." src="components-page-light.svg">
+  <img alt="Component diagram of the page of the workbench. The client of the hub connects to the workbench process through the WebSocket link. The renderer reads the part store from the output port that the client gives, and sends the inputs of the views through the input port. A view sends an input through the prop wishem. The renderer finds the view in the table of views, and mounts the view with props. The table of views reads the sidecars and collects the views. The views draw with the catalog. The product panel reads the part product from the output port, sends product/set-field through the input port, and draws with the catalog." src="components-page-light.svg">
 </picture>
 
-Amber arrows show the primary path inside the page: how the changed parts of step 3 of the dynamic diagram become the picture of step 4. Gray arrows show where the table of views gets its content.
+Amber arrows show the primary path inside the page: how the changed parts of step 3 of the dynamic diagram become the picture of step 4. Gray arrows show where the table of views gets its content, and what the product panel reads, sends, and draws with.
 
 `src/main.tsx` connects the client of the hub. After each `welcome` message, it draws the `Page` with the output port and the input port of the new link and the table of views. A view sends an input through the prop `wishem`. The `Renderer` sends it through the input port. The `Renderer` mounts each view in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`.
 
 The sidecars are source files of `workbench-app`. Each sidecar sits beside the view that it describes. `src/views/AppBar.view.gen.ts` has the type `Props` of the view, with one member for each field of the component type. The `generate` script of `workbench-app` writes it from the definition file and the sidecar. The type check reads it. The page does not.
 
-The `Page` shows the zero state (`ZeroState`) of the catalog in the space below the pictures, with or without a port. The diagram does not show the `Page` module.
+The `Page` shows the product panel in the space below the pictures when the output port reads a part `product`. In each other case, it shows the zero state (`ZeroState`) of the catalog in that space. The diagram does not show the `Page` module.
 
 | Element           | Type                        | Responsibility                                                                                                                                                                                                                                    |
 | ----------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -143,7 +143,8 @@ The `Page` shows the zero state (`ZeroState`) of the catalog in the space below 
 | Table of views    | Component: `renderer-react` | `collectViews` in `renderer-react`. It pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view.                                                                                         |
 | Sidecars          | Component: JSON files       | `src/views/*.view.json`. Each one holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.                                                                                              |
 | Views             | Component: React            | `src/views/*.tsx`. Each view has a React component as its default export. The file states no ID.                                                                                                                                                  |
-| Catalog           | Component: React            | `src/components/`. It holds the components of the workbench, such as `AppBar` and `ZeroState`.                                                                                                                                                    |
+| Product panel     | Component: React            | `ProductTool` in `src/tools/`. It reads the part `product` from the output port, and it sends `product/set-field` through the input port. It draws `ProductPanel` of the catalog.                                                                 |
+| Catalog           | Component: React            | `src/components/`. It holds the components of the workbench, such as `AppBar`, `ZeroState`, and the parts of the product panel.                                                                                                                   |
 
 The React renderer is the package `renderer-react`. It holds `Renderer`, `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, and the generator. The page keeps `connectHub`, the views, and the sidecars.
 
