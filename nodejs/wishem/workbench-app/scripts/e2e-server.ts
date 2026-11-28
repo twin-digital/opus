@@ -3,7 +3,7 @@
 // With `--product`, the workbench mounts a copy of the sample product from `.e2e-product/`, and its model is in
 // `.e2e-product-model/`.
 // With `--run`, the workbench mounts a copy of the sample product from `.e2e-run-product/`, with the product code and
-// the views of the sample product, and its model is in `.e2e-run-model/`.
+// the views of the sample product copied to `.e2e-run-views/`, and its model is in `.e2e-run-model/`.
 import { cp } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -26,11 +26,15 @@ const copy = resolve(
   : '.e2e-model',
 )
 const productCopy = resolve(root, withRun ? '.e2e-run-product' : '.e2e-product')
+const viewsCopy = resolve(root, '.e2e-run-views')
 
 // Overwrites files. Deletes nothing.
 await cp(modelFolder, copy, { recursive: true })
 if (withProduct) {
   await cp(resolve(root, '..', 'sample-product', 'model'), productCopy, { recursive: true })
+}
+if (withRun) {
+  await cp(resolve(root, '..', 'sample-product', 'views', 'react'), viewsCopy, { recursive: true })
 }
 
 // Node.js needs the `.ts` extension. TypeScript reads the types through `.js`.
@@ -42,7 +46,7 @@ const workbench = await startWorkbench({
   model: copy,
   product: withProduct ? productCopy : undefined,
   productCode: withRun ? '@thrashplay/wishem-sample-product' : undefined,
-  productViews: withRun ? resolve(root, '..', 'sample-product', 'views', 'react') : undefined,
+  productViews: withRun ? viewsCopy : undefined,
   port: PAGE_PORT,
   hubPort: 0,
   viewTypes: false,

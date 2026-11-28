@@ -16,7 +16,8 @@ export interface RunToolProps {
   port: PortReader
   /** With no value, each control is disabled. */
   input: InputPort | undefined
-  productViews: ProductViews
+  /** With no value, the views are not loaded yet. */
+  productViews: ProductViews | undefined
 }
 
 const CONSTRUCT = 'play'
@@ -150,6 +151,9 @@ export const RunTool = ({ port, input, productViews }: RunToolProps): ReactNode 
         : <StageFrame message='Not running. Press Run to start the product.' />
     }
     if (stage.state === 'connecting') {
+      return <StageFrame message='Connecting to the product.' />
+    }
+    if (productViews === undefined) {
       return <StageFrame message='Connecting to the product.' />
     }
     if (productViews.error !== undefined) {

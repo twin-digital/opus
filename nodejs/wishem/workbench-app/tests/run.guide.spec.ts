@@ -9,7 +9,7 @@ import { COUNT_FIELD } from '@thrashplay/wishem-sample-product'
 const productFolder = join(import.meta.dirname, '..', '.e2e-run-product')
 const statePath = join(productFolder, 'state.json')
 const originalPath = join(import.meta.dirname, '..', '..', 'sample-product', 'model', 'state.json')
-const countViewPath = join(import.meta.dirname, '..', '..', 'sample-product', 'views', 'react', 'Count.tsx')
+const countViewPath = join(import.meta.dirname, '..', '.e2e-run-views', 'Count.tsx')
 const LINK = 'ws://127.0.0.1:4186/link'
 const NO_PRODUCT_PAGE = 'http://127.0.0.1:4180/'
 const CONTROLS = ['Run', 'Stop', 'Pause', 'Resume', 'Step', 'Step back']
@@ -234,7 +234,7 @@ test('step 12: a viewport 390 pixels wide in dark mode has the run area above th
   await expect(page).toHaveScreenshot('run-narrow-dark.png')
 })
 
-// Last: the test edits a view file, and the dev server may keep the edit until it stops.
+// Last: the test edits a view file of the copy in `.e2e-run-views/`, and the dev server may keep the edit until it stops.
 test('step 12: an edit of a view of the product keeps the run state', async ({ page }) => {
   await startPaused()
   await page.goto('/')
@@ -242,8 +242,10 @@ test('step 12: an edit of a view of the product keeps the run state', async ({ p
   await expect(status).toHaveText('Paused')
   await expect(stage).toContainText('Count 0')
   const original = await readFile(countViewPath, 'utf8')
+  const edited = original.replace('Count {count}', 'Count: {count}')
+  expect(edited).not.toBe(original)
   try {
-    await writeFile(countViewPath, original.replace('Count {count}', 'Count: {count}'))
+    await writeFile(countViewPath, edited)
     await expect(stage).toContainText('Count: 0')
     await expect(status).toHaveText('Paused')
     expect(await tick()).toBe(0)

@@ -108,9 +108,9 @@ describe('RunTool', () => {
     vi.restoreAllMocks()
   })
 
-  const draw = (inputPort: InputPort | null = input, productViews = withViews) => {
+  const draw = (inputPort: InputPort | null = input, productViews: ProductViews | null = withViews) => {
     act(() => {
-      root.render(<RunTool port={output} input={inputPort ?? undefined} productViews={productViews} />)
+      root.render(<RunTool port={output} input={inputPort ?? undefined} productViews={productViews ?? undefined} />)
     })
   }
   const settle = async () => {
@@ -318,6 +318,16 @@ describe('RunTool', () => {
     expect(stage()?.textContent).toContain('The product has no React views.')
     draw(input, { views, error: 'The views of the product are not correct.' })
     expect(stage()?.textContent).toContain('The views of the product are not correct.')
+  })
+
+  it('shows connecting, not the no-views line, while the product views are not loaded', async () => {
+    draw(input, null)
+    await running()
+    await welcome(time(0, false))
+    expect(stage()?.textContent).toContain('Connecting to the product.')
+    expect(stage()?.textContent).not.toContain('The product has no React views.')
+    draw(input, withViews)
+    expect(stage()?.textContent).toContain('Color #1d4ed8')
   })
 
   it('shows connecting for a running entry with no link', async () => {

@@ -13,7 +13,7 @@ export interface PageProps {
   input: InputPort | undefined
   views: ViewTable
   /** The React views of the product, for the stage. */
-  productViews: ProductViews
+  productViews: ProductViews | undefined
 }
 
 interface BelowProps {
@@ -28,7 +28,7 @@ const Below = ({ port, input }: BelowProps) =>
   : <ProductTool port={port} input={input} />
 
 interface ContentProps extends BelowProps {
-  productViews: ProductViews
+  productViews: ProductViews | undefined
 }
 
 /** The product panel, with the run area beside it when the port reads a part `constructs`. */

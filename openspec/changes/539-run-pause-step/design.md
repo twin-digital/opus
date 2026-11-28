@@ -480,7 +480,7 @@ The inputs of the controls on the link of the page (`hub/LINK.md`):
 {"t":"submit","request":7,"subsystem":"page-4f1c0a9e2b7d3c58-input","input":{"type":"constructs/rewind","payload":{"construct":"play","ticks":1}}}
 ```
 
-A refused step back from a client: `{"t":"result","request":9,"result":{"ok":false,"reason":"invalid","problems":[{"message":"The ticks are not an integer of 1 or more","path":["payload","ticks"]}]}}`.
+A refused step back from a client: `{"t":"result","request":9,"result":{"ok":false,"reason":"invalid","problems":[{"message":"The ticks value is not an integer of 1 or more","path":["payload","ticks"]}]}}`.
 
 The terminal of the workbench:
 
@@ -569,6 +569,8 @@ Not running:
 | |    Not running. Press Run to start the product.     | |
 | +-----------------------------------------------------+ |
 ```
+
+The views of the product are not loaded until the list and the view files are imported. While they are not loaded, the stage shows `Connecting to the product.`. The stage shows `The product has no React views.` only for a loaded list with no view.
 
 Failed, and a refusal:
 

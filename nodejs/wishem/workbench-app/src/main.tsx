@@ -29,7 +29,7 @@ const root = document.getElementById('root')
 if (root) {
   const views = loadViews()
   const page = createRoot(root)
-  let productViews: ProductViews = { views: collectViews({}, {}) }
+  let productViews: ProductViews | undefined
   let ports: { output: PortReader; input: InputPort } | undefined
   const draw = () => {
     page.render(<Page port={ports?.output} input={ports?.input} views={views} productViews={productViews} />)
