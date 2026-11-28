@@ -42,14 +42,16 @@ describe('propNames', () => {
     expect(result.problems).toEqual([])
   })
 
-  it('reports an empty name', () => {
+  it('gives no prop for an empty name, and reports it', () => {
     const result = propNames(definition('title', '???'))
+    expect(result.props.map((prop) => prop.name)).toEqual(['title'])
     expect(result.problems).toEqual([{ kind: 'empty-name', field: 'fld_1' }])
   })
 
   it('reports a name that starts with a digit', () => {
     const result = propNames(definition('2nd line'))
     expect(result.problems).toEqual([{ kind: 'name-starts-with-digit', field: 'fld_0', name: '2ndLine' }])
+    expect(result.props.map((prop) => prop.name)).toEqual(['2ndLine'])
   })
 
   it('does not report a digit that is not the first character', () => {
@@ -60,6 +62,7 @@ describe('propNames', () => {
 
   it('reports two empty names as empty names only', () => {
     const result = propNames(definition('???', '!!!'))
+    expect(result.props).toEqual([])
     expect(result.problems).toEqual([
       { kind: 'empty-name', field: 'fld_0' },
       { kind: 'empty-name', field: 'fld_1' },
