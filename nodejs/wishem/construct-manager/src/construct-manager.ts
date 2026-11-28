@@ -1,4 +1,4 @@
-import type { ClockTimer, TimePart } from '@thrashplay/wishem-clock'
+import type { TimePart } from '@thrashplay/wishem-clock'
 import type { Model } from '@thrashplay/wishem-core'
 import { PRODUCT_ID } from '@thrashplay/wishem-host-nodejs'
 import { hubInputs } from '@thrashplay/wishem-hub'
@@ -13,33 +13,28 @@ import type {
   TimeState,
 } from './construct-list.js'
 import { CONSTRUCT_MANAGER_ID, CONSTRUCT_MANAGER_READER_ID, CONSTRUCTS_ID } from './ids.js'
-import type { NativeBehavior } from '@thrashplay/wishem-update'
+import { childProcessLauncher } from './launchers.js'
+import type { LaunchedConstruct, ProductConstructLauncher } from './launchers.js'
 import { productChanges } from './product-changes.js'
-import { startProductConstruct } from './product-construct.js'
-import type { ProductConstruct } from './product-construct.js'
 
 export interface ConstructManagerOptions {
   /** The workbench hub. It runs, and it has the parts `product` and `constructs`. */
   hub: Hub
-  /** The native behaviors of the product. Each product construct runs them. */
-  behaviors?: readonly NativeBehavior[]
+  /** Starts each product construct. Default: `childProcessLauncher()`. */
+  launch?: ProductConstructLauncher
   /** Default: write to the terminal. */
   log?: (line: string) => void
-  /** For tests: given to each product construct. */
-  stepMs?: number
-  timer?: ClockTimer
-  now?: () => number
 }
 
 export interface ConstructManager {
   /** The product constructs that run, by ID. */
-  readonly running: ReadonlyMap<string, ProductConstruct>
+  readonly running: ReadonlyMap<string, LaunchedConstruct>
   /** Stops each product construct and closes the two ports. Gives the same promise on each call. */
   close(): Promise<void>
 }
 
 interface Live {
-  readonly construct: ProductConstruct
+  readonly construct: LaunchedConstruct
   readonly input: Port
   readonly reader: Port
   /** The `startSeq` of the entry when the construct started. */
@@ -70,8 +65,8 @@ const messageOf = (error: unknown): string => (error instanceof Error ? error.me
 const listOf = (state: JoinedState): Readonly<Record<string, ConstructEntry>> =>
   (state[CONSTRUCTS_ID] as ConstructList).constructs
 
-const timeStateOf = (construct: ProductConstruct): TimeState =>
-  (construct.hub.read().time as TimePart).running ? 'running' : 'paused'
+const timeStateOf = (construct: LaunchedConstruct): TimeState =>
+  (construct.reader.read().time as TimePart).running ? 'running' : 'paused'
 
 const problemsOf = (result: Extract<SubmitResult, { ok: false }>): string =>
   result.problems.length === 0 ? result.reason : result.problems.map((problem) => problem.message).join('; ')
@@ -90,7 +85,9 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
   }
 
   const live = new Map<string, Live>()
-  const running = new Map<string, ProductConstruct>()
+  const running = new Map<string, LaunchedConstruct>()
+  const failing = new Set<string>()
+  const launch = options.launch ?? childProcessLauncher()
   let seenProduct = reader.read()[PRODUCT_ID]
   let chain: Promise<void> = Promise.resolve()
   let closed = false
@@ -173,8 +170,6 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
   const stopConstruct = async (id: string, item: Live): Promise<void> => {
     live.delete(id)
     running.delete(id)
-    item.input.close()
-    item.reader.close()
     try {
       await item.construct.close()
     } catch (error) {
@@ -183,36 +178,51 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     log(`wishem: construct ${id} stopped`)
   }
 
-  const startConstruct = async (id: string, entry: ConstructEntry, product: Model): Promise<void> => {
-    let construct: ProductConstruct | undefined
-    let item: Live
+  const ended = async (id: string, item: Live, message: string): Promise<void> => {
+    if (live.get(id) !== item || closed) {
+      return
+    }
+    failing.add(id)
+    live.delete(id)
+    running.delete(id)
     try {
-      construct = await startProductConstruct({
-        id,
-        model: product,
-        running: entry.startTime === 'running',
-        ...(options.behaviors === undefined ? {} : { behaviors: options.behaviors }),
-        ...(options.stepMs === undefined ? {} : { stepMs: options.stepMs }),
-        ...(options.timer === undefined ? {} : { timer: options.timer }),
-        ...(options.now === undefined ? {} : { now: options.now }),
-        onError: (error) => {
-          log(`wishem: construct ${id}: ${messageOf(error)}`)
-        },
+      await item.construct.close().catch(() => undefined)
+      log(`wishem: construct ${id} failed: ${message}`)
+      await report({ construct: id, status: 'failed', message }).catch((error: unknown) => {
+        log(`wishem: construct manager: ${messageOf(error)}`)
       })
-      item = {
-        construct,
-        input: construct.hub.attach({ id: CONSTRUCT_MANAGER_ID, kind: 'input' }),
-        reader: construct.hub.attach({ id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' }),
-        startSeq: entry.startSeq,
-        given: product,
-        ticks: [],
-      }
+    } finally {
+      failing.delete(id)
+    }
+  }
+
+  const startConstruct = async (id: string, entry: ConstructEntry, product: Model): Promise<void> => {
+    let construct: LaunchedConstruct
+    try {
+      construct = await launch(
+        { id, model: product, running: entry.startTime === 'running' },
+        {
+          onProcess: (pid) => {
+            log(`wishem: construct ${id} runs in the process ${pid}`)
+          },
+          onLine: (line) => {
+            log(`wishem: construct ${id}: ${line}`)
+          },
+        },
+      )
     } catch (error) {
-      await construct?.close().catch(() => undefined)
       const message = messageOf(error)
       log(`wishem: construct ${id} failed: ${message}`)
       await report({ construct: id, status: 'failed', message })
       return
+    }
+    const item: Live = {
+      construct,
+      input: construct.input,
+      reader: construct.reader,
+      startSeq: entry.startSeq,
+      given: product,
+      ticks: [],
     }
     item.reader.subscribe((event) => {
       if (event.type !== 'applied') {
@@ -233,6 +243,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
     })
     live.set(id, item)
     running.set(id, construct)
+    void construct.ended.then((message) => ended(id, item, message))
     log(`wishem: construct ${id} runs, link at ${construct.linkUrl}`)
     await report(liveReport(id, item))
   }
@@ -246,7 +257,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
       }
     }
     for (const [id, entry] of Object.entries(list)) {
-      if (closed || entry.want !== 'running' || live.has(id) || entry.status === 'failed') {
+      if (closed || entry.want !== 'running' || live.has(id) || failing.has(id) || entry.status === 'failed') {
         continue
       }
       await startConstruct(id, entry, reader.read()[PRODUCT_ID] as Model)

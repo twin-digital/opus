@@ -60,7 +60,17 @@ const inputs = productChanges(before, after, 'product')
 
 ## The construct manager
 
-`attachConstructManager({ hub, behaviors, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The list `behaviors` holds the native behaviors of the product, and each product construct runs them. The hub must have the parts `product` and `constructs`.
+`attachConstructManager({ hub, launch, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The hub must have the parts `product` and `constructs`.
+
+The option `launch` is a `ProductConstructLauncher`. It starts one product construct and gives a `LaunchedConstruct`. The default is `childProcessLauncher()`: each product construct runs in a product construct process. The manager uses only the ports of the `LaunchedConstruct`. `running` holds the `LaunchedConstruct` of each live product construct, by ID.
+
+```ts
+import { childProcessLauncher } from '@thrashplay/wishem-construct-manager/node'
+
+const launch = childProcessLauncher({ productCode: new URL('./product.js', import.meta.url).href })
+```
+
+The example below uses `inProcessLauncher`, which runs each product construct in the process of the caller.
 
 ```ts
 import { fileURLToPath } from 'node:url'
@@ -71,7 +81,7 @@ import { createHub } from '@thrashplay/wishem-hub'
 import { behaviors } from '@thrashplay/wishem-sample-product'
 import { constructInputs, createConstructList } from '@thrashplay/wishem-construct-manager'
 import type { ConstructList } from '@thrashplay/wishem-construct-manager'
-import { attachConstructManager } from '@thrashplay/wishem-construct-manager/node'
+import { attachConstructManager, inProcessLauncher } from '@thrashplay/wishem-construct-manager/node'
 
 const eventually = async (check: () => boolean) => {
   while (!check()) {
@@ -85,7 +95,11 @@ const hub = createHub({
   subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
 })
 hub.start()
-const manager = attachConstructManager({ hub, behaviors, log: (line) => console.log(line) })
+const manager = attachConstructManager({
+  hub,
+  launch: inProcessLauncher({ behaviors }),
+  log: (line) => console.log(line),
+})
 const client = hub.attach({ id: 'client', kind: 'input' })
 const entry = () => (hub.read().constructs as ConstructList).constructs.play
 
@@ -99,9 +113,9 @@ await manager.close()
 hub.stop()
 ```
 
-The construct manager attaches the input port `construct-manager` and the output port `construct-manager-reader` to `hub`. It also attaches the same two ports to the hub of each product construct. `attachConstructManager` throws when `hub` uses one of these IDs.
+The construct manager attaches the input port `construct-manager` and the output port `construct-manager-reader` to `hub`. The launcher attaches the same two ports to the hub of each product construct. `attachConstructManager` throws when `hub` uses one of these IDs.
 
-A product construct (`startProductConstruct`) holds:
+A product construct (`startProductConstruct`, or a product construct process) holds:
 
 - a hub with the parts `time` and `store`, and the update subsystem, which runs the `behaviors`. The part `time` holds `stepMs`, the step length of the clock (default 50 milliseconds)
 - a link server on the port of the option `port` (`linkUrl`, for example `ws://127.0.0.1:41377/link`). The default is 0: the system selects a free port. A port in use rejects `startProductConstruct` with `EADDRINUSE`, and then no timer and no open port stay.
@@ -119,13 +133,17 @@ A step back keeps the `running` value that the product construct had before it. 
 await client.submit(constructInputs.rewind({ construct: 'play', ticks: 1 }))
 ```
 
+When a product construct process ends and no stop was requested, the manager reports `failed` with the message of `ended`.
+
 The construct manager gives each product construct the changes of the model `product` as inputs. It reports `running`, `stopped`, or `failed` for each construct with `constructs/report`. A `failed` construct stays `failed` until a client sends `constructs/stop` and then `constructs/start`.
 
 A `constructs/stop` and a `constructs/start` always give a new product construct: a new link address and a time that starts from 0. This is also true when the hub applies both inputs in one pass.
 
 The construct manager writes these log lines:
 
+- `wishem: construct <id> runs in the process <pid>`
 - `wishem: construct <id> runs, link at <link>`
+- `wishem: construct <id>: <line>` for each line that the construct writes to the standard output or the standard error
 - `wishem: construct <id> stopped`
 - `wishem: construct <id> failed: <message>`
 - `wishem: construct <id>: the change of the product was refused: <message>`

@@ -7,7 +7,7 @@ import { behaviors } from '@thrashplay/wishem-sample-product'
 import { expect, it } from 'vitest'
 import { constructInputs, createConstructList } from './index.js'
 import type { ConstructList } from './index.js'
-import { attachConstructManager } from './node.js'
+import { attachConstructManager, inProcessLauncher } from './node.js'
 
 const eventually = async (check: () => boolean, ms = 2000) => {
   const deadline = Date.now() + ms
@@ -28,7 +28,11 @@ it('runs the example of the README', async () => {
     subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
   })
   hub.start()
-  const manager = attachConstructManager({ hub, behaviors, log: (line) => lines.push(line) })
+  const manager = attachConstructManager({
+    hub,
+    launch: inProcessLauncher({ behaviors }),
+    log: (line) => lines.push(line),
+  })
   const client = hub.attach({ id: 'client', kind: 'input' })
   const entry = () => (hub.read().constructs as ConstructList).constructs.play
 
