@@ -5,9 +5,9 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promis
 import * as fsp from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { createStore, storeInputs, validateModel } from '@thrashplay/wishem-core'
+import { createStore, isEqual, storeInputs, validateModel } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
-import { createHub, InputRefusedError } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs, InputRefusedError } from '@thrashplay/wishem-hub'
 import type { Hub, ModelSubsystem, Port } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { attachModelFolderStorage } from './model-folder-storage.js'
@@ -22,6 +22,11 @@ vi.mock('node:fs', async (importOriginal) => ({
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>()
   return { ...actual, rename: vi.fn(actual.rename), writeFile: vi.fn(actual.writeFile), rm: vi.fn(actual.rm) }
+})
+
+vi.mock('@thrashplay/wishem-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thrashplay/wishem-core')>()
+  return { ...actual, isEqual: vi.fn(actual.isEqual) }
 })
 
 vi.mock('./read-model-folder.js', async (importOriginal) => {
@@ -68,6 +73,13 @@ class FakeWatcher extends EventEmitter {
   ) {
     super()
   }
+}
+
+const counter: ModelSubsystem<number> = {
+  id: 'counter',
+  inputs: ['counter/bump'],
+  initial: 0,
+  apply: (part) => part + 1,
 }
 
 const definition = { id: CT, label: 'AppBar', fields: [{ id: FLD, label: 'title', type: 'string' }] }
@@ -125,6 +137,7 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
 
   beforeEach(async () => {
     lines = []
+    vi.mocked(isEqual).mockClear()
     folder = await mkdtemp(path.join(tmpdir(), 'wishem-storage-'))
     await mkdir(path.join(folder, 'definitions'))
     await writeFile(path.join(folder, 'definitions', `${CT}.json`), JSON.stringify(definition))
@@ -254,6 +267,73 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     expect(await fileTitle()).toBe('Wishem')
     await setTitle('B')
     await eventually(async () => (await fileTitle()) === 'B')
+  })
+
+  describe('A write request for a store that the writer already checked', () => {
+    const bump = () => client.submit({ type: 'counter/bump', payload: {} })
+    const startWithCounter = () => {
+      start(createHub({ subsystems: [createStore({ model: first }), counter] }))
+    }
+
+    it('compares nothing after a write', async () => {
+      startWithCounter()
+      await pause(150)
+      await setTitle('A')
+      await eventually(async () => (await fileTitle()) === 'A')
+      vi.mocked(isEqual).mockClear()
+
+      expect((await bump()).ok).toBe(true)
+      await pause(100)
+
+      expect(isEqual).not.toHaveBeenCalled()
+    })
+
+    it('compares nothing while the definitions differ from the files', async () => {
+      startWithCounter()
+      await pause(150)
+      const model = { definitions: [{ ...definition, label: 'Renamed' }], entities: store().entities }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      await eventually(() => lines.some((line) => line.includes('state.json is not written')))
+      vi.mocked(isEqual).mockClear()
+
+      expect((await bump()).ok).toBe(true)
+      await pause(100)
+
+      expect(isEqual).not.toHaveBeenCalled()
+    })
+
+    it('compares no entities when a rewind gives back the entities of the last write', async () => {
+      start()
+      await pause(150)
+      await setTitle('A')
+      await eventually(async () => (await fileTitle()) === 'A')
+      expect((await client.submit(hubInputs.rewind(hub.seq))).ok).toBe(true)
+      const written = hub.seq
+      const model = { definitions: [{ ...definition, label: 'Renamed' }], entities: store().entities }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      await eventually(() => lines.some((line) => line.includes('state.json is not written')))
+      vi.mocked(isEqual).mockClear()
+
+      expect((await client.submit(hubInputs.rewind(written))).ok).toBe(true)
+      await eventually(() => lines.some((line) => line.includes('are equal to the files in definitions again')))
+
+      const compared = vi
+        .mocked(isEqual)
+        .mock.calls.filter(([a]) => a.definitions.length === 0 && a.entities.length > 0)
+      expect(compared).toHaveLength(0)
+    })
+
+    it('writes again after a failed write when an input leaves the store as it is', async () => {
+      startWithCounter()
+      await pause(150)
+      vi.mocked(fsp.writeFile).mockRejectedValueOnce(new Error('EACCES: permission denied'))
+      await setTitle('A')
+      await eventually(() => lines.some((line) => line.includes('cannot write state.json')))
+
+      expect((await bump()).ok).toBe(true)
+
+      await eventually(async () => (await fileTitle()) === 'A')
+    })
   })
 
   it('gives one promise for each call of close', async () => {

@@ -7,12 +7,12 @@ import { isEqual, storeInputs, validateModel } from '@thrashplay/wishem-core'
 import type { Entity, Model, Problem } from '@thrashplay/wishem-core'
 import type { Hub, Port } from '@thrashplay/wishem-hub'
 import { describeCounts, formatProblem } from './format.js'
-import { readModelFolder, withSource } from './read-model-folder.js'
+import { readModelFolder, toAbsoluteSources, withSource } from './read-model-folder.js'
 
 export const FILES_ID = 'files'
 export const FILES_WRITER_ID = 'files-writer'
 
-const STORE_ID = 'store'
+const DEFAULT_STORE_ID = 'store'
 const STATE_FILE = 'state.json'
 const DEFINITIONS_FOLDER = 'definitions'
 const SETTLE_MS = 50
@@ -24,6 +24,12 @@ export interface ModelFolderStorageOptions {
   first: Model
   log: (line: string) => void
   onWatchError?: (error: Error) => void
+  /** The ID of the store that this storage subsystem keeps. Default `store`. */
+  storeId?: string
+  /** Default `{ input: 'files', output: 'files-writer' }`. */
+  subsystemIds?: { input: string; output: string }
+  /** When `true`, the source of each problem is the absolute path of its file. Default `false`. */
+  absoluteSources?: boolean
 }
 
 export interface ModelFolderStorage {
@@ -42,23 +48,31 @@ const sameDefinitionList = (a: Model['definitions'], b: Model['definitions']) =>
 const sameEntities = (a: readonly Entity[], b: readonly Entity[]) =>
   isEqual({ definitions: [], entities: [...a] }, { definitions: [], entities: [...b] })
 
-/** Attaches `files` and `files-writer` to the hub. */
+/** Attaches an input subsystem and an output subsystem (default `files` and `files-writer`) to the hub. */
 export const attachModelFolderStorage = (options: ModelFolderStorageOptions): ModelFolderStorage => {
-  const { folder, hub, log } = options
-  const inputs = storeInputs(STORE_ID)
+  const { folder, hub, log, storeId = DEFAULT_STORE_ID, absoluteSources = false } = options
+  const ids = options.subsystemIds ?? { input: FILES_ID, output: FILES_WRITER_ID }
+  const inputs = storeInputs(storeId)
   const stateFile = path.join(folder, STATE_FILE)
   const definitionsFolder = path.join(folder, DEFINITIONS_FOLDER)
 
-  const files: Port = hub.attach({ id: FILES_ID, kind: 'input' })
+  const stateName = absoluteSources ? path.resolve(stateFile) : STATE_FILE
+  const logProblems = (problems: Problem[]) => {
+    ;(absoluteSources ? toAbsoluteSources(problems, folder) : problems).forEach((problem) => {
+      log(formatProblem(problem))
+    })
+  }
+
+  const files: Port = hub.attach({ id: ids.input, kind: 'input' })
   let writer: Port
   try {
-    writer = hub.attach({ id: FILES_WRITER_ID, kind: 'output' })
+    writer = hub.attach({ id: ids.output, kind: 'output' })
   } catch (error) {
     files.close()
     throw error
   }
 
-  const current = () => hub.read()[STORE_ID] as Model
+  const current = () => hub.read()[storeId] as Model
 
   let synced = options.first
   // The definitions of the last correct read of the folder.
@@ -89,9 +103,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
       const validation = result.data === undefined ? undefined : validateModel(result.data)
       if (validation?.ok !== true) {
         const problems = validation === undefined ? result.problems : withSource(validation.problems, result)
-        problems.forEach((problem) => {
-          log(formatProblem(problem))
-        })
+        logProblems(problems)
         log('wishem: the last correct model stays')
         correct = false
         return
@@ -109,10 +121,11 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
         const outcome = await files.submit(inputs.replaceModel(next))
         if (!outcome.ok) {
           if (outcome.reason !== 'not-running') {
-            outcome.problems.forEach((problem) => {
-              const entry: Problem = { severity: 'error', message: problem.message, path: [...(problem.path ?? [])] }
-              log(formatProblem(withSource([entry], result)[0] ?? entry))
-            })
+            logProblems(
+              outcome.problems.flatMap((problem) =>
+                withSource([{ severity: 'error', message: problem.message, path: [...(problem.path ?? [])] }], result),
+              ),
+            )
             log('wishem: the last correct model stays')
             correct = false
           }
@@ -122,9 +135,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
       }
       synced = read
       if (!quiet || changed) {
-        withSource(validation.warnings, result).forEach((warning) => {
-          log(formatProblem(warning))
-        })
+        logProblems(withSource(validation.warnings, result))
       }
       if (!correct) {
         log(`wishem: the model is correct: ${describeCounts(current())}`)
@@ -169,7 +180,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
       checked = { store, disk }
     } catch (error) {
       await rm(temporary, { force: true }).catch(() => undefined)
-      log(`wishem: cannot write ${STATE_FILE}: ${error instanceof Error ? error.message : String(error)}`)
+      log(`wishem: cannot write ${stateName}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 

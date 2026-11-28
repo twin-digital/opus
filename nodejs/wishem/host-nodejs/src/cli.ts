@@ -4,10 +4,10 @@ import { parseArgs } from 'node:util'
 import { ModelError } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { describeCounts, formatProblem } from './format.js'
-import { DEFAULT_PORT, startConstruct } from './start-construct.js'
+import { DEFAULT_PORT, PRODUCT_ID, startConstruct } from './start-construct.js'
 import type { Construct } from './start-construct.js'
 
-const USAGE = 'usage: wishem start <folder> [--port <number>]'
+const USAGE = 'usage: wishem start <folder> [--product <folder>] [--port <number>]'
 
 const say = (line: string) => {
   console.log(line)
@@ -24,13 +24,18 @@ const usageError = (message?: string): never => {
 const main = async () => {
   let parsed
   try {
-    parsed = parseArgs({ allowPositionals: true, options: { port: { type: 'string' } } })
+    parsed = parseArgs({ allowPositionals: true, options: { port: { type: 'string' }, product: { type: 'string' } } })
   } catch (error) {
     return usageError(error instanceof Error ? error.message : String(error))
   }
 
   const [command, folder] = parsed.positionals
   if (command !== 'start' || parsed.positionals.length < 2) {
+    return usageError()
+  }
+
+  const product = parsed.values.product
+  if (product === '') {
     return usageError()
   }
 
@@ -44,6 +49,9 @@ const main = async () => {
   }
 
   say(`wishem: model ${path.resolve(folder)}`)
+  if (product !== undefined) {
+    say(`wishem: product ${path.resolve(product)}`)
+  }
 
   let construct: Construct | undefined
   const stopState = { requested: false }
@@ -71,6 +79,7 @@ const main = async () => {
   try {
     const started = await startConstruct({
       folder,
+      product,
       port,
       log: say,
       onWatchError: () => {
@@ -87,6 +96,9 @@ const main = async () => {
       return
     }
     say(`wishem: ${describeCounts(started.hub.read().store as Model)}`)
+    if (product !== undefined) {
+      say(`wishem: product: ${describeCounts(started.hub.read()[PRODUCT_ID] as Model)}`)
+    }
     say(`wishem: link at ${started.linkUrl}`)
   } catch (error) {
     if (error instanceof ModelError) {

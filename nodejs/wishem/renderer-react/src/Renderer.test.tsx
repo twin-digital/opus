@@ -439,13 +439,21 @@ describe('Renderer', () => {
       expect(Object.keys(received[0] ?? {})).toEqual(['maxHealth', 'other'])
     })
 
-    it('mounts the function of the view as a React component', () => {
+    it('mounts the function of the view as a React component', async () => {
       const Counter = ({ title }: ViewProps) => {
         const [count] = useState(7)
         return <span>{`${String(title)}:${count}`}</span>
       }
-      draw(startWorld(baseModel()).output, tableOf({ ...sourceA, view: Counter }))
+      const { input, output } = startWorld(baseModel())
+      draw(output, tableOf({ ...sourceA, view: Counter }))
       expect(wrappers()[0]?.textContent).toBe('One:7')
+
+      // A change of the number of views changes the hooks of the renderer if a view is not a component.
+      const model = baseModel()
+      await act(async () => {
+        await input.submit(inputs.replaceModel({ ...model, entities: model.entities.slice(0, 1) }))
+      })
+      expect(wrappers().map((wrapper) => wrapper.textContent)).toEqual(['One:7'])
     })
 
     it('draws nothing for a component type that has no view, and logs no error', () => {
@@ -566,6 +574,24 @@ describe('Renderer', () => {
 
       expect(warn).toHaveBeenCalledTimes(1)
       expect(wrappers()).toHaveLength(2)
+    })
+
+    it('writes a warning again when the definition is removed after it was added', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const model = baseModel()
+      const withoutA = { ...model, definitions: model.definitions.filter(({ id }) => id !== CT_A), entities: [] }
+      const { input, output } = startWorld(withoutA)
+
+      draw(output)
+      await act(async () => {
+        await input.submit(inputs.replaceModel(model))
+      })
+      expect(warn).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        await input.submit(inputs.replaceModel(withoutA))
+      })
+
+      expect(warn).toHaveBeenCalledTimes(2)
     })
 
     it('gives no warning for views that match their definitions', () => {

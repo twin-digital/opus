@@ -264,7 +264,7 @@ The live state of a construct is its joined state. Each model subsystem contribu
 
 Each input is in the record. The same starting state and the same inputs always give the same result. Random values come from a seed. (rule R3)
 
-The **clock** is a subsystem that sends ticks at an interval. A product that is not a game has no clock. (**Agreed**)
+The **clock** is a subsystem that sends ticks at an interval. A product that is not a game has no clock. (**Agreed**) [The game loop](#the-game-loop) says how the clock and the other parts work together.
 
 A tick is the input `time/advance`. A listener sees a tick as the hub event for an applied input. (**Agreed**)
 
@@ -320,6 +320,51 @@ A bookmark has more uses:
 
 A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the product changes. See [#479](https://github.com/twin-digital/opus/issues/479).
 
+## The game loop
+
+A game loop has these jobs: a fixed step, an accumulator, a catch-up with a limit, a source of real time, an update of the rules, and a render. This section says which part of Wishem has each job. The facts come from `clock/src/clock.ts` and `clock/src/time.ts`.
+
+| Job                   | Part of Wishem                                                                                                                                                                            | State                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Fixed step            | The clock. Each tick is `time/advance { ms: stepMs }`, with the same `ms` each time (50 ms by default). The reason is rule R3.                                                            | Built                                                               |
+| Accumulator           | The clock. At each call of its timer it sends `floor((real time - last) / stepMs)` ticks and moves `last` by that number of steps.                                                        | Built                                                               |
+| Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                                                                              | Built                                                               |
+| Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                                                                     | Built                                                               |
+| Pause, step, rewind   | The part `time` (`running`) and the inputs `time/set-running` and `hub/rewind`. After `time/set-running` and `hub/rewind`, and when the clock starts, the clock measures real time again. | Built                                                               |
+| Update of the rules   | One model subsystem, the update subsystem. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.                                                    | Not built ([#617](https://github.com/twin-digital/opus/issues/617)) |
+| Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                                                                   | Built, with no interpolation                                        |
+
+### Fixed step
+
+A tick has the same length each time, so the same record gives the same state (rule R3). Rewind and replay need this. The delta of a tick is the payload `ms` of `time/advance`. The part `time` holds `now` (the sum of the deltas), `ticks`, and `running`.
+
+### Catch-up and the source of real time
+
+The accumulator keeps the time of the construct near the real time. When the timer is late, the clock sends more than one tick in the call. When more than `maxTicksPerCall` ticks are due, the time of the construct runs slower than the real time for that moment. This stops a loop of more and more work.
+
+`performance.now()` does not jump when the user or the system changes the clock of the computer. A timer such as `setInterval` is not exact, and the accumulator corrects the count of ticks. The hub runs in a Node.js process (rule R21). The clock of a construct runs in the same process. A tab of a web browser can slow a timer when the tab is not in front, and a Node.js process does not have this problem.
+
+### Not built
+
+- **The update subsystem.** A tick changes only the part `time`. A rule that reacts to `time/advance` is a model subsystem that wraps the store. The count rule of the sample product is the first. The color rule of the PixiJS construct is the next rule. [#540](https://github.com/twin-digital/opus/issues/540) adds it. These rules are native behaviors in a first form, and each one wraps the store by itself. No part owns the order between them.
+- **Interpolation.** No renderer draws a frame between two ticks.
+- **A step length that changes.** The step length is set when the clock starts. A product cannot ask for a different rate while it runs.
+- **The cost of a tick.** Each tick is an input in the record and goes to each listener and through each link. The cost for each tick of each listener is not measured. The record has a limit ([#533](https://github.com/twin-digital/opus/issues/533)).
+
+### Decision: the update subsystem (**Agreed**)
+
+One model subsystem is the update subsystem. It runs the behaviors in an order that the specification of the update subsystem gives. A behavior is data and code that this subsystem runs. It is not a subsystem. (rule R22)
+
+The count rule and the color rule move into the update subsystem as its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
+
+### Decision: interpolation in a renderer (**Agreed**)
+
+The direction is interpolation in a renderer. A renderer keeps the state of the last two ticks. At each frame of its own, it draws a value between them from its own real time. A user sees smooth motion at each frame rate, one tick late.
+
+The model says which fields a renderer draws between two values (for example a position) and which fields jump (for example a text or a color name). This fact belongs in the design of the field types.
+
+A renderer is not built this way until a product with motion needs it (rule R7). Until then, a renderer draws each state as it comes. The planning of the first product with motion creates the task of interpolation.
+
 ## Storage
 
 The text that defines Wishem does not say "folder" or "file" for where a model is stored. Storage in files is the method of one storage subsystem. (**Agreed**)
@@ -327,7 +372,7 @@ The text that defines Wishem does not say "folder" or "file" for where a model i
 These items are **Proposed**:
 
 - The **store** is the built-in model subsystem that holds the definitions and the entities. A write is an input to the store. The package `core` holds the code of the store. `core` is a current name in the code.
-- The authored state is the state of the store in the workbench construct.
+- The authored state is the state of the stores of the workbench construct. A storage subsystem keeps each store.
 - A **storage subsystem** keeps the authored state. It has one job, and it attaches two subsystems. Its output subsystem writes each change to files. Its input subsystem sends an input when a file changes on the disk. Only the storage subsystem knows that the authored state is in files.
 - The live state is the joined state of a product construct. The store of that construct starts from the authored model that the workbench gives to the construct.
 - The live state is in memory. Its durable form is a checkpoint and the record.
@@ -358,7 +403,7 @@ The workbench is its own construct. It does not hold the subsystems of the produ
 
 These items are **Proposed**:
 
-- The store of the workbench construct holds the authored model of the workbench. It holds the authored model of the product as a separate, **mounted** model. The product model refers to nothing of the workbench.
+- The workbench construct has the store `store` for the model of the workbench. It has the store `product` for the **mounted** product. The store `product` validates the product model alone, and the product model refers to nothing of the workbench.
 - The workbench construct has a model subsystem that holds the list of the product constructs that must run.
 - The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
   - It starts and stops the product constructs.
@@ -395,7 +440,8 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 - Each renderer reads the hub through a port. The Godot renderer uses a remote port in GDScript. (**Proposed**)
 - The React renderer is the package `renderer-react`. It runs React views and reads a port. The page gives the port. (**Proposed**) The requirements of the package are in `wishem/renderer-html/renderer`.
 - The PixiJS renderer and the Godot renderer each have one view. (**Agreed**)
-- The view of the PixiJS renderer and the view of the Godot renderer each clear the viewport to a color that a field gives. (**Proposed**)
+- The PixiJS renderer is the package `renderer-pixi`. Its view is the PixiJS view (sidecar kind `pixi`). The package `pixi-page` holds a construct with a clock in a Node.js process, and a page that reads it through a link. (**Proposed**)
+- The view of the PixiJS renderer is `ClearColor`. The view of the Godot renderer is the same. Each clears the viewport to a color that a field gives. (**Proposed**)
 - The proof that a renderer works is a screenshot that changes when the clock advances. (**Proposed**)
 
 ### Views (**Agreed**)
@@ -435,7 +481,7 @@ A built-in subsystem needs no adapter. A library can replace a built-in subsyste
 ## Distribution
 
 - A product is distributed as a build that holds the hub, the subsystems, the model, and the page. (**Proposed**)
-- A product with a browser renderer can run the hub in the page, because the hub uses no Node.js API. (**Proposed**)
+- For the MVP, the hub of each construct is in a Node.js process, and each renderer reads it through a link. (**Agreed**, owner, 2026-11-27)
 - The workbench is distributed as an archive on a GitHub release. (**Proposed**)
 - No package of Wishem is published to npm unless the owner agrees. (**Agreed**)
 - The licence and the release channel are **Open**.
@@ -486,6 +532,8 @@ Two kinds of problem have two different fixes (rule R9):
 A person can view and edit the code behind a behavior. The edit makes a new version in the history, written by hand. A behavior whose current version was written by hand is a **native behavior**. (**Agreed**)
 
 A native behavior is not locked. The designer can give it a new prompt. The agent then writes a new version, and the behavior is not native. (**Agreed**)
+
+The count rule of the sample product is a native behavior in a first form. It stands in for the behavior feature (issue #481).
 
 The agent starts the new version from the current code, as for each other prompt change (rule R11). A hand edit to code has the same problems as a hand edit to a generated room: the prompt does not describe it, and a later change can remove it. (**Proposed**)
 

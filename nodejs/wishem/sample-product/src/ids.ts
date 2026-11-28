@@ -1,0 +1,7 @@
+import type { Id } from '@thrashplay/wishem-core'
+
+export const COLOR_TYPE: Id = 'ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512'
+export const COLOR_FIELD: Id = 'fld_694d6cb2-97e8-444e-961e-aa76744837fb'
+export const COUNTER_TYPE: Id = 'ct_6af38bd9-a91d-49d9-9370-fa4e6c04769d'
+export const COUNT_FIELD: Id = 'fld_ef085a2e-22ef-4409-bac4-9cd5648d0705'
+export const SAMPLE_ENTITY: Id = 'e_99969ed3-f499-4dbb-bf6d-958db4542884'
