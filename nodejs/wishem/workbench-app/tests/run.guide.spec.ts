@@ -3,7 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { constructInputs, type ConstructEntry, type ConstructList } from '@thrashplay/wishem-construct-manager'
-import { openLink, webSocketChannel, type Port, type RecordedInput } from '@thrashplay/wishem-hub'
+import { hubInputs, openLink, webSocketChannel, type Port, type RecordedInput } from '@thrashplay/wishem-hub'
 import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE } from '@thrashplay/wishem-sample-product'
 
 const productFolder = join(import.meta.dirname, '..', '.e2e-run-product')
@@ -90,6 +90,10 @@ const expectEnabled = async (page: Page, enabled: string[]) => {
 }
 
 test.beforeEach(async () => {
+  await reset()
+})
+
+test.afterEach(async () => {
   await reset()
 })
 
@@ -199,6 +203,109 @@ test('step 6: a clear of the color while play is paused keeps the count and send
     expect(applied.filter((recorded) => recorded.type === 'store/replace-model')).toHaveLength(0)
     expect(await tick()).toBe(pausedTick)
     expect(await count(stage)).toBe(pausedCount)
+  } finally {
+    play.close()
+    link.close()
+  }
+})
+
+const SAMPLE = 'e_99969ed3-f499-4dbb-bf6d-958db4542884'
+const SECOND = 'e_2b8f4c6d-1a3e-4f5b-9c7d-8e0f1a2b3c4d'
+const THIRD = 'e_3c9a5d7e-2b4f-4a6c-8d8e-9f1a2b3c4d5e'
+
+interface StateFile {
+  entities: { id: string; components: Record<string, Record<string, unknown>> }[]
+}
+
+const WAIT = { timeout: 10_000 }
+
+const counterEntity = (id: string, value: number) => ({ id, components: { [COUNTER_TYPE]: { [COUNT_FIELD]: value } } })
+
+test('steps 2, 3, 5, 6, 7: an edit of the entities while paused keeps the count and the tick, and a rewind adds the entity', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  await page.goto('/')
+  const { status, stage, control, tick } = parts(page)
+  await control('Run').click()
+  await expect(status).toHaveText('Running')
+  await expect.poll(async () => count(stage)).toBeGreaterThan(10)
+  await control('Pause').click()
+  await expect(status).toHaveText('Paused')
+  const pausedTick = await tick()
+  const pausedCount = await count(stage)
+
+  const { link, port, entry } = await workbenchLink()
+  const workbenchApplied: RecordedInput[] = []
+  port.subscribe((event) => {
+    if (event.type === 'applied') {
+      workbenchApplied.push(event.input)
+    }
+  })
+  const play = await openLink(await webSocketChannel(new WebSocket(entry()?.link ?? '')), [
+    { id: 'guide-play', kind: 'input' },
+  ])
+  const applied: RecordedInput[] = []
+  play.ports['guide-play'].subscribe((event) => {
+    if (event.type === 'applied') {
+      applied.push(event.input)
+    }
+  })
+  const ofType = (type: string) => applied.filter((input) => input.type === type)
+  const stored = () => (play.ports['guide-play'].read().store as StateFile).entities
+  const edit = async (change: (entities: StateFile['entities']) => StateFile['entities']) => {
+    const state = JSON.parse(await readFile(statePath, 'utf8')) as StateFile
+    state.entities = change(state.entities)
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`)
+  }
+  const expectUnchanged = async () => {
+    expect(applied.filter((input) => input.type === 'store/replace-model')).toHaveLength(0)
+    expect(stored().find((entity) => entity.id === SAMPLE)?.components[COUNTER_TYPE][COUNT_FIELD]).toBe(pausedCount)
+    expect(await tick()).toBe(pausedTick)
+  }
+  try {
+    // Step 3: an entity at the end.
+    await edit((entities) => [...entities, counterEntity(SECOND, 1000)])
+    await expect.poll(() => ofType('store/add-entity').length, WAIT).toBe(1)
+    expect(ofType('store/add-entity')[0].source).toBe('construct-manager')
+    expect(stored().map((entity) => entity.id)).toEqual([SAMPLE, SECOND])
+    await expectUnchanged()
+
+    // Step 5: an entity at the start.
+    await edit((entities) => [counterEntity(THIRD, 500), ...entities])
+    await expect.poll(() => ofType('store/add-entity').length, WAIT).toBe(2)
+    expect(ofType('store/add-entity')[1].source).toBe('construct-manager')
+    expect(ofType('store/add-entity')[1].payload).toMatchObject({ index: 0 })
+    expect(stored().map((entity) => entity.id)).toEqual([THIRD, SAMPLE, SECOND])
+    await expectUnchanged()
+
+    // Step 6: a removal.
+    await edit((entities) => entities.filter((entity) => entity.id !== SECOND))
+    await expect.poll(() => ofType('store/remove-entity').length, WAIT).toBe(1)
+    expect(ofType('store/remove-entity')[0].source).toBe('construct-manager')
+    expect(stored().map((entity) => entity.id)).toEqual([THIRD, SAMPLE])
+    await expectUnchanged()
+    // The removal is the `product/replace-model` of the model with the third entity and without the second.
+    const isRemoval = (input: RecordedInput) =>
+      input.type === 'product/replace-model' &&
+      JSON.stringify(input.payload).includes(THIRD) &&
+      !JSON.stringify(input.payload).includes(SECOND)
+    await expect.poll(() => workbenchApplied.some(isRemoval), WAIT).toBe(true)
+    const removal = workbenchApplied.find(isRemoval)
+
+    // Step 7: a rewind of the workbench to the input before the removal.
+    expect(await port.submit(hubInputs.rewind((removal?.seq ?? 1) - 1))).toMatchObject({ ok: true })
+    await expect.poll(() => ofType('store/add-entity').length, WAIT).toBe(3)
+    expect(ofType('store/add-entity')[2].source).toBe('construct-manager')
+    expect(stored().map((entity) => entity.id)).toEqual([THIRD, SAMPLE, SECOND])
+    expect(stored()[2].components[COUNTER_TYPE][COUNT_FIELD]).toBe(1000)
+    await expectUnchanged()
+    await expect
+      .poll(async () => (JSON.parse(await readFile(statePath, 'utf8')) as StateFile).entities.map((e) => e.id), WAIT)
+      .toEqual([THIRD, SAMPLE, SECOND])
+    // A late replace-model would show now.
+    await wait(1000)
+    await expectUnchanged()
   } finally {
     play.close()
     link.close()

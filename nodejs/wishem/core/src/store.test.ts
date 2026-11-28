@@ -233,6 +233,8 @@ describe('storeInputs', () => {
     const entity: Entity = { id: ENT, components: {} }
     const set = { entity: ENT, componentType: CT, field: FLD, value: 'x' }
     expect(inputs.addEntity(entity).payload).toEqual({ entity })
+    expect(inputs.addEntity(entity).payload).not.toHaveProperty('index')
+    expect(inputs.addEntity(entity, 0).payload).toEqual({ entity, index: 0 })
     expect(inputs.removeEntity(ENT).payload).toEqual({ entity: ENT })
     expect(inputs.setField(set).payload).toEqual(set)
     expect(inputs.clearField({ entity: ENT, componentType: CT, field: FLD }).payload).toEqual({
@@ -322,6 +324,72 @@ describe('add-entity', () => {
     const store = createStore({ model: workbench() })
     const error = refusal(() => send(store, store.initial, 'store/add-entity', payload))
     expect(error.problems.map((problem) => problem.path)).toContainEqual(path)
+  })
+
+  describe('with an index', () => {
+    const ENT3 = 'e_33333333-4444-4555-8666-777777777777'
+    const third = (): Entity => ({ id: ENT3, components: { [CT]: { [FLD]: 'Third' } } })
+    const add = (store: ModelSubsystem<Model>, index?: unknown) =>
+      send(
+        store,
+        store.initial,
+        'store/add-entity',
+        index === undefined ? { entity: third() } : { entity: third(), index },
+      )
+    const ids = (part: Model) => part.entities.map((entity) => entity.id)
+
+    it.each([
+      [0, [ENT3, ENT, ENT2]],
+      [1, [ENT, ENT3, ENT2]],
+      [2, [ENT, ENT2, ENT3]],
+      [undefined, [ENT, ENT2, ENT3]],
+    ])('puts the entity for the index %s at its position', (index, order) => {
+      const store = createStore({ model: twoEntities() })
+      const next = add(store, index)
+      expect(ids(next)).toEqual(order)
+      expect(next.entities.find((entity) => entity.id === ENT3)).toEqual(third())
+    })
+
+    it('keeps the other entities as the same objects and freezes the part', () => {
+      const store = createStore({ model: twoEntities() })
+      const next = add(store, 0)
+      expect(next.entities[1]).toBe(store.initial.entities[0])
+      expect(next.entities[2]).toBe(store.initial.entities[1])
+      expect(frozenDeep(next)).toBe(true)
+    })
+
+    it.each([3, -1, 1.5, '1', null, NaN, Infinity])('refuses the index %j', (index) => {
+      const store = createStore({ model: twoEntities() })
+      const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: third(), index }))
+      expect(error.problems).toEqual([
+        { message: 'The index is not an integer from 0 to 2', path: ['payload', 'index'] },
+      ])
+    })
+
+    it('gives each problem of a refused index and an entity that is not correct', () => {
+      const store = createStore({ model: twoEntities() })
+      const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: {}, index: 7 }))
+      expect(error.problems.map((problem) => problem.path)).toEqual([
+        ['payload', 'entity', 'id'],
+        ['payload', 'entity', 'components'],
+        ['payload', 'index'],
+      ])
+    })
+
+    it('refuses an ID that exists', () => {
+      const store = createStore({ model: twoEntities() })
+      const error = refusal(() =>
+        send(store, store.initial, 'store/add-entity', { entity: { id: ENT, components: {} }, index: 0 }),
+      )
+      expect(error.problems[0]?.path).toEqual(['payload', 'entity', 'id'])
+    })
+
+    it('refuses an entity that the model does not allow, with the path of its position', () => {
+      const store = createStore({ model: twoEntities() })
+      const entity = { id: ENT3, components: { [CT]: { [FLD2]: 'x' } } }
+      const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity, index: 0 }))
+      expect(error.problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD2])
+    })
   })
 
   it('gives one problem for each fault of the entity form', () => {

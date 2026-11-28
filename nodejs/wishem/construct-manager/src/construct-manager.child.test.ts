@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { TIME_ID } from '@thrashplay/wishem-clock'
 import type { TimePart } from '@thrashplay/wishem-clock'
 import { createStore } from '@thrashplay/wishem-core'
-import type { Model } from '@thrashplay/wishem-core'
+import type { Entity, Model } from '@thrashplay/wishem-core'
 import { readModelFolder, serveHub } from '@thrashplay/wishem-host-nodejs'
 import type { HubServer } from '@thrashplay/wishem-host-nodejs'
 import { createHub, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
@@ -78,6 +78,15 @@ const setColor = (value: string): Input => ({
   type: 'product/set-field',
   payload: { entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD, value },
 })
+
+const SECOND = 'e_22222222-2222-4222-8222-222222222222'
+
+const secondEntity = (): Entity => ({
+  id: SECOND,
+  components: { [COUNTER_TYPE]: { [COUNT_FIELD]: 1000 } },
+})
+
+const idsOf = (state: State) => (state.store as Model).entities.map((e) => e.id)
 
 const pause: Input = { type: 'time/set-running', payload: { running: false } }
 
@@ -281,6 +290,27 @@ describe('attachConstructManager with product construct processes', () => {
       expect(types.slice(at)).not.toContain('time/advance')
     })
 
+    it('adds an entity before a step back across the processes', { timeout: 30000 }, async () => {
+      setup()
+      await start('play', false)
+      for (let i = 0; i < 12; i++) {
+        await send(advance)
+      }
+      const applied = appliedOf('play')
+      await tester.submit({ type: 'product/add-entity', payload: { entity: secondEntity() } })
+      await eventually(() => idsOf(stateOf('play')).length === 2)
+      const last = await stepBack(1)
+      expect(last?.result).toMatchObject({ ok: true })
+      expect(timeOf(stateOf('play')).ticks).toBe(11)
+      expect(idsOf(stateOf('play'))).toEqual([SAMPLE_ENTITY, SECOND])
+      const types = applied.map((input) => input.type)
+      const at = types.indexOf('hub/rewind')
+      expect(at).toBeGreaterThanOrEqual(0)
+      const rest = types.slice(at)
+      expect(rest).not.toContain('time/advance')
+      expect(rest.slice(0, 2)).toEqual(['hub/rewind', 'store/add-entity'])
+    })
+
     it('steps back n - 1 ticks to 1 tick after a run of 1 second', { timeout: 30000 }, async () => {
       setup()
       await start('play')
@@ -293,6 +323,28 @@ describe('attachConstructManager with product construct processes', () => {
       expect(timeOf(stateOf('play')).ticks).toBe(1)
       expect(entry('play')?.time).toBe('paused')
     })
+  })
+
+  it('sends add-entity with the index 0 for an entity before the sample entity', { timeout: 30000 }, async () => {
+    setup()
+    await start('play', false)
+    await send({
+      type: 'store/set-field',
+      payload: { entity: SAMPLE_ENTITY, componentType: COUNTER_TYPE, field: COUNT_FIELD, value: 25 },
+    })
+    const applied = appliedOf('play')
+    const sample = model.entities.find((e) => e.id === SAMPLE_ENTITY) as Entity
+    await tester.submit({
+      type: 'product/replace-model',
+      payload: { model: { ...structuredClone(model), entities: [secondEntity(), structuredClone(sample)] } },
+    })
+    await eventually(() => idsOf(stateOf('play')).length === 2)
+    const adds = applied.filter((input) => input.type === 'store/add-entity')
+    expect(adds).toHaveLength(1)
+    expect(adds[0]).toMatchObject({ source: 'construct-manager', payload: { index: 0 } })
+    expect(applied.some((input) => input.type === 'store/replace-model')).toBe(false)
+    expect(idsOf(stateOf('play'))).toEqual([SECOND, SAMPLE_ENTITY])
+    expect(countOf(stateOf('play'))).toBe(25)
   })
 
   it('gives a product/set-field to the construct with the source construct-manager', { timeout: 20000 }, async () => {
