@@ -51,7 +51,7 @@ A file with the name `*.test.ts` is never a view file.
 
 A view gets one prop for each field in the definition of its component type. The name of a prop comes from the label of the field. The words of the label are joined in camel case, and the first letter is a small letter. For example, the label `Max health` gives the prop `maxHealth`.
 
-A prop has no value when the component omits the field. For two fields with one name, the prop has the value of the first field. The renderer writes one warning with `console.warn` for each later field of that name. The line of a warning is:
+A prop has no value when the component omits the field. The prop of a `reference` field is the ID of the entity. The prop of a `reference-list` field is the list of IDs, in the order of the value. The renderer holds no entity, and draws each entity that a field names at the top level. For two fields with one name, the prop has the value of the first field. The renderer writes one warning with `console.warn` for each later field of that name. The line of a warning is:
 
 ```text
 wishem: the sidecar <sidecar>: the fields <first field ID> and <later field ID> of the component type <component type ID> give the same name "<name>". The prop has the value of the first field.

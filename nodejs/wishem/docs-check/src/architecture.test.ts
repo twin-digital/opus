@@ -118,6 +118,7 @@ describe('the container diagram', () => {
     const lines = svg.match(/(?:Package|Example): [a-z-]+/g) ?? []
     expect(lines.sort()).toEqual([
       'Example: sample-product',
+      'Package: construct-manager',
       'Package: host-nodejs',
       'Package: pixi-page',
       'Package: pixi-page',
@@ -140,7 +141,7 @@ describe('the component diagram of the workbench process', () => {
     })
   }
 
-  it('names the nine components', () => {
+  it('names the seven components', () => {
     const svg = readFileSync(join(architectureFolder, 'components-workbench-process-light.svg'), 'utf8')
     for (const name of [
       'Start script',
@@ -148,13 +149,12 @@ describe('the component diagram of the workbench process', () => {
       'Workbench construct',
       'Storage subsystems',
       'Construct manager',
-      'Product constructs',
-      'Update subsystem',
-      'Product code',
+      'Launcher',
       'Generator of the view types',
     ]) {
       expect(svg).toContain(name)
     }
+    expect(svg).toContain('Product construct process')
   })
 })
 

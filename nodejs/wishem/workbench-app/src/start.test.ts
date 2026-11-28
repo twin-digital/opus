@@ -685,7 +685,8 @@ describe('the start script of the workbench', () => {
   })
 
   describe('the construct manager with a mounted product', () => {
-    const SAMPLE_CODE = '@thrashplay/wishem-sample-product'
+    // The child process has no `source` condition, so it loads the built entry.
+    const SAMPLE_CODE = join(sampleProduct, '..', 'dist', 'index.js')
     let product = ''
     const fakeServer = () =>
       vite.createServer.mockResolvedValue({
@@ -700,7 +701,7 @@ describe('the start script of the workbench', () => {
       return path
     }
     const productAddress = (lines: string[]) =>
-      /link at (ws:\/\/\S+)/.exec(lines.find((line) => line.includes('construct play runs')) ?? '')?.[1] ?? ''
+      /link at (ws:\/\/\S+)/.exec(lines.find((line) => line.includes('construct play runs, link at')) ?? '')?.[1] ?? ''
     const base = () => ({ model, views, viewTypes: false, port: 0, hubPort: 0 })
 
     beforeEach(() => {
@@ -925,6 +926,54 @@ describe('the start script of the workbench', () => {
     })
 
     it(
+      'checks the product code in a process that is not the script, and that process ended',
+      { timeout: 30000 },
+      async () => {
+        const idFile = join(folder, 'pids.txt')
+        const path = codeFile(
+          'pid.mjs',
+          `import { appendFileSync } from 'node:fs'\nappendFileSync(${JSON.stringify(idFile)}, process.pid + '\\n')\nexport const behaviors = []\n`,
+        )
+        const run = start(['--port', '0', '--hub-port', '0', '--product', product, '--product-code', path])
+        await until(
+          () => run.output().includes('wishem: workbench at') || run.child.exitCode !== null,
+          () => run.output(),
+        )
+
+        const ids = readFileSync(idFile, 'utf8').trim().split('\n').map(Number)
+        expect(ids).toHaveLength(1)
+        expect(ids[0]).not.toBe(run.child.pid)
+        expect(() => process.kill(ids[0] ?? 0, 0)).toThrow()
+      },
+    )
+
+    it.each([
+      [
+        'a module that cannot be loaded',
+        './missing.mjs',
+        undefined,
+        /^wishem: the product code \.\/missing\.mjs cannot be loaded: .*missing\.mjs/m,
+      ],
+      [
+        'a module with no list behaviors',
+        'text.mjs',
+        "export const behaviors = 'count'\n",
+        /^wishem: the product code has no correct list behaviors: The behaviors are not a list\.$/m,
+      ],
+    ])(
+      'prints the reason for %s with the script, and stops with exit code 1',
+      { timeout: 30000 },
+      async (_name, value, code, pattern) => {
+        const target = code === undefined ? value : codeFile(value, code)
+        const run = start(['--port', '0', '--hub-port', '0', '--product', product, '--product-code', target])
+
+        expect(await run.exit).toBe(1)
+        expect(run.output()).toMatch(pattern)
+        expect(run.output()).not.toContain('wishem: workbench at')
+      },
+    )
+
+    it(
       'stops with exit code 0 on an interrupt and closes the address of a product construct',
       {
         timeout: 40000,
@@ -939,7 +988,7 @@ describe('the start script of the workbench', () => {
         const { link: open, tester } = await openTestLink(link)
         await tester.submit(constructInputs.start('play'))
         await until(
-          () => run.output().includes('construct play runs'),
+          () => run.output().includes('construct play runs, link at'),
           () => run.output(),
         )
         const found = /construct play runs, link at (ws:\/\/127\.0\.0\.1:\d+\/link)/.exec(run.output())
@@ -1202,7 +1251,7 @@ describe('the start script of the workbench', () => {
       const workbench = await openTestLink(`${socketBase}link`)
       await workbench.tester.submit(constructInputs.start('play'))
       await until(
-        () => run.output().includes('construct play runs'),
+        () => run.output().includes('construct play runs, link at'),
         () => run.output(),
       )
       return workbench

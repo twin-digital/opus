@@ -12,7 +12,7 @@ import { createHub, hubInputs, openLink, webSocketChannel } from '@thrashplay/wi
 import type { HubServer } from '@thrashplay/wishem-host-nodejs'
 import type { Hub, RemoteLink } from '@thrashplay/wishem-hub'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { startProductConstruct } from './product-construct.js'
+import { createProductHub, startProductClock, startProductConstruct } from './product-construct.js'
 import type { ProductConstruct, ProductConstructOptions } from './product-construct.js'
 
 const MODEL_FOLDER = fileURLToPath(new URL('../../sample-product/model', import.meta.url))
@@ -264,7 +264,7 @@ describe('startProductConstruct', () => {
     const port = await open(construct, { id: 'client', kind: 'input' })
     const result = await port.submit(timeInputs.advance(50))
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
-    expect(JSON.stringify(result)).toContain('test/broken')
+    expect(result).toMatchObject({ problems: [{ path: ['behaviors', 'test/broken', expect.any(String)] }] })
   })
 
   it('rejects when the clock fails to start, and releases the port', async () => {
@@ -365,5 +365,36 @@ describe('startProductConstruct', () => {
     } finally {
       process.chdir(previous)
     }
+  })
+})
+
+describe('a start whose clock cannot start (#685)', () => {
+  const failingTimer: ClockTimer = {
+    start: () => {
+      throw new Error('The timer cannot start.')
+    },
+  }
+
+  it('closes the clock port', () => {
+    const hub = createProductHub({ model, behaviors, running: true })
+    hub.start()
+    expect(() => startProductClock(hub, { stepMs: 50, timer: failingTimer })).toThrow('The timer cannot start.')
+    expect(() => hub.attach({ id: 'clock', kind: 'input' })).not.toThrow()
+    hub.stop()
+  })
+
+  it('rejects startProductConstruct and frees the port of the link', async () => {
+    const probe = createServer()
+    await new Promise<void>((resolve) => probe.listen(0, '127.0.0.1', resolve))
+    const { port } = probe.address() as AddressInfo
+    await new Promise<void>((resolve) => {
+      probe.close(() => {
+        resolve()
+      })
+    })
+    await expect(
+      startProductConstruct({ id: 'play', model, behaviors, running: true, port, timer: failingTimer }),
+    ).rejects.toThrow('The timer cannot start.')
+    expect(await canListen(port)).toBe(true)
   })
 })

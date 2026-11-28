@@ -1,0 +1,5 @@
+{
+  "id": "ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512",
+  "label": "Color",
+  "fields": [{ "id": "fld_694d6cb2-97e8-444e-961e-aa76744837fb", "label": "color", "type": "string" }]
+}

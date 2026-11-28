@@ -95,6 +95,8 @@ describe('createUpdate: the store', () => {
       'product/remove-entity',
       'product/set-field',
       'product/clear-field',
+      'product/add-reference',
+      'product/remove-reference',
       'time/advance',
     ])
     await input.submit(timeInputs.advance(50))

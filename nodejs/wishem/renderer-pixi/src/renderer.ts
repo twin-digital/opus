@@ -98,15 +98,16 @@ export const startRenderer = (options: RendererOptions): PixiRenderer => {
         }
 
         const target = item
+        if (target.failed) {
+          // The view decides the visibility again.
+          target.display.visible = true
+        }
         if (
           attempt(() => {
             entry.view.update(target.display, propsOf(definition, component), viewport)
           })
         ) {
-          if (target.failed) {
-            target.display.visible = true
-            target.failed = false
-          }
+          target.failed = false
         } else {
           target.display.visible = false
           target.failed = true

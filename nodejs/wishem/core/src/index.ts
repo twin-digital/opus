@@ -18,6 +18,7 @@ export { createStore, storeInputs } from './store.js'
 export type {
   AddEntityPayload,
   ClearFieldPayload,
+  ReferencePayload,
   RemoveEntityPayload,
   ReplaceModelPayload,
   SetFieldPayload,

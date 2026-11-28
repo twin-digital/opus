@@ -44,12 +44,25 @@ export interface ClearFieldPayload {
   field: Id
 }
 
+export interface ReferencePayload {
+  /** The ID of the entity that holds the list. */
+  entity: Id
+  /** The ID of the component type. */
+  componentType: Id
+  /** The ID of a `reference-list` field. */
+  field: Id
+  /** The ID of the entity to add or to remove. */
+  reference: Id
+}
+
 export interface StoreInputs {
   replaceModel(model: Model): Input
   addEntity(entity: Entity): Input
   removeEntity(entity: Id): Input
   setField(payload: SetFieldPayload): Input
   clearField(payload: ClearFieldPayload): Input
+  addReference(payload: ReferencePayload): Input
+  removeReference(payload: ReferencePayload): Input
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -212,7 +225,7 @@ const setField = (part: Model, payload: unknown): Model => {
   const target = locate(part, payload, ['value'])
   const { value } = target.fields
   const component = componentOf(target)
-  if (component?.[target.field] === value) {
+  if (component !== undefined && Object.hasOwn(component, target.field) && isEqual(component[target.field], value)) {
     return part
   }
   return withComponent(part, target, { ...component, [target.field]: value as FieldValue })
@@ -228,7 +241,52 @@ const clearField = (part: Model, payload: unknown): Model => {
   return withComponent(part, target, rest)
 }
 
-const OPERATIONS = ['replace-model', 'add-entity', 'remove-entity', 'set-field', 'clear-field'] as const
+/** Locates the list of a `reference-list` field, and gives its items, or `undefined` when it has no value. */
+const locateList = (part: Model, payload: unknown) => {
+  const target = locate(part, payload, [])
+  const reference = requireString(target.fields, 'reference')
+  const type = part.definitions
+    .find((definition) => definition.id === target.componentType)
+    ?.fields.find((definition) => definition.id === target.field)
+  if (type?.type !== 'reference-list') {
+    return refuse(`The field "${type?.label ?? target.field}" does not have the type "reference-list"`, [
+      'payload',
+      'field',
+    ])
+  }
+  const component = componentOf(target)
+  const items = component !== undefined && Object.hasOwn(component, target.field) ? component[target.field] : undefined
+  return { target, reference, component, items: items as readonly Id[] | undefined }
+}
+
+const addReference = (part: Model, payload: unknown): Model => {
+  const { target, reference, component, items } = locateList(part, payload)
+  if (!part.entities.some((entity) => entity.id === reference)) {
+    return refuse(`No entity has the ID "${reference}"`, ['payload', 'reference'])
+  }
+  if (items?.includes(reference) === true) {
+    return part
+  }
+  return withComponent(part, target, { ...component, [target.field]: [...(items ?? []), reference] })
+}
+
+const removeReference = (part: Model, payload: unknown): Model => {
+  const { target, reference, component, items } = locateList(part, payload)
+  if (items?.includes(reference) !== true) {
+    return part
+  }
+  return withComponent(part, target, { ...component, [target.field]: items.filter((item) => item !== reference) })
+}
+
+const OPERATIONS = [
+  'replace-model',
+  'add-entity',
+  'remove-entity',
+  'set-field',
+  'clear-field',
+  'add-reference',
+  'remove-reference',
+] as const
 
 const handlers: Record<(typeof OPERATIONS)[number], (part: Model, payload: unknown) => Model> = {
   'replace-model': replaceModel,
@@ -236,6 +294,8 @@ const handlers: Record<(typeof OPERATIONS)[number], (part: Model, payload: unkno
   'remove-entity': removeEntity,
   'set-field': setField,
   'clear-field': clearField,
+  'add-reference': addReference,
+  'remove-reference': removeReference,
 }
 
 /** Throws a `ModelError` when the first model is not correct. */
@@ -268,4 +328,6 @@ export const storeInputs = (id = 'store'): StoreInputs => ({
   removeEntity: (entity) => ({ type: `${id}/remove-entity`, payload: { entity } }),
   setField: (payload) => ({ type: `${id}/set-field`, payload }),
   clearField: (payload) => ({ type: `${id}/clear-field`, payload }),
+  addReference: (payload) => ({ type: `${id}/add-reference`, payload }),
+  removeReference: (payload) => ({ type: `${id}/remove-reference`, payload }),
 })

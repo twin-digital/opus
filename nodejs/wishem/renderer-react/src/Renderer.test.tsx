@@ -1090,6 +1090,121 @@ describe('Renderer', () => {
       expect(calls.mock.calls.length).toBe(before)
     })
 
+    describe('a reference-list field', () => {
+      const CT_DECK = 'ct_eeeeeeee-0000-4000-8000-000000000005'
+      const FLD_CARDS = 'fld_eeeeeeee-0000-4000-8000-000000000016'
+      const deckView = ({ cards }: ViewProps) => <ol className='deck'>{cards}</ol>
+      const deckSource: ViewSource = { name: 'Deck', componentType: CT_DECK, view: deckView }
+      const deckModel = (
+        cards: string[] | undefined,
+        others: Entity[] = [task(E1, 'goat'), task(E3, 'owl')],
+      ): Model => ({
+        definitions: [
+          { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: 'title', type: 'string' }] },
+          { id: CT_DECK, label: 'Deck', fields: [{ id: FLD_CARDS, label: 'cards', type: 'reference-list' }] },
+        ],
+        entities: [...others, { id: E2, components: { [CT_DECK]: cards === undefined ? {} : { [FLD_CARDS]: cards } } }],
+      })
+      const tableDeck = () => tableOf(sourceA, deckSource)
+
+      it('gives a list of pictures in order, each in an element of its entity inside the deck', () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        draw(startWorld(deckModel([E1, E3])).output, tableDeck())
+        expect(error).not.toHaveBeenCalled()
+        expect(topLevel()).toEqual([E2])
+        expect(entityTexts(container.children[0])).toEqual([`${E1}:title:goat`, `${E3}:title:owl`])
+        const inner = Array.from(
+          container.querySelectorAll(`[data-wishem-entity="${E2}"] > .deck > [data-wishem-entity]`),
+        )
+        expect(inner.map((node) => node.getAttribute('data-wishem-entity'))).toEqual([E1, E3])
+      })
+
+      it('gives the new order after set-field with a new order', async () => {
+        const { input, output } = startWorld(deckModel([E1, E3]))
+        draw(output, tableDeck())
+        await act(async () => {
+          const result = await input.submit(
+            inputs.setField({ entity: E2, componentType: CT_DECK, field: FLD_CARDS, value: [E3, E1] }),
+          )
+          expect(result.ok).toBe(true)
+        })
+        const inner = Array.from(container.querySelectorAll(`.deck > [data-wishem-entity]`))
+        expect(inner.map((node) => node.getAttribute('data-wishem-entity'))).toEqual([E3, E1])
+      })
+
+      it('gives an empty list for an empty value', () => {
+        const seen: unknown[] = []
+        draw(
+          startWorld(deckModel([])).output,
+          tableOf(sourceA, {
+            ...deckSource,
+            view: (props: ViewProps) => {
+              seen.push(props.cards)
+              return null
+            },
+          }),
+        )
+        expect(seen).toEqual([[]])
+        expect(topLevel()).toEqual([E1, E3, E2])
+      })
+
+      it('gives no value for an omitted field', () => {
+        const seen: unknown[] = []
+        draw(
+          startWorld(deckModel(undefined)).output,
+          tableOf(sourceA, {
+            ...deckSource,
+            view: (props: ViewProps) => {
+              seen.push(props.cards)
+              return null
+            },
+          }),
+        )
+        expect(seen).toEqual([undefined])
+      })
+
+      it('draws nothing for an item that names the holder, and warns one time', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        const seen: unknown[] = []
+        draw(
+          startWorld(deckModel([E1, E2])).output,
+          tableOf(sourceA, {
+            ...deckSource,
+            view: (props: ViewProps) => {
+              seen.push(props.cards)
+              return deckView(props)
+            },
+          }),
+        )
+        const cards = seen[0] as unknown[]
+        expect(cards).toHaveLength(2)
+        expect(cards[1]).toBeNull()
+        expect(container.querySelectorAll('.deck > [data-wishem-entity]')).toHaveLength(1)
+        expect(warn).toHaveBeenCalledTimes(1)
+        const line = String(warn.mock.calls[0]?.[0])
+        expect(line).toContain(E2)
+        expect(line).toContain(FLD_CARDS)
+      })
+
+      it('draws goat at the top level after remove-reference', async () => {
+        const { input, output } = startWorld(deckModel([E1, E3]))
+        draw(output, tableDeck())
+        expect(topLevel()).toEqual([E2])
+        await act(async () => {
+          const result = await input.submit(
+            inputs.removeReference({ entity: E2, componentType: CT_DECK, field: FLD_CARDS, reference: E1 }),
+          )
+          expect(result.ok).toBe(true)
+        })
+        expect(topLevel()).toEqual([E1, E2])
+        expect(
+          Array.from(container.querySelectorAll('.deck > [data-wishem-entity]')).map((n) =>
+            n.getAttribute('data-wishem-entity'),
+          ),
+        ).toEqual([E3])
+      })
+    })
+
     describe('a cycle', () => {
       it('draws each entity one time on its path, and warns one time', () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)

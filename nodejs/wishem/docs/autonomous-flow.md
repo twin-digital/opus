@@ -165,7 +165,7 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Before each push, run `node nodejs/wishem/docs/flow-scripts/finish-check.mjs` from the root of the worktree. Push only when it prints no FAIL line.
 - A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
-- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. Its last line is `<number> merged=<true|false>`. The exit code is 0 when the pull request is merged and 1 when it is not merged. The lead agent does the steps after the merge (the worktree, the board, the break-test issue) only after exit code 0. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> <range> <file>...` creates the one break-test issue of a change. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
+- The folder [`flow-scripts`](flow-scripts/) holds the scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. The step "merge, or update the branch and wait for the checks" holds the lock file `/tmp/wishem-merge.lock` (`flock`), so that one pull request at a time is in that step. The wait for the first checks is outside the lock. Reason: each merge moves `main`, the other runs then update their branch and lose their round; three runs lost four rounds each on 2026-11-28. Its last line is `<number> merged=<true|false>`. The exit code is 0 when the pull request is merged and 1 when it is not merged. The lead agent does the steps after the merge (the worktree, the board, the break-test issue) only after exit code 0. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs <change issue> <milestone> --pr <pull request number> <file>...` creates the one break-test issue of a change. The script reads the merge commit of the merged pull request itself, builds the range `<sha>~1..<sha>`, and refuses a pull request that is not merged. Reason: on 2026-11-28 the lead agent three times sent the read of a merge commit and its use in one batch and used a guessed commit, and two break-test issues got a wrong range. The form `<change issue> <milestone> <range> <file>...` also works. The option `--dry` prints the title and the body of the issue and creates nothing. `heavy.mjs <command>` runs a heavy command in a slot, and `heavy-stats.mjs` summarizes the waits (see "Limits on agents"). `finish-check.mjs` runs the checks before a push. `resource-log.mjs` writes the resource log (see "Limits on agents"). Run each one with `node`, as one command.
 
 ### The steps that a person does
 
@@ -191,10 +191,10 @@ The owner decided on 2026-11-27 that a break-test is not a step of a change. A c
 - The owner decided on 2026-11-28 to take one break-test issue for each change, not one for each package, because it closes milestones faster: one run, one pull request, one changeset, and one wait for the checks.
 - The issue has the type `Review`, the title "Break-test: after #`<issue of the change>`", the label `app:wishem`, and the milestone of the change. Add it to the project. Do not assign it to the owner.
 - The scope of the break-test is the source files of each library package that the change added or changed, and the tests that the change added or changed. The issue lists these files by package and gives the range of commits. The break-test runs the mutants of one package at a time.
-- When one or more of these issues are open, one break-test is always in work. Do them in the order in which they were created, the oldest one first.
+- When one or more of these issues are open, one break-test is always in work. Do them in the order in which they were created, the oldest one first. One exception: when a milestone has only break-tests left, its break-tests go first, because the milestone closes then. The owner prefers faster completion of a milestone (2026-11-28).
 - A break-test does not take a slot that other work can use. When no other item can start and fewer subagents than the limit run, start more break-tests, the oldest first, to fill the slots. Do not run two break-tests of the same package at the same time. The owner decided this on 2026-11-28: the limit of one break-test keeps the break-tests from stopping other issues, and it is not a limit on the number of subagents.
 - A break-test runs in a worktree of its own, from `main`. Its result is a pull request that changes tests only, and that closes the issue. The description of the pull request gives the totals of the two passes.
-- When a break-test finds no gap and changes no test, close its issue with a comment that gives the totals of the two passes. No pull request is necessary.
+- When a break-test finds no gap and changes no test, close its issue with a comment that gives the totals of the two passes. No pull request is necessary. A change that waited for "the merge of break-test #N" can start when that break-test closes with no pull request.
 - When a break-test finds a fault of the source, create an issue of the type `Bug` for the fault. Do not correct the source in the pull request of the break-test.
 
 ### Skills and briefs
@@ -271,6 +271,33 @@ The brief of each subagent says: report each thing that is not in the scope of t
    - If the milestone published a build that a person can install, and where it is.
 5. Continue with the next milestone. Do not wait for the review.
 
+### Ports and containers of tests
+
+- Each test server of a package uses a port that no other package uses. Reason: CI runs the `test:ui` tasks of the packages at the same time. Two faults of 2026-11-28 came from a shared port (4181, then 4182).
+- Do not use a port on the "bad ports" list of the WHATWG Fetch standard. The `WebSocket` of Node.js refuses such a port. Example: 4190.
+- A change that adds or moves a port updates the table below in the same change. Find the ports in use with `git grep -n -E '\b4[0-9]{3}\b' -- nodejs/wishem`.
+
+| Port | Package                                          | Use                                              |
+| ---- | ------------------------------------------------ | ------------------------------------------------ |
+| 4173 | `workbench-app`                                  | static server of the browser tests               |
+| 4180 | `workbench-app`                                  | end-to-end server without a product              |
+| 4181 | `pixi-page`                                      | page server of the Playwright tests              |
+| 4183 | `pixi-page`                                      | construct of the Playwright tests (`--hub-port`) |
+| 4184 | `workbench-app`                                  | end-to-end server with a product                 |
+| 4186 | `workbench-app`                                  | end-to-end server with a run                     |
+| 4188 | `workbench-app`                                  | end-to-end server with a list product (`--list`) |
+| 4747 | `host-nodejs`                                    | default port of a construct                      |
+| 4748 | `host-nodejs`                                    | example port of a hub in the documentation       |
+| 4749 | `renderer-godot`                                 | link of the unit tests of the Godot code         |
+| 4750 | `pixi-page`, `three-renderers`, `renderer-godot` | default port of the sample construct             |
+| 4751 | `pixi-page`                                      | `--hub-port` of a unit test                      |
+| 4760 | `renderer-godot`                                 | `hubPort` of a unit test                         |
+| 5173 | `workbench-app`                                  | default port of the page                         |
+| 5174 | `pixi-page`                                      | default port of the page                         |
+| 5175 | `three-renderers`                                | default port of the page                         |
+
+- A test of two or more packages that run at the same time on one Docker daemon checks only the containers and the processes of its own run. Select them by a label or by a name that is unique to the run (see `godotLabel` in `renderer-godot`). A check of all containers with a label of the package finds the containers of a different package, or of a different run, and removes or reports them wrongly (#542, #767).
+
 ### The test guide of a milestone
 
 The owner asked for this document on 2026-11-27. It is the test plan of the milestone, the list of its new features, and a demonstration that a person does alone.
@@ -329,6 +356,10 @@ Stop and tell the owner in each of these cases:
 - A milestone fails its final review two times.
 - The checks on `main` stay red after one attempt to correct them.
 - The credentials do not work. Read `/creds/status/`. Continue with the work that needs no credentials, and do not try a different way to get access.
+  - The lead agent knows that the vended credentials stalled when a file in `/creds/status/` says `stalled`, or when `gh` has no token.
+  - Send one notice to the owner (see "A notice to the phone of the owner"). Do not send a second notice for the same stall.
+  - Go on with the local work: applies, reviews, and break-tests whose scope the lead agent knows. A step on GitHub waits (a push, a pull request, a merge, an issue, the board).
+  - On 2026-11-28 the credentials stalled from about 07:29 UTC. The lead agent sent one notice and finished the apply of #607 and three break-tests while it waited for the owner.
 
 ## A notice to the phone of the owner
 

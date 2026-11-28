@@ -73,6 +73,26 @@ func test_draws_at_once_from_the_state_of_the_port() -> void:
 	host.free()
 
 
+func test_a_reference_list_prop_is_the_array_of_ids_and_the_entities_draw_at_the_top_level() -> void:
+	var host := _host()
+	var view := RectView.new()
+	var deck := {"id": "deck", "label": "Deck", "fields": [{"id": "fld_cards", "label": "Cards", "type": "reference-list"}]}
+	var table := _table(view)
+	var deck_view := RectView.new()
+	table["ct_deck"] = {"sidecar": "Deck.view.json", "view": deck_view}
+	deck["id"] = "ct_deck"
+	var entities := [
+		_entity("goat", {CT: {COLOR: "#111111"}}),
+		_entity("owl", {CT: {COLOR: "#222222"}}),
+		_entity("deck", {"ct_deck": {"fld_cards": ["goat", "owl"]}}),
+	]
+	var port := FakePort.new({"store": _store(entities, [_definition(), deck])})
+	var renderer := Renderer.new(port, table, host, _size)
+	assert_equal(deck_view.updates[0]["props"], {"cards": ["goat", "owl"]})
+	assert_equal(_children(host).size(), 3)
+	assert_true(renderer != null, "the renderer exists")
+
+
 func test_a_field_change_keeps_the_node_and_gives_the_new_value() -> void:
 	var host := _host()
 	var view := RectView.new()

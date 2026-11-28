@@ -60,7 +60,17 @@ const inputs = productChanges(before, after, 'product')
 
 ## The construct manager
 
-`attachConstructManager({ hub, behaviors, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The list `behaviors` holds the native behaviors of the product, and each product construct runs them. The hub must have the parts `product` and `constructs`.
+`attachConstructManager({ hub, launch, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The hub must have the parts `product` and `constructs`.
+
+The option `launch` is a `ProductConstructLauncher`. It starts one product construct and gives a `LaunchedConstruct`. The default is `childProcessLauncher()`: each product construct runs in a product construct process. The manager uses only the ports of the `LaunchedConstruct`. `running` holds the `LaunchedConstruct` of each live product construct, by ID.
+
+```ts
+import { childProcessLauncher } from '@thrashplay/wishem-construct-manager/node'
+
+const launch = childProcessLauncher({ productCode: new URL('./product.js', import.meta.url).href })
+```
+
+The example below uses `inProcessLauncher`, which runs each product construct in the process of the caller.
 
 ```ts
 import { fileURLToPath } from 'node:url'
@@ -71,7 +81,7 @@ import { createHub } from '@thrashplay/wishem-hub'
 import { behaviors } from '@thrashplay/wishem-sample-product'
 import { constructInputs, createConstructList } from '@thrashplay/wishem-construct-manager'
 import type { ConstructList } from '@thrashplay/wishem-construct-manager'
-import { attachConstructManager } from '@thrashplay/wishem-construct-manager/node'
+import { attachConstructManager, inProcessLauncher } from '@thrashplay/wishem-construct-manager/node'
 
 const eventually = async (check: () => boolean) => {
   while (!check()) {
@@ -85,7 +95,11 @@ const hub = createHub({
   subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
 })
 hub.start()
-const manager = attachConstructManager({ hub, behaviors, log: (line) => console.log(line) })
+const manager = attachConstructManager({
+  hub,
+  launch: inProcessLauncher({ behaviors }),
+  log: (line) => console.log(line),
+})
 const client = hub.attach({ id: 'client', kind: 'input' })
 const entry = () => (hub.read().constructs as ConstructList).constructs.play
 
@@ -99,9 +113,9 @@ await manager.close()
 hub.stop()
 ```
 
-The construct manager attaches the input port `construct-manager` and the output port `construct-manager-reader` to `hub`. It also attaches the same two ports to the hub of each product construct. `attachConstructManager` throws when `hub` uses one of these IDs.
+The construct manager attaches the input port `construct-manager` and the output port `construct-manager-reader` to `hub`. The launcher attaches the same two ports to the hub of each product construct. `attachConstructManager` throws when `hub` uses one of these IDs.
 
-A product construct (`startProductConstruct`) holds:
+A product construct (`startProductConstruct`, or a product construct process) holds:
 
 - a hub with the parts `time` and `store`, and the update subsystem, which runs the `behaviors`. The part `time` holds `stepMs`, the step length of the clock (default 50 milliseconds)
 - a link server on the port of the option `port` (`linkUrl`, for example `ws://127.0.0.1:41377/link`). The default is 0: the system selects a free port. A port in use rejects `startProductConstruct` with `EADDRINUSE`, and then no timer and no open port stay.
@@ -119,13 +133,55 @@ A step back keeps the `running` value that the product construct had before it. 
 await client.submit(constructInputs.rewind({ construct: 'play', ticks: 1 }))
 ```
 
+When a product construct process ends and no stop was requested, the manager reports `failed` with the message of `ended`.
+
 The construct manager gives each product construct the changes of the model `product` as inputs. It reports `running`, `stopped`, or `failed` for each construct with `constructs/report`. A `failed` construct stays `failed` until a client sends `constructs/stop` and then `constructs/start`.
 
 A `constructs/stop` and a `constructs/start` always give a new product construct: a new link address and a time that starts from 0. This is also true when the hub applies both inputs in one pass.
 
 The construct manager writes these log lines:
 
+- `wishem: construct <id> runs in the process <pid>`
 - `wishem: construct <id> runs, link at <link>`
+- `wishem: construct <id>: <line>` for each line that the construct writes to the standard output or the standard error
 - `wishem: construct <id> stopped`
 - `wishem: construct <id> failed: <message>`
 - `wishem: construct <id>: the change of the product was refused: <message>`
+
+## The product construct process
+
+`childProcessLauncher(options)` starts one product construct in a product construct process. This is a child process that runs `dist/product-construct-process.js`. The launcher gives a `LaunchedConstruct`: the link address (`linkUrl`), the process ID (`pid`), the ports `input` and `reader`, the promise `ended`, and `close()`.
+
+The order of the start:
+
+1. The launcher forks the process and sends `start`. The child loads the product code (`productCode`, a file URL), checks it, makes the hub, and starts the hub.
+2. The child answers `ready`. The launcher opens a link on the IPC channel with the IDs `construct-manager` (input) and `construct-manager-reader` (output).
+3. The launcher sends `serve`. The child serves the WebSocket link on a port that the system selects, starts the clock, and answers `serving` with the address.
+
+The manager holds both IDs before any WebSocket client can connect. A WebSocket client that asks for one of them gets `refused` with `id-in-use`. Only the source `construct-manager` can send `hub/rewind`. The texts of one turn go in one IPC message, so the hub queues the inputs of a step back before the next tick.
+
+The launcher gives each line of the standard output and the standard error of the child to `onLine`. A start that fails rejects with the message of the child, and then no process stays.
+
+`close()` sends `stop`. The child sends `stopping` on each WebSocket link, frees its port, and ends. The launcher sends `SIGKILL` after `stopMs` (default 2000). Each call gives the same promise.
+
+The child ends when its IPC channel disconnects. This happens when the parent ends for any cause, also `SIGKILL`. A watchdog thread of the child checks the parent each 500 ms, so a child with a blocked event loop also ends within 0.5 s. The child ignores `SIGINT`: a Ctrl+C of the process group stops the construct through `stop` or the disconnect. `ended` resolves with a message when the child ends and no `close()` was called.
+
+### The faults of a product construct process
+
+Each fault gives `ended` a message, and the manager reports `failed`. The launcher does not start the construct again.
+
+| Fault                                                                                  | Result                                                                                                |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| The process ends                                                                       | `The process of the construct ended with the exit code <code>.` or `... with the signal <signal>.`    |
+| No `serving` in `startMs` (default 10000)                                              | The launch rejects with `The construct did not start in <n> seconds.` The launcher kills the process. |
+| No `pong` in `answerMs` (default 5000) after a ping, sent each `pingMs` (default 1000) | `ended` resolves with `The construct did not answer in <n> seconds.` The launcher kills the process.  |
+| No result of a `submit` in `answerMs`                                                  | The `submit` of `input` rejects with the same message. The launcher kills the process.                |
+| The process does not end in `stopMs` after `close()`                                   | The launcher sends `SIGKILL`.                                                                         |
+
+A new process loads the current product code file. A running construct keeps the code that it loaded.
+
+## The check of the product code
+
+`checkProductCode(url, { answerMs })` imports the product code in a short child process and checks the behaviors. It never rejects. It gives `{ ok: true, count }`, or `{ ok: false, reason, message }`. `reason` is `load` (the import failed, or the check did not end in `answerMs`, default 5000) or `behaviors` (the message of `checkBehaviors`). The process ends in each case.
+
+`inProcessLauncher(options)` runs the construct in this process with `startProductConstruct`, for tests with a fake clock. Its `LaunchedConstruct` also has `hub`.
