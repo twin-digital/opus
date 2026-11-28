@@ -42,6 +42,14 @@ The hub takes the last checkpoint at or before the target. It gives the inputs a
 
 A target that is not an integer, is before the start of the record, or is after `hub.seq` gives the rejection `invalid` with a problem at the path `['payload', 'seq']`. A rejected rewind changes nothing. When a model subsystem throws while it applies an input again, the hub changes nothing and the promise of `submit` rejects with the error. Each other type `hub/<name>` gives the rejection `unknown-type`.
 
+### Limit the sources of a rewind
+
+The option `rewindSources` is a list of the IDs of the subsystems that can send `hub/rewind`. With no list, each input subsystem can send it. When the list is given, the hub rejects a rewind from each other source with the reason `not-permitted`, before the input gets a sequence number. The rejection changes nothing. Other input types are not limited. The hub does not check the inputs of `options.record`. `createHub` throws a `HubConfigurationError` that names a source that is not an ID.
+
+```ts
+const hub = createHub({ subsystems, rewindSources: ['construct-manager'] })
+```
+
 ## Replay
 
 The option `record` makes a hub from a record. The hub takes `record.start` as its first joined state and its first checkpoint. It applies each input of `record.inputs` in order, with the recorded source and sequence number, before `createHub` returns. It sends no event for these inputs. The new hub has the status `created`. Its joined state and its `seq` equal those of the record that it got, so the next input gets the next sequence number. The hub applies `recordLimit` one time, after the last input of the record. When `recordLimit` is not less than the number of inputs of the record, the new hub has the same record and the same `recordStart()`. A smaller `recordLimit` gives a shorter record. An input `hub/rewind` in the record applies as it applied the first time.

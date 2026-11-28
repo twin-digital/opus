@@ -69,6 +69,20 @@ const thrown = (run: () => unknown): unknown => {
   throw new Error('Nothing was thrown.')
 }
 
+describe('a replay with rewind sources', () => {
+  it('applies a rewind from a source that is not in the list', async () => {
+    const { hub, keyboard } = await original(3)
+    await keyboard.submit(hubInputs.rewind(1))
+    const copy = createHub({
+      subsystems: [makeCounter({ applied: [] }), label, other],
+      record: recordOf(hub),
+      rewindSources: ['construct-manager'],
+    })
+    expect(copy.read()).toEqual(hub.read())
+    expect(copy.seq).toBe(hub.seq)
+  })
+})
+
 describe('a replay', () => {
   it('gives equal joined states and the next sequence number', async () => {
     const { hub, keyboard } = await original(4)

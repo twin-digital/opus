@@ -9,13 +9,13 @@ import path from 'node:path'
 import { ModelError, storeInputs } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { createHub, hubInputs, LinkRefusedError, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
-import type { Hub, HubEvent, Port, RemoteLink, WebSocketLike } from '@thrashplay/wishem-hub'
+import type { Hub, HubEvent, ModelSubsystem, Port, RemoteLink, WebSocketLike } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 import { FILES_ID } from './model-folder-storage.js'
 import { readModelFolder } from './read-model-folder.js'
 import { PRODUCT_FILES_ID, PRODUCT_FILES_WRITER_ID, PRODUCT_ID, startConstruct } from './start-construct.js'
-import type { Construct } from './start-construct.js'
+import type { Construct, ConstructOptions } from './start-construct.js'
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>()
@@ -399,6 +399,70 @@ describe('startConstruct', () => {
     const result = await example(folder)
     expect(result.link).toMatch(/^ws:\/\/127\.0\.0\.1:\d+\/link$/)
     expect((result.store as Model).entities).toHaveLength(1)
+  })
+})
+
+describe('startConstruct with more model subsystems', () => {
+  let folder: string
+  let productFolder: string
+  let construct: Construct | undefined
+
+  const extra: ModelSubsystem<{ n: number }> = {
+    id: 'extra',
+    inputs: ['extra/add'],
+    initial: { n: 0 },
+    apply: (part) => ({ n: part.n + 1 }),
+  }
+
+  const start = async (options: Partial<ConstructOptions> = {}) => {
+    construct = await startConstruct({ folder, port: 0, log: () => undefined, ...options })
+    return construct
+  }
+
+  beforeEach(async () => {
+    folder = await mkdtemp(path.join(tmpdir(), 'wishem-construct-'))
+    productFolder = await mkdtemp(path.join(tmpdir(), 'wishem-construct-product-'))
+    for (const target of [folder, productFolder]) {
+      await mkdir(path.join(target, 'definitions'))
+      await writeFile(path.join(target, 'definitions', `${CT}.json`), JSON.stringify(definition))
+      await writeFile(path.join(target, 'state.json'), JSON.stringify(state('Wishem')))
+    }
+  })
+
+  afterEach(async () => {
+    await construct?.close()
+    construct = undefined
+    await rm(folder, { recursive: true, force: true })
+    await rm(productFolder, { recursive: true, force: true })
+  })
+
+  it('puts the parts store and extra in this order', async () => {
+    const started = await start({ subsystems: [extra] })
+    expect(Object.keys(started.hub.read())).toEqual(['store', 'extra'])
+  })
+
+  it('puts the parts store, product, and extra in this order', async () => {
+    const started = await start({ subsystems: [extra], product: productFolder })
+    expect(Object.keys(started.hub.read())).toEqual(['store', 'product', 'extra'])
+  })
+
+  it('applies an input of a type that the subsystem declares', async () => {
+    const started = await start({ subsystems: [extra] })
+    const port = started.hub.attach({ id: 'client', kind: 'input' })
+    expect(await port.submit({ type: 'extra/add' })).toEqual({ ok: true, seq: 1 })
+    expect(started.hub.read().extra).toEqual({ n: 1 })
+  })
+
+  it('rejects a subsystem with the ID store, and the port is free', async () => {
+    const port = await freePort()
+    const clash: ModelSubsystem<null> = { id: 'store', inputs: ['clash/go'], initial: null, apply: () => null }
+    await expect(start({ subsystems: [clash], port })).rejects.toThrow()
+    expect(await canListen(port)).toBe(true)
+  })
+
+  it('gives the same joined state as before with no option', async () => {
+    const started = await start()
+    expect(Object.keys(started.hub.read())).toEqual(['store'])
   })
 })
 
