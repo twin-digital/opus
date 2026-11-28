@@ -278,6 +278,17 @@ describe('the start of a link', () => {
     expect(manual.state.closes).toBe(1)
   })
 
+  it.each([
+    ['the seq 3.5', { seq: 3.5 }],
+    ['the status stopped', { status: 'stopped' }],
+  ])('closes the channel and rejects with a LinkClosedError for a welcome with %s', async (_name, change) => {
+    const manual = manualChannel()
+    const opening = openLink(manual.channel, [page])
+    manual.deliver({ ...welcomeMessage, ...change })
+    await expect(opening).rejects.toBeInstanceOf(LinkClosedError)
+    expect(manual.state.closes).toBe(1)
+  })
+
   it('has a first expected sequence number of welcome.seq + 1', async () => {
     const { link, send, counts } = await connectRaw([page], { seq: 3 })
     send(applied(4))
@@ -641,6 +652,15 @@ describe('the end of a link', () => {
     expect(await caught).toBeInstanceOf(LinkClosedError)
     expect(link.ports.page.read().time).toEqual({ ticks: 1 })
     expect(counts.clientClose).toBe(1)
+  })
+
+  it('ends the link and rejects the waiting request for a result with a result and an error', async () => {
+    const { link, send, counts } = await connectRaw()
+    const waiting = link.ports['page-controls'].submit(setField('a')).catch((e: unknown) => e)
+    send({ t: 'result', request: 1, result: { ok: true, seq: 1 }, error: 'It broke.' })
+    await link.closed
+    expect(counts.clientClose).toBe(1)
+    expect(await waiting).toBeInstanceOf(LinkClosedError)
   })
 
   it('gives not-running after the end, and sends no message', async () => {

@@ -66,20 +66,16 @@ export const connectHub = (options: HubClientOptions): HubClient => {
     },
   })
 
-  const onPageHide = () => {
-    close()
-  }
-
   const close = () => {
     if (closed) {
       return
     }
     closed = true
-    window.removeEventListener('pagehide', onPageHide)
+    window.removeEventListener('pagehide', close)
     client.close()
   }
 
   // A page that is left or reloaded ends the link, and that is not a failure of the hub.
-  window.addEventListener('pagehide', onPageHide)
+  window.addEventListener('pagehide', close)
   return { close }
 }

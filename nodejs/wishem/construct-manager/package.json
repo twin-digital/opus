@@ -46,7 +46,8 @@
     "@thrashplay/wishem-clock": "workspace:*",
     "@thrashplay/wishem-core": "workspace:*",
     "@thrashplay/wishem-host-nodejs": "workspace:*",
-    "@thrashplay/wishem-hub": "workspace:*"
+    "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-update": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

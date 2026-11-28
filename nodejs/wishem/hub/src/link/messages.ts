@@ -1,16 +1,19 @@
-import type { HubStatus, Input, JoinedState, RecordedInput, SubmitResult } from '../types.js'
+import type { Input, JoinedState, RecordedInput, SubmitResult } from '../types.js'
 
 /** The version of the protocol of the link. */
 export const LINK_PROTOCOL_VERSION = 1
 
 export type RefusalReason = 'malformed' | 'version' | 'id-in-use' | 'unsupported' | 'stopped'
 
+/** The status of a hub that a `welcome` message can hold. */
+export type WelcomeStatus = 'created' | 'running'
+
 export type ClientMessage =
   | { t: 'hello'; protocol: number; subsystems: { id: string; kind: string }[] }
   | { t: 'submit'; request: number; subsystem: string; input: Input }
 
 export type HubMessage =
-  | { t: 'welcome'; protocol: number; status: HubStatus; seq: number; state: JoinedState }
+  | { t: 'welcome'; protocol: number; status: WelcomeStatus; seq: number; state: JoinedState }
   | { t: 'refused'; reason: RefusalReason; message: string; supported?: number[] }
   | { t: 'event'; event: 'started' | 'stopping' }
   | { t: 'applied'; input: RecordedInput; parts: Record<string, unknown> }
@@ -21,7 +24,7 @@ export type Parsed<Message> =
   { readonly kind: 'message'; readonly message: Message } | { readonly kind: 'unknown'; readonly t: string }
 
 const REASONS: readonly string[] = ['malformed', 'version', 'id-in-use', 'unsupported', 'stopped']
-const STATUSES: readonly string[] = ['created', 'running', 'stopped']
+const STATUSES: readonly string[] = ['created', 'running']
 const CLIENT_TYPES: readonly string[] = ['hello', 'submit']
 const HUB_TYPES: readonly string[] = ['welcome', 'refused', 'event', 'applied', 'result']
 
@@ -34,10 +37,13 @@ const isString = (value: unknown): value is string => typeof value === 'string'
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+
 const isInput = (value: unknown): value is Input => isFields(value) && isString(value.type)
 
 const isRecordedInput = (value: unknown): value is RecordedInput =>
-  isFields(value) && isNumber(value.seq) && isString(value.source) && isString(value.type)
+  isFields(value) && isCount(value.seq) && isString(value.source) && isString(value.type)
 
 const isSubsystem = (value: unknown): value is { id: string; kind: string } =>
   isFields(value) && isString(value.id) && isString(value.kind)
@@ -48,10 +54,10 @@ const isHello = (fields: Fields) =>
 const isSubmit = (fields: Fields) => isNumber(fields.request) && isString(fields.subsystem) && isInput(fields.input)
 
 const isWelcome = (fields: Fields) =>
-  isNumber(fields.protocol) &&
+  isCount(fields.protocol) &&
   isString(fields.status) &&
   STATUSES.includes(fields.status) &&
-  isNumber(fields.seq) &&
+  isCount(fields.seq) &&
   isFields(fields.state)
 
 const isRefused = (fields: Fields) =>
@@ -64,11 +70,12 @@ const isEvent = (fields: Fields) => fields.event === 'started' || fields.event =
 
 const isApplied = (fields: Fields) => isRecordedInput(fields.input) && isFields(fields.parts)
 
-const isResult = (fields: Fields) =>
-  isNumber(fields.request) &&
-  (fields.error === undefined ?
-    isFields(fields.result) && typeof fields.result.ok === 'boolean'
-  : isString(fields.error))
+const isResult = (fields: Fields) => {
+  if (!isCount(fields.request) || 'result' in fields === 'error' in fields) {
+    return false
+  }
+  return 'error' in fields ? isString(fields.error) : isFields(fields.result) && typeof fields.result.ok === 'boolean'
+}
 
 const CLIENT_CHECKS: Record<string, (fields: Fields) => boolean> = { hello: isHello, submit: isSubmit }
 const HUB_CHECKS: Record<string, (fields: Fields) => boolean> = {

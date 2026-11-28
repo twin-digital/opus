@@ -37,9 +37,9 @@ pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sam
 
 With `--product`, the script adds the construct list (the model subsystem `constructs`) to the construct of the workbench and attaches the construct manager. The `welcome` message of the link then has the parts `store`, `product`, and `constructs`. A client of the link starts a product construct with the input `constructs/start`. The product construct runs in the process of the script, with its own link on a port that the system selects. The script prints `wishem: construct <id> runs, link at <address>`. The construct manager gives the product construct each later change of the product model. When the script stops, it stops the product constructs first.
 
-The option `--product-code <module>` names the product code. The module exports `wrapStore`, which adds the rules of the product to the store of a product construct. The value is a package name, or a path that starts with `.` or `/`. A relative path starts from the folder where you run the command. The script prints `wishem: product code <value>` after the product line. The option needs `--product`. With no option, a product construct has no rules.
+The option `--product-code <module>` names the product code. The module exports `behaviors`, the list of the native behaviors of the product. Each product construct runs them in each tick. The script stops with a message when `behaviors` is not a correct list. The value is a package name, or a path that starts with `.` or `/`. A relative path starts from the folder where you run the command. The script prints `wishem: product code <value>` after the product line. The option needs `--product`. With no option, a product construct has no behaviors.
 
-To start the workbench with the sample product and its rules, from the root of the repository:
+To start the workbench with the sample product and its behaviors, from the root of the repository:
 
 ```
 pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sample-product/model --product-code @thrashplay/wishem-sample-product

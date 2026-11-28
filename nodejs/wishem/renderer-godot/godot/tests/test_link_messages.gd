@@ -83,6 +83,12 @@ func test_as_int_gives_null_for_a_value_that_is_not_an_integer() -> void:
 	assert_equal(Messages.as_int(1e300), null)
 
 
+func test_as_int_gives_null_for_a_negative_number() -> void:
+	assert_equal(Messages.as_int(-1), null)
+	assert_equal(Messages.as_int(-1.0), null)
+	assert_equal(Messages.as_int(-0.0), 0)
+
+
 func test_each_message_of_the_fixture_parses() -> void:
 	var examples := _examples()
 	assert_true(examples.size() > 10, "the fixture has the examples")

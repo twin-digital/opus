@@ -179,9 +179,36 @@ describe('Renderer', () => {
       expect(wrappers()[0]?.textContent).toBe('title:Second')
     })
 
+    it('draws one time, and keeps the picture, when a new port holds an equal model', () => {
+      const calls: string[] = []
+      const counted: ViewSource = {
+        ...sourceA,
+        view: (props) => {
+          calls.push('draw')
+          return viewA(props)
+        },
+      }
+      const views = tableOf(counted)
+      draw(startWorld(baseModel()).output, views)
+      const before = container.innerHTML
+      calls.length = 0
+
+      draw(startWorld(baseModel()).output, views)
+
+      expect(calls).toHaveLength(2)
+      expect(container.innerHTML).toBe(before)
+    })
+
     it('leaves no listener and keeps the port open after the renderer is removed', async () => {
       const { hub, input, output } = startWorld(baseModel())
-      const port = counting(output)
+      const close = vi.spyOn(output, 'close')
+      // A renderer that closes its port would reach `close` of the hub through this object.
+      const port = {
+        ...counting(output),
+        close: () => {
+          output.close()
+        },
+      }
       draw(port)
       expect(port.listeners()).toBe(1)
 
@@ -190,6 +217,7 @@ describe('Renderer', () => {
       })
 
       expect(port.listeners()).toBe(0)
+      expect(close).not.toHaveBeenCalled()
       await expect(setTitle(input, E1, 'After')).resolves.toBeUndefined()
       expect(hub.status).toBe('running')
       expect(output.read().store).toBeDefined()
@@ -566,41 +594,25 @@ describe('Renderer', () => {
       expect(String(warn.mock.calls[2]?.[0])).toContain('Other.view.json')
     })
 
-    it('gives no new warning when the model gains the definition of a component type', async () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      const model = baseModel()
-      const { input, output } = startWorld({
-        ...model,
-        definitions: model.definitions.filter(({ id }) => id !== CT_A),
-        entities: [],
-      })
-
-      draw(output)
-      expect(warn).toHaveBeenCalledTimes(1)
-      await act(async () => {
-        await input.submit(inputs.replaceModel(model))
-      })
-
-      expect(warn).toHaveBeenCalledTimes(1)
-      expect(wrappers()).toHaveLength(2)
-    })
-
-    it('writes a warning again when the definition is removed after it was added', async () => {
+    it('gives no new warning when the model gains the definition of a component type, and a warning when it loses it', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
       const model = baseModel()
       const withoutA = { ...model, definitions: model.definitions.filter(({ id }) => id !== CT_A), entities: [] }
       const { input, output } = startWorld(withoutA)
 
       draw(output)
+      expect(warn).toHaveBeenCalledTimes(1)
       await act(async () => {
         await input.submit(inputs.replaceModel(model))
       })
       expect(warn).toHaveBeenCalledTimes(1)
+      expect(wrappers()).toHaveLength(2)
+
       await act(async () => {
         await input.submit(inputs.replaceModel(withoutA))
       })
-
       expect(warn).toHaveBeenCalledTimes(2)
+      expect(String(warn.mock.calls[1]?.[0])).toContain(CT_A)
     })
 
     it('gives no warning for views that match their definitions', () => {

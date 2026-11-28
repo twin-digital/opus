@@ -115,7 +115,7 @@ When the `start` script of the workbench page mounts a product, it SHALL add the
 
 ### Requirement: The option --product-code names the rules of the product
 
-The option `--product-code <module>` SHALL name a module whose export `wrapStore` wraps the store of a product construct. The value SHALL be a package name or a path, and a path SHALL be relative to the folder in which the person runs the command. The script SHALL print the line `wishem: product code <value>` after the line of the product folder. With no option, a product construct SHALL have the store with no rules.
+The option `--product-code <module>` SHALL name a module whose export `behaviors` is the list of native behaviors of a product construct. The value SHALL be a package name or a path, and a path SHALL be relative to the folder in which the person runs the command. The script SHALL print the line `wishem: product code <value>` after the line of the product folder. With no option, a product construct SHALL have the update subsystem with no behavior.
 
 #### Scenario: The rules of the sample product
 
@@ -129,8 +129,13 @@ The option `--product-code <module>` SHALL name a module whose export `wrapStore
 
 #### Scenario: A module with no wrapStore
 
-- **WHEN** a person runs the script with `--product-code` and a module that has no function `wrapStore`
-- **THEN** the command prints `wishem: the product code has no function wrapStore`, serves no page, and stops with a non-zero exit code
+- **WHEN** a person runs the script with `--product-code` and a module that exports the function `wrapStore` and no `behaviors`
+- **THEN** the command prints `wishem: the product code has no correct list behaviors:` and the reason, serves no page, and stops with a non-zero exit code
+
+#### Scenario: A list that is not correct
+
+- **WHEN** a person runs the script with `--product-code` and a module whose `behaviors` is the text `count`
+- **THEN** the command prints `wishem: the product code has no correct list behaviors: The behaviors are not a list.`, serves no page, and stops with a non-zero exit code
 
 #### Scenario: Product code with no product
 
