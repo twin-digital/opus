@@ -136,10 +136,27 @@ describe('the test guide: each product construct runs in a process of its own', 
     clients.splice(0).forEach((client) => {
       client.close()
     })
+    const pids = new Set<number>()
     for (const run of runs.splice(0)) {
       if (run.child.exitCode === null && run.child.signalCode === null) {
         run.child.kill('SIGKILL')
         await run.exit
+      }
+      for (const match of run.output().matchAll(/runs in the process (\d+)/g)) {
+        pids.add(Number(match[1]))
+      }
+    }
+    // The check child and each product construct child write their pid to loaded.txt.
+    try {
+      loadedIds().forEach((pid) => pids.add(pid))
+    } catch {
+      // no process loaded the code
+    }
+    for (const pid of pids) {
+      try {
+        process.kill(pid, 'SIGKILL')
+      } catch {
+        // the process ended
       }
     }
     rmSync(folder, { recursive: true, force: true })
