@@ -378,6 +378,20 @@ describe('constructs/report', () => {
     })
   })
 
+  it('keeps the part for a report with the startSeq of an earlier start', async () => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    const first = startSeqOf(rig)
+    await rig.client.submit(constructInputs.stop('play'))
+    await rig.client.submit(constructInputs.start('play'))
+    const before = rig.part()
+    await rig.manager.submit(
+      constructInputs.report({ construct: 'play', status: 'failed', message: 'old', startSeq: first }),
+    )
+    expect(rig.part()).toEqual(before)
+    expect(rig.part().constructs.play.status).toBe('pending')
+  })
+
   it('refuses a report from a different source and keeps the part', async () => {
     const rig = makeRig()
     await rig.client.submit(constructInputs.start('play'))

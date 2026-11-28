@@ -1,13 +1,13 @@
 /** An ID has a prefix for its kind (`ct_`, `fld_`, or `e_`) and a UUID in lowercase. */
 export type Id = string
 
-export type FieldType = 'string' | 'number' | 'boolean' | 'reference'
+export type FieldType = 'string' | 'number' | 'boolean' | 'reference' | 'reference-list'
 
 /** The field types, in the order of the specification. */
-export const FIELD_TYPES: readonly FieldType[] = ['string', 'number', 'boolean', 'reference']
+export const FIELD_TYPES: readonly FieldType[] = ['string', 'number', 'boolean', 'reference', 'reference-list']
 
-/** A reference is the ID of an entity. */
-export type FieldValue = string | number | boolean
+/** A reference is the ID of an entity. A reference list is a list of distinct entity IDs. */
+export type FieldValue = string | number | boolean | readonly Id[]
 
 export interface FieldDefinition {
   id: Id

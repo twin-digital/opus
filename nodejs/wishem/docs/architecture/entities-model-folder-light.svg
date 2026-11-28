@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 632" width="880" height="632" role="img" aria-labelledby="title desc">
 <title id="title">Entity diagram: the model folder</title>
-<desc id="desc">The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference has zero or one entity, and an entity has zero or more field values that refer to it.</desc>
+<desc id="desc">The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference-list has zero or more entities, and an entity has zero or more field values that refer to it.</desc>
 <defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.12"/></filter></defs>
 <rect width="880" height="632" fill="#f7f7fa"/>
 <text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#1c1c2e" text-anchor="start">Entity diagram: the model folder</text>
@@ -60,8 +60,8 @@
 <path d="M698 356 L338 484" fill="none" stroke="#85859a" stroke-width="2"/>
 <path d="M684.81 360.69 L700.35 362.6 M684.81 360.69 L698 356 M684.81 360.69 L695.65 349.4" fill="none" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
 <circle cx="677.27" cy="363.37" r="4.5" fill="#f7f7fa" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
-<path d="M345.08 474.05 L349.77 487.25" fill="none" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
-<circle cx="356.84" cy="477.3" r="4.5" fill="#f7f7fa" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
+<path d="M351.19 479.31 L335.65 477.4 M351.19 479.31 L338 484 M351.19 479.31 L340.35 490.6" fill="none" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
+<circle cx="358.73" cy="476.63" r="4.5" fill="#f7f7fa" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
 <rect x="474.6" y="408" width="86.8" height="24" rx="12" fill="#ffffff" stroke="#85859a"/>
 <text x="518" y="424.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#5b5b70" text-anchor="middle">Refers to</text>
 <rect x="24" y="564" width="832" height="44" rx="12" fill="#ffffff" stroke="#c4c4cf"/>
@@ -79,8 +79,4 @@
 <path d="M543.84 586 L557.84 593 M543.84 586 L557.84 586 M543.84 586 L557.84 579" fill="none" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
 <circle cx="535.84" cy="586" r="4.5" fill="#f7f7fa" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
 <text x="565.84" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#5b5b70" text-anchor="start">Zero or more</text>
-<path d="M670.24 586 L696.24 586" stroke="#85859a" stroke-width="2"/>
-<path d="M686.24 593 L686.24 579" fill="none" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
-<circle cx="676.24" cy="586" r="4.5" fill="#f7f7fa" stroke="#85859a" stroke-width="2" stroke-linecap="round"/>
-<text x="704.24" y="590.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#5b5b70" text-anchor="start">Zero or one</text>
 </svg>

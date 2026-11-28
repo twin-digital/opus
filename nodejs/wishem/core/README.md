@@ -8,7 +8,7 @@ The package uses no Node.js API. It runs in a web browser and in Node.js.
 
 A model is data with two parts.
 
-- `definitions`: a list of component types. Each component type has an `id`, a `label`, and a list of `fields`. Each field has an `id`, a `label`, and a `type`. The types are `string`, `number`, `boolean`, and `reference`. A value of a `reference` field is the ID of an entity of the model.
+- `definitions`: a list of component types. Each component type has an `id`, a `label`, and a list of `fields`. Each field has an `id`, a `label`, and a `type`. The types are `string`, `number`, `boolean`, `reference`, and `reference-list`. A value of a `reference` field is the ID of an entity of the model. A value of a `reference-list` field is a list of entity IDs of the model. The list holds no ID two times, and its order is part of the value. `[]` is a correct value and is different from an omitted field.
 - `entities`: a list of entities. Each entity has an `id` and a `components` record. The record maps the ID of a component type to a record. That record maps the ID of a field to a value.
 
 Each ID has a prefix for its kind, an underscore, and a UUID in lowercase. The prefix is `ct` for a component type, `fld` for a field, and `e` for an entity.
@@ -50,17 +50,21 @@ Options:
 - `id`: the ID of the store. The default is `store`. Each input type starts with the ID and a slash.
 - `model`: the first model. The default is a model with no definitions and no entities.
 
-The store applies five inputs.
+The store applies seven inputs.
 
-| Input type            | Payload                                   | Effect                                                                                             |
-| --------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `store/replace-model` | `{ model }`                               | Replaces the model.                                                                                |
-| `store/add-entity`    | `{ entity }`                              | Adds the entity at the end of the list. The ID must be new.                                        |
-| `store/remove-entity` | `{ entity }`, the ID of the entity        | Removes the entity.                                                                                |
-| `store/set-field`     | `{ entity, componentType, field, value }` | Sets the value. Adds the component when the entity has none.                                       |
-| `store/clear-field`   | `{ entity, componentType, field }`        | Removes the value. Keeps the component. Keeps the same part when the field has no value to remove. |
+| Input type               | Payload                                       | Effect                                                                                                                 |
+| ------------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `store/replace-model`    | `{ model }`                                   | Replaces the model.                                                                                                    |
+| `store/add-entity`       | `{ entity }`                                  | Adds the entity at the end of the list. The ID must be new.                                                            |
+| `store/remove-entity`    | `{ entity }`, the ID of the entity            | Removes the entity.                                                                                                    |
+| `store/set-field`        | `{ entity, componentType, field, value }`     | Sets the value. Adds the component when the entity has none.                                                           |
+| `store/clear-field`      | `{ entity, componentType, field }`            | Removes the value. Keeps the component. Keeps the same part when the field has no value to remove.                     |
+| `store/add-reference`    | `{ entity, componentType, field, reference }` | Adds the ID `reference` at the end of a `reference-list` list. Sets a list of that one ID when the field has no value. |
+| `store/remove-reference` | `{ entity, componentType, field, reference }` | Removes the ID `reference` from the list. Keeps the order of the other items. Leaves `[]` after the last item.         |
 
-`storeInputs(id)` gives the functions that make these inputs: `replaceModel`, `addEntity`, `removeEntity`, `setField`, and `clearField`.
+The key `reference` is the ID of an entity. `add-reference` refuses an ID that no entity has. An input that changes nothing keeps the same part object. This applies to an `add-reference` of an ID that the list holds, and to a `remove-reference` of an ID that the list does not hold. Both inputs refuse a field that does not have the type `reference-list`.
+
+`storeInputs(id)` gives the functions that make these inputs: `replaceModel`, `addEntity`, `removeEntity`, `setField`, `clearField`, `addReference`, and `removeReference`.
 
 The store applies an input only when the model after the input is correct. Otherwise, the store refuses the input with problems. Each problem has a `message` and a `path`. The part and the record of the hub do not change. An input that changes nothing keeps the same part object. Each part is frozen. An entity that an input does not change is the same object in the new part.
 
@@ -89,7 +93,7 @@ const refused = await form.submit(storeInputs().removeEntity('e_00000000-0000-40
 - `ModelError`: the error with the list `problems`. `createStore` throws it for a first model that is not correct.
 - `createStore(options)`: makes the store, a model subsystem for a hub. See "The store".
 - `storeInputs(id)`: gives the functions that make the five inputs of a store.
-- `isEqual(a, b)`: compares two models by canonical JSON.
+- `isEqual(a, b)`: compares two values by canonical JSON. The store uses it for models and for the values of `set-field`.
 
 ## No Node.js API
 

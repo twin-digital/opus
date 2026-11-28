@@ -3,7 +3,7 @@ import type { ComponentType, ReactNode } from 'react'
 import { parseSidecar, REACT_KIND } from './sidecar.js'
 import type { ViewTools } from './view-tools.js'
 
-/** The fields by prop name, and the tools in `wishem`. A `reference` field is a `ReactNode`. */
+/** The fields by prop name, and the tools in `wishem`. A `reference` field is a `ReactNode`, and a `reference-list` field is a list of them. */
 export type ViewProps = Readonly<Record<string, FieldValue | ReactNode>> & { readonly wishem: ViewTools }
 
 export interface CollectedView {

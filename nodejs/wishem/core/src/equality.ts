@@ -1,5 +1,3 @@
-import type { Model } from './model.js'
-
 /** JSON text with sorted record keys. */
 export const canonical = (value: unknown): string =>
   JSON.stringify(value, (_key, item: unknown) =>
@@ -16,4 +14,5 @@ export const deepFreeze = <T>(value: T): T => {
   return value
 }
 
-export const isEqual = (a: Model, b: Model): boolean => canonical(a) === canonical(b)
+/** True when the canonical JSON text of the two values is the same. */
+export const isEqual = (a: unknown, b: unknown): boolean => canonical(a) === canonical(b)

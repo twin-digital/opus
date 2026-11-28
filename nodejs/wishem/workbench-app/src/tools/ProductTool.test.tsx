@@ -6,7 +6,13 @@ import { COLOR_FIELD, COLOR_TYPE, COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY } fro
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { PRODUCT_CLEAR_FIELD, PRODUCT_SET_FIELD, ProductTool } from './ProductTool.js'
+import {
+  PRODUCT_ADD_REFERENCE,
+  PRODUCT_CLEAR_FIELD,
+  PRODUCT_REMOVE_REFERENCE,
+  PRODUCT_SET_FIELD,
+  ProductTool,
+} from './ProductTool.js'
 
 const SECOND_ENTITY = 'e_5f0c1d2e-aaaa-4bbb-8ccc-0123456789ab'
 
@@ -114,6 +120,106 @@ describe('ProductTool', () => {
     expect(PRODUCT_CLEAR_FIELD).toBe(
       storeInputs('product').clearField({ entity: 'e', componentType: 'c', field: 'f' }).type,
     )
+  })
+
+  it('has the add-reference and remove-reference input types of the store `product`', () => {
+    const payload = { entity: 'e', componentType: 'c', field: 'f', reference: 'r' }
+    expect(PRODUCT_ADD_REFERENCE).toBe(storeInputs('product').addReference(payload).type)
+    expect(PRODUCT_REMOVE_REFERENCE).toBe(storeInputs('product').removeReference(payload).type)
+  })
+
+  describe('a reference-list field', () => {
+    const DECK_TYPE = 'ct_4a1b2c3d-5e6f-4a7b-8c9d-0e1f2a3b4c5d'
+    const CARDS_FIELD = 'fld_5b2c3d4e-6f7a-4b8c-9d0e-1f2a3b4c5d6e'
+    const DECK = 'e_1f2a3b4c-5d6e-4f7a-8b9c-0d1e2f3a4b5c'
+    const listModel: Model = {
+      definitions: [
+        { id: DECK_TYPE, label: 'Deck', fields: [{ id: CARDS_FIELD, label: 'Cards', type: 'reference-list' }] },
+        ...productModel.definitions,
+      ],
+      entities: [
+        { id: DECK, components: { [DECK_TYPE]: { [CARDS_FIELD]: [SAMPLE_ENTITY] } } },
+        ...productModel.entities,
+      ],
+    }
+    const setupList = () => {
+      const hub: Hub = createHub({
+        subsystems: [
+          createStore({ model: { definitions: [], entities: [] } }),
+          createStore({ id: 'product', model: listModel }),
+        ],
+      })
+      hub.start()
+      const output: Port = hub.attach({ id: 'screen', kind: 'output' })
+      const input: Port = hub.attach({ id: 'screen-input', kind: 'input' })
+      return { hub, output, input }
+    }
+    const press = async (selector: string) => {
+      await act(async () => {
+        container.querySelector<HTMLButtonElement>(selector)?.click()
+        await new Promise((done) => setTimeout(done, 0))
+      })
+    }
+    const cards = (output: Port) => (output.read().product as Model).entities[0]?.components[DECK_TYPE]?.[CARDS_FIELD]
+
+    it('sends one product/add-reference with the four keys, and shows the new item', async () => {
+      const { hub, output, input } = setupList()
+      draw(output, input)
+      select(0)
+      await press('[role="group"] button:not([aria-label])')
+      const record = hub.record()
+      expect(record).toHaveLength(1)
+      expect(record[0]).toMatchObject({
+        type: PRODUCT_ADD_REFERENCE,
+        source: 'screen-input',
+        payload: { entity: DECK, componentType: DECK_TYPE, field: CARDS_FIELD, reference: DECK },
+      })
+      expect(cards(output)).toEqual([SAMPLE_ENTITY, DECK])
+      expect(container.querySelectorAll('[role="group"] li')).toHaveLength(2)
+      expect(container.querySelector('[role="alert"]')).toBeNull()
+    })
+
+    it('sends one product/remove-reference with the four keys, and shows no item', async () => {
+      const { hub, output, input } = setupList()
+      draw(output, input)
+      select(0)
+      await press('button[aria-label^="Remove "]')
+      const record = hub.record()
+      expect(record).toHaveLength(1)
+      expect(record[0]).toMatchObject({
+        type: PRODUCT_REMOVE_REFERENCE,
+        payload: { entity: DECK, componentType: DECK_TYPE, field: CARDS_FIELD, reference: SAMPLE_ENTITY },
+      })
+      expect(cards(output)).toEqual([])
+      expect(container.textContent).toContain('empty list')
+    })
+
+    it('sends product/set-field for another row', async () => {
+      const { hub, output, input } = setupList()
+      draw(output, input)
+      select(1)
+      type(textbox('color'), 'red')
+      await enter(textbox('color'))
+      expect(hub.record().map((entry) => entry.type)).toEqual([PRODUCT_SET_FIELD])
+    })
+
+    it('shows the text of outcomeText after a refused list change', async () => {
+      const { output } = setupList()
+      const input: InputPort = { submit: () => Promise.resolve({ ok: false, reason: 'not-running', problems: [] }) }
+      draw(output, input)
+      select(0)
+      await press('[role="group"] button:not([aria-label])')
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        'The value is not saved. The workbench does not run. Start it, and try again.',
+      )
+    })
+
+    it('disables the list control when there is no input port', () => {
+      const { output } = setupList()
+      draw(output, undefined)
+      select(0)
+      expect(container.querySelector('select')?.disabled).toBe(true)
+    })
   })
 
   const clickClear = async (name: string) => {
