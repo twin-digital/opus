@@ -306,8 +306,36 @@ describe('the test guide: the command loads the product code', () => {
       expect(run.output()).toContain('wishem: product code ./code.mjs\n')
       expect(run.output()).toContain('link at')
       expect(loaded()).toHaveLength(1)
+      // The product construct process loads the same module.
+      const address = /wishem: link at (ws:\/\/127\.0\.0\.1:\d+\/link)/.exec(run.output())?.[1] ?? ''
+      const command = await connect(address, 'guide-command')
+      const play = await startPlay(run, command, false)
+      expect(loaded()).toHaveLength(2)
+      expect(loaded()[1]).toBe(play.pid)
     },
   )
+
+  it(
+    'exits with code 1 and names the value for a package name that cannot be resolved',
+    { timeout: 40000 },
+    async () => {
+      const { exit, output } = await failed(['--product', product, '--product-code', '@nope/nothing'])
+      expect(exit).toBe(1)
+      expect(output).toContain(
+        "wishem: the product code @nope/nothing cannot be loaded: Cannot find package '@nope/nothing'",
+      )
+      expect(output).not.toContain('link at')
+    },
+  )
+
+  it('resolves a package name from the package of the command', { timeout: 40000 }, async () => {
+    // The package of the command can resolve its own name. The check process cannot.
+    const name = '@thrashplay/wishem-command/package.json'
+    const { exit, output } = await failed(['--product', product, '--product-code', name])
+    expect(exit).toBe(1)
+    expect(output).toContain(`wishem: the product code ${name} cannot be loaded: `)
+    expect(output).not.toContain('Cannot find package')
+  })
 
   it('does the step 10: the product code as a package name', { timeout: 40000 }, async () => {
     const { run, address } = await started('@thrashplay/wishem-sample-product')
