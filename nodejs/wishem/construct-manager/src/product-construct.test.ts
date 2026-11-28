@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TIME_ID, timeInputs, type ClockTimer, type TimePart } from '@thrashplay/wishem-clock'
 import { COUNT_FIELD, COUNTER_TYPE, SAMPLE_ENTITY, wrapStore } from '@thrashplay/wishem-sample-product'
-import { createStore, type Model } from '@thrashplay/wishem-core'
+import { createStore, type FieldValue, type Model } from '@thrashplay/wishem-core'
 import { readModelFolder, serveHub } from '@thrashplay/wishem-host-nodejs'
 import { createHub, hubInputs, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { HubServer } from '@thrashplay/wishem-host-nodejs'
@@ -51,7 +51,7 @@ const makeClock = () => {
   }
 }
 
-const countOf = (hub: Hub): string | undefined =>
+const countOf = (hub: Hub): FieldValue | undefined =>
   (hub.read().store as Model).entities.find((entity) => entity.id === SAMPLE_ENTITY)?.components[COUNTER_TYPE]?.[
     COUNT_FIELD
   ]
