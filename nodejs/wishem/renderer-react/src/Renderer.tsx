@@ -2,6 +2,7 @@ import type { ComponentTypeDefinition, Entity, FieldValue, Id, Model } from '@th
 import type { Port } from '@thrashplay/wishem-hub'
 import {
   createElement,
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -92,11 +93,23 @@ export const Renderer = ({ port, views, input }: RendererProps) => {
       const fields = Object.fromEntries(
         propNames(definition).props.map(({ name, field }): [string, FieldValue | ReactNode] => {
           const value: FieldValue | undefined = component[field.id]
-          if (field.type !== 'reference' || typeof value !== 'string') {
-            return [name, value]
+          const picture = (id: Id): ReactNode => {
+            const named = entities.get(id)
+            return named && !here.includes(id) ? draw(named, here) : null
           }
-          const named = entities.get(value)
-          return [name, named && !here.includes(value) ? draw(named, here) : null]
+          if (field.type === 'reference' && typeof value === 'string') {
+            return [name, picture(value)]
+          }
+          if (field.type === 'reference-list' && Array.isArray(value)) {
+            return [
+              name,
+              (value as readonly Id[]).map((id) => {
+                const item = picture(id)
+                return item === null ? null : <Fragment key={id}>{item}</Fragment>
+              }),
+            ]
+          }
+          return [name, value]
         }),
       )
       return [

@@ -137,4 +137,41 @@ describe('findHolds', () => {
     expect([...held]).toEqual([])
     expect(cycles).toEqual([])
   })
+
+  describe('a reference-list field', () => {
+    const FLD_CARDS = 'fld_aaaaaaaa-0000-4000-8000-000000000031'
+    const deck = (cards: string[] | undefined, componentType = CT_LIST): Model => ({
+      definitions: [
+        { id: componentType, label: 'Deck', fields: [{ id: FLD_CARDS, label: 'cards', type: 'reference-list' }] },
+      ],
+      entities: [
+        { id: A, components: { [componentType]: cards === undefined ? {} : { [FLD_CARDS]: cards } } },
+        { id: B, components: {} },
+        { id: C, components: {} },
+      ],
+    })
+
+    it('holds each item of a list', () => {
+      const { held, cycles } = findHolds(withView, deck([B, C]))
+      expect([...held].sort()).toEqual([B, C])
+      expect(cycles).toEqual([])
+    })
+
+    it('holds nothing for an empty list or an omitted field', () => {
+      expect([...findHolds(withView, deck([])).held]).toEqual([])
+      expect([...findHolds(withView, deck(undefined)).held]).toEqual([])
+    })
+
+    it('gives a cycle, and no hold of the holder, for a list that names its holder', () => {
+      const { held, cycles } = findHolds(withView, deck([B, A]))
+      expect([...held]).toEqual([B])
+      expect(cycles).toEqual([
+        { sidecar: 'List.view.json', componentType: CT_LIST, field: FLD_CARDS, holder: A, entity: A },
+      ])
+    })
+
+    it('holds nothing for a list in a component type with no view', () => {
+      expect([...findHolds(withView, deck([B, C], CT_PLAIN)).held]).toEqual([])
+    })
+  })
 })
