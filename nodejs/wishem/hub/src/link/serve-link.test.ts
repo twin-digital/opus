@@ -274,6 +274,79 @@ describe('the order of the welcome', () => {
   })
 })
 
+describe('a binary message', () => {
+  const BINARY_TEXT = 'The message is binary. Send each message as a WebSocket text message.'
+
+  const setup = () => {
+    const hub = makeHub()
+    const sent: string[] = []
+    let deliver: ((text: string) => void) | undefined
+    let deliverBinary: (() => void) | undefined
+    const close = vi.fn()
+    const channel: Channel = {
+      send: (text) => {
+        sent.push(text)
+      },
+      onMessage: (listener, onBinary) => {
+        deliver = listener
+        deliverBinary = onBinary
+      },
+      onClose: () => undefined,
+      close,
+    }
+    serveLink(hub, channel)
+    return {
+      hub,
+      sent,
+      close,
+      text: (value: string) => deliver?.(value),
+      binary: () => deliverBinary?.(),
+    }
+  }
+
+  it('refuses a binary message before the hello with malformed and closes', async () => {
+    const { hub, sent, close, binary } = setup()
+    binary()
+    await settle()
+    expect(sent).toHaveLength(1)
+    expect(JSON.parse(sent[0])).toEqual({ t: 'refused', reason: 'malformed', message: BINARY_TEXT })
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(() => hub.attach(page)).not.toThrow()
+  })
+
+  it('refuses a binary message after the welcome, closes, and frees the IDs', async () => {
+    const { hub, sent, close, text, binary } = setup()
+    text(JSON.stringify(hello(page)))
+    await settle()
+    binary()
+    await settle()
+    expect(sent.map((s) => JSON.parse(s) as { t: string; reason?: string })).toMatchObject([
+      { t: 'welcome' },
+      { t: 'refused', reason: 'malformed' },
+    ])
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(() => hub.attach(page)).not.toThrow()
+  })
+
+  it('ignores a hello after a binary message', async () => {
+    const { hub, sent, text, binary } = setup()
+    binary()
+    text(JSON.stringify(hello(page)))
+    await settle()
+    expect(sent.map((s) => (JSON.parse(s) as { t: string }).t)).toEqual(['refused'])
+    expect(() => hub.attach(page)).not.toThrow()
+  })
+
+  it('sends one refused for two binary messages', async () => {
+    const { sent, close, binary } = setup()
+    binary()
+    binary()
+    await settle()
+    expect(sent).toHaveLength(1)
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('a stop during the welcome', () => {
   it('sends the stopping event after the welcome and closes the channel', () => {
     const hub = makeHub()

@@ -5,6 +5,7 @@ import { createStore, type Model } from '@thrashplay/wishem-core'
 import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
 import { createHub, hubInputs, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { Hub, HubEvent, Input, Port, RemoteLink } from '@thrashplay/wishem-hub'
+import type { NativeBehavior } from '@thrashplay/wishem-update'
 import {
   COLOR_FIELD,
   COLOR_TYPE,
@@ -31,10 +32,12 @@ beforeAll(async () => {
 /** A timer that the test calls for each running clock, and a source of real time that the test sets. */
 const makeClock = () => {
   const callbacks = new Set<() => void>()
+  const intervals: number[] = []
   let time = 0
   const timer: ClockTimer = {
-    start: (callback) => {
+    start: (callback, intervalMs) => {
       callbacks.add(callback)
+      intervals.push(intervalMs)
       return () => {
         callbacks.delete(callback)
       }
@@ -42,6 +45,7 @@ const makeClock = () => {
   }
   return {
     timer,
+    intervals,
     now: () => time,
     fire: (ms: number) => {
       time += ms
@@ -99,6 +103,19 @@ const setCount = (store: string, value: number): Input => ({
 
 const duplicates = [behaviors[0], behaviors[0]]
 
+/** A behavior of the component type Color that throws an error from the read of its type after `fault.armed` is set. */
+const fault = { armed: false }
+const exploding: NativeBehavior = {
+  id: 'test/explode',
+  get componentType() {
+    if (fault.armed) {
+      throw new Error('boom')
+    }
+    return COLOR_TYPE
+  },
+  update: (fields) => fields,
+}
+
 describe('attachConstructManager', () => {
   let clock: ReturnType<typeof makeClock>
   let hub: Hub
@@ -125,6 +142,31 @@ describe('attachConstructManager', () => {
       timer: clock.timer,
       now: clock.now,
       ...options,
+    })
+  }
+
+  /** Runs `prepare` on the hub before the construct manager attaches. */
+  const setupLate = async (
+    prepare: () => Promise<void>,
+    options: () => Partial<ConstructManagerOptions> = () => ({}),
+  ) => {
+    clock = makeClock()
+    lines = []
+    sockets = []
+    links = []
+    hub = createHub({
+      subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
+    })
+    hub.start()
+    tester = hub.attach({ id: 'tester', kind: 'input' })
+    await prepare()
+    manager = attachConstructManager({
+      hub,
+      behaviors,
+      log: (line) => lines.push(line),
+      timer: clock.timer,
+      now: clock.now,
+      ...options(),
     })
   }
 
@@ -176,6 +218,8 @@ describe('attachConstructManager', () => {
   }
 
   it('attaches the subsystems construct-manager and construct-manager-reader', async () => {
+    expect(CONSTRUCT_MANAGER_ID).toBe('construct-manager')
+    expect(CONSTRUCT_MANAGER_READER_ID).toBe('construct-manager-reader')
     setup()
     expect(() => hub.attach({ id: CONSTRUCT_MANAGER_ID, kind: 'input' })).toThrow(/in use/)
     expect(() => hub.attach({ id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' })).toThrow(/in use/)
@@ -187,6 +231,100 @@ describe('attachConstructManager', () => {
   it('throws when an ID is in use and keeps no port', () => {
     setup()
     expect(() => attachConstructManager({ hub })).toThrow(/in use/)
+  })
+
+  it('closes the input port when the reader port is in use', () => {
+    setup()
+    const other = createHub({
+      subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
+    })
+    other.start()
+    other.attach({ id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' })
+    expect(() => attachConstructManager({ hub: other })).toThrow(/in use/)
+    expect(() => other.attach({ id: CONSTRUCT_MANAGER_ID, kind: 'input' })).not.toThrow()
+    other.stop()
+  })
+
+  it('logs the error of a pass', async () => {
+    setup()
+    const bare = createHub({ subsystems: [createStore(), createStore({ id: 'product', model })] })
+    bare.start()
+    const bareLines: string[] = []
+    const bareManager = attachConstructManager({ hub: bare, log: (line) => bareLines.push(line) })
+    await eventually(() => bareLines.length > 0)
+    await bareManager.close()
+    bare.stop()
+    expect(bareLines[0]).toMatch(/^wishem: construct manager: /)
+  })
+
+  it('starts the constructs that the list wants when it attaches', async () => {
+    await setupLate(async () => {
+      await tester.submit(constructInputs.start('play'))
+    })
+    await eventually(() => entry('play')?.status === 'running')
+    expect(manager.running.has('play')).toBe(true)
+  })
+
+  it('reports stopped for an entry that is not wanted to run and has no construct', async () => {
+    await setupLate(async () => {
+      await tester.submit(constructInputs.start('play'))
+      await tester.submit(constructInputs.stop('play'))
+      expect(entry('play')).toMatchObject({ want: 'stopped', status: 'pending' })
+    })
+    await eventually(() => entry('play')?.status === 'stopped')
+    expect(manager.running.size).toBe(0)
+  })
+
+  it('starts no construct after a close that comes while a start runs, and keeps none', async () => {
+    let calls = 0
+    let closing: Promise<void> | undefined
+    await setupLate(
+      async () => {
+        await tester.submit(constructInputs.start('play'))
+        await tester.submit(constructInputs.start('check'))
+      },
+      () => ({
+        behaviors: new Proxy([...behaviors], {
+          get: (target, property, receiver) => {
+            if (property === 'forEach') {
+              calls += 1
+              closing ??= manager.close()
+            }
+            return Reflect.get(target, property, receiver) as unknown
+          },
+        }),
+      }),
+    )
+    await eventually(() => closing !== undefined)
+    await closing
+    await settle()
+    expect(calls).toBe(1)
+    expect(manager.running.size).toBe(0)
+  })
+
+  it('sends no change of the product after a close', async () => {
+    setup()
+    await start()
+    const play = construct('play')
+    const submitted = tester.submit(setColor('#b91c1c'))
+    const closed = manager.close()
+    await submitted
+    await closed
+    expect(play.hub.record().filter((input) => input.type === 'store/set-field')).toHaveLength(0)
+  })
+
+  it('ignores a send that reaches a stopped construct, and logs no error', async () => {
+    setup()
+    await start()
+    const pause: Input = { type: 'time/set-running', payload: { running: false } }
+    await Promise.all([
+      tester.submit(constructInputs.send('play', pause)),
+      tester.submit(constructInputs.send('play', pause)),
+      tester.submit(constructInputs.stop('play')),
+    ])
+    await eventually(() => entry('play')?.status === 'stopped')
+    await settle()
+    expect(lines.filter((line) => line.startsWith('wishem: construct manager:'))).toEqual([])
   })
 
   it('starts a construct that reports running with a link that a client can open', async () => {
@@ -357,6 +495,51 @@ describe('attachConstructManager', () => {
     expect(timeOf(construct('play').hub).ticks).toBe(0)
   })
 
+  it('joins the problems of a refused change', async () => {
+    setup()
+    await start()
+    await send({ type: 'store/replace-model', payload: { model: { definitions: [], entities: [] } } })
+    await tester.submit(setColor('#b91c1c'))
+    await eventually(() => entry('play')?.message !== undefined)
+    expect(entry('play')?.message).toMatch(/^No entity has the ID "[^"]+"; No component type has the ID "[^"]+"$/)
+  })
+
+  it('reports the reason of a refused change that has no problem', async () => {
+    setup()
+    await start()
+    construct('play').hub.stop()
+    await tester.submit(setColor('#b91c1c'))
+    await eventually(() => entry('play')?.message !== undefined)
+    expect(entry('play')?.message).toBe('not-running')
+  })
+
+  it('reports the error of a pass that throws', async () => {
+    setup({ behaviors: [exploding] })
+    await start()
+    fault.armed = true
+    await send({ type: 'time/advance', payload: { ms: 50 } })
+    fault.armed = false
+    expect(entry('play')?.lastSend?.result).toEqual({ ok: false, reason: 'error', message: 'boom' })
+  })
+
+  it('gives the step of the clock to each construct', async () => {
+    setup({ stepMs: 25 })
+    await start()
+    expect(clock.intervals).toEqual([25])
+  })
+
+  it('logs an error of the product construct', async () => {
+    setup()
+    await start()
+    construct('play')
+      .hub.attach({ id: 'probe', kind: 'output' })
+      .subscribe(() => {
+        throw new Error('listener failed')
+      })
+    clock.fire(50)
+    expect(lines).toContain('wishem: construct play: listener failed')
+  })
+
   it('passes a step to a paused construct', async () => {
     setup()
     await start('play', false)
@@ -444,6 +627,39 @@ describe('attachConstructManager', () => {
     await start()
     expect(countOf(construct('play').hub)).toBe(0)
     expect(construct('play').hub.seq).toBe(0)
+  })
+
+  it('logs the error of a close and goes on with the stop', async () => {
+    setup()
+    await start()
+    const play = construct('play')
+    const close = play.close.bind(play)
+    play.close = async () => {
+      await close()
+      throw new Error('close failed')
+    }
+    await tester.submit(constructInputs.stop('play'))
+    await eventually(() => entry('play')?.status === 'stopped')
+    expect(lines).toContain('wishem: construct play: close failed')
+    expect(lines).toContain('wishem: construct play stopped')
+  })
+
+  it('reports the link of the live construct after a rewind to a report with an old link', async () => {
+    setup()
+    await start()
+    const first = entry('play')?.link ?? ''
+    const seq = reports().find((input) => (input.payload as { link?: string }).link === first)?.seq ?? -1
+    await tester.submit(constructInputs.stop('play'))
+    await eventually(() => entry('play')?.status === 'stopped')
+    await start()
+    const second = construct('play')
+    await tester.submit(hubInputs.rewind(seq))
+    await eventually(() => hub.seq > seq && manager.running.get('play') !== second)
+    await eventually(
+      () => entry('play')?.status === 'running' && entry('play')?.link === manager.running.get('play')?.linkUrl,
+    )
+    expect(entry('play')).toMatchObject({ want: 'running', status: 'running', link: construct('play').linkUrl })
+    expect(entry('play')?.link).not.toBe(second.linkUrl)
   })
 
   const startSeqs = () =>

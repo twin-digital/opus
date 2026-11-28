@@ -61,6 +61,12 @@ describe('productChanges', () => {
   })
 
   const replaced: [string, (model: Model) => void][] = [
+    [
+      'a removed field',
+      (model) => {
+        model.entities[0].components[CT_A] = {}
+      },
+    ],
     ['a changed label', (model) => (model.definitions[0].label = 'Renamed')],
     [
       'a new definition',
@@ -99,6 +105,21 @@ describe('productChanges', () => {
     const after = clone(base())
     change(after)
     expect(productChanges(base(), after)).toEqual([{ type: 'store/replace-model', payload: { model: after } }])
+  })
+
+  it('gives one replace-model for a component type that an entity did not have', () => {
+    const before = base()
+    const { [CT_B]: _removed, ...rest } = before.entities[1].components
+    before.entities[1].components = rest
+    expect(productChanges(before, base())).toEqual([{ type: 'store/replace-model', payload: { model: base() } }])
+  })
+
+  it('gives one replace-model for a component type that replaces a type with no field', () => {
+    const before = base()
+    before.entities[0].components = { [CT_B]: {} }
+    const after = base()
+    after.entities[0].components = { [CT_A]: { [F_A]: 'x' } }
+    expect(productChanges(before, after)).toEqual([{ type: 'store/replace-model', payload: { model: after } }])
   })
 
   it('uses the ID of the store', () => {
