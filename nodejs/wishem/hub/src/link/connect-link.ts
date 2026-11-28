@@ -5,8 +5,10 @@ import { LinkRefusedError, openLink } from './open-link.js'
 import type { RemoteLink } from './open-link.js'
 
 export interface LinkClientSubsystem {
-  /** The ID of the subsystem is `<prefix>-<16 hex>`, new for each link. */
+  /** The ID of the subsystem is `<prefix>-<16 hex><suffix>`. The ID stays the same for each link until a refusal with `id-in-use`. */
   prefix: string
+  /** Default: empty. */
+  suffix?: string
   kind: 'input' | 'output'
 }
 
@@ -35,8 +37,8 @@ export interface LinkClient {
   close(): void
 }
 
-const makeId = (prefix: string) =>
-  `${prefix}-${Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`
+const makeHex = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, '0')).join('')
 
 /** Opens a link at once, and opens a new link after each end, until `close()`. */
 export const connectLink = (options: ConnectLinkOptions): LinkClient => {
@@ -61,6 +63,11 @@ export const connectLink = (options: ConnectLinkOptions): LinkClient => {
   let down = false
   let refusalReported = false
   let closed = false
+  const makeList = () => {
+    const hex = makeHex()
+    return subsystems.map(({ prefix, suffix = '', kind }) => ({ id: `${prefix}-${hex}${suffix}`, kind }))
+  }
+  let list = makeList()
 
   const report = (cause: unknown) => {
     try {
@@ -93,7 +100,7 @@ export const connectLink = (options: ConnectLinkOptions): LinkClient => {
   }
 
   const attempt = async () => {
-    const list = subsystems.map(({ prefix, kind }) => ({ id: makeId(prefix), kind }))
+    const attempted = list
     try {
       const current = createSocket(url)
       socket = current
@@ -102,12 +109,12 @@ export const connectLink = (options: ConnectLinkOptions): LinkClient => {
         channel.close()
         return
       }
-      const next = await openLink(channel, list, { onError: report })
+      const next = await openLink(channel, attempted, { onError: report })
       if (isClosed()) {
         next.close()
         return
       }
-      const ports = list.map(({ id }) => next.ports[id])
+      const ports = attempted.map(({ id }) => next.ports[id])
       link = next
       delay = firstDelayMs
       down = false
@@ -130,6 +137,9 @@ export const connectLink = (options: ConnectLinkOptions): LinkClient => {
     } catch (cause) {
       if (closed) {
         return
+      }
+      if (cause instanceof LinkRefusedError && cause.reason === 'id-in-use') {
+        list = makeList()
       }
       if (cause instanceof LinkRefusedError && !refusalReported) {
         refusalReported = true

@@ -112,6 +112,27 @@ describe('workbench page', () => {
     })
   })
 
+  it('opens the new link with the same two subsystem IDs', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(1)
+    })
+    FakeWebSocket.instances[0]?.welcome(baseModel)
+    await vi.waitFor(() => {
+      expect(document.querySelector('header h1')?.textContent).toBe('Wishem.')
+    })
+    FakeWebSocket.instances[0]?.emit('close')
+    await vi.waitFor(() => {
+      expect(FakeWebSocket.instances).toHaveLength(2)
+    })
+    const ids = FakeWebSocket.instances.map((socket) =>
+      (JSON.parse(socket.sent[0] ?? '{}') as { subsystems: { id: string }[] }).subsystems.map(({ id }) => id),
+    )
+    expect(ids[1]).toEqual(ids[0])
+    expect(ids[0]).toHaveLength(2)
+  })
+
   it('opens the link at the address of the page', async () => {
     await import('./main.js')
     await vi.waitFor(() => {

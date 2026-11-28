@@ -9,7 +9,7 @@ import {
   type WebSocketLike,
 } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
-import { connectHub, type HubClient, type HubClientOptions } from './hub-client.js'
+import { connectHub, type HubClient, type HubClientOptions, type HubPorts } from './hub-client.js'
 
 const CT = 'ct_aaaaaaaa-0000-4000-8000-000000000001'
 const FLD = 'fld_aaaaaaaa-0000-4000-8000-000000000011'
@@ -138,7 +138,7 @@ interface Env {
   hub: Hub
   sockets: FakeSocket[]
   plan: Mode[]
-  options: Omit<HubClientOptions, 'onPort'>
+  options: Omit<HubClientOptions, 'onPorts'>
   last: () => FakeSocket
 }
 
@@ -179,7 +179,7 @@ const flush = async (ms = 0) => {
   await vi.advanceTimersByTimeAsync(ms)
 }
 
-type Options = Omit<HubClientOptions, 'onPort'>
+type Options = Omit<HubClientOptions, 'onPorts'>
 
 const storeOf = (port: Port) => port.read().store
 
@@ -187,14 +187,16 @@ describe('connectHub', () => {
   let env: Env
   let clients: HubClient[]
   let ports: Port[]
+  let portPairs: HubPorts[]
   let warn: MockInstance<typeof console.warn>
   let error: MockInstance<typeof console.error>
 
-  const onPort = (port: Port) => {
-    ports.push(port)
+  const onPorts = (pair: HubPorts) => {
+    portPairs.push(pair)
+    ports.push(pair.output)
   }
 
-  /** Waits for `count` calls of `onPort`. Fails by an assertion when they do not come. */
+  /** Waits for `count` calls of `onPorts`. Fails by an assertion when they do not come. */
   const waitForPorts = async (count: number) => {
     for (let tries = 0; tries < 20 && ports.length < count; tries += 1) {
       await flush()
@@ -203,7 +205,7 @@ describe('connectHub', () => {
   }
 
   const connect = async (options: Options = env.options) => {
-    const client = connectHub({ ...options, onPort })
+    const client = connectHub({ ...options, onPorts })
     clients.push(client)
     await waitForPorts(1)
     return client
@@ -222,6 +224,7 @@ describe('connectHub', () => {
     env = makeEnv(startHub('One'))
     clients = []
     ports = []
+    portPairs = []
     warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
   })
@@ -258,9 +261,9 @@ describe('connectHub', () => {
   })
 
   describe('before the first link', () => {
-    it('calls onPort after the welcome message and not before', async () => {
+    it('calls onPorts after the welcome message and not before', async () => {
       env.plan = ['manual']
-      clients.push(connectHub({ ...env.options, onPort }))
+      clients.push(connectHub({ ...env.options, onPorts }))
       env.last().held = true
       env.last().open()
       await flush()
@@ -271,9 +274,9 @@ describe('connectHub', () => {
       expect(storeOf(ports[0])).toEqual(modelOf('One'))
     })
 
-    it('writes one warning, keeps trying, and calls onPort when the hub answers', async () => {
+    it('writes one warning, keeps trying, and calls onPorts when the hub answers', async () => {
       env.plan = ['fail', 'fail']
-      clients.push(connectHub({ ...env.options, onPort }))
+      clients.push(connectHub({ ...env.options, onPorts }))
       await flush()
       expect(warn).toHaveBeenCalledExactlyOnceWith(WARNING)
       expect(ports).toHaveLength(0)
@@ -288,7 +291,7 @@ describe('connectHub', () => {
       const stopped = startHub('One')
       stopped.stop()
       env.hub = stopped
-      clients.push(connectHub({ ...env.options, onPort }))
+      clients.push(connectHub({ ...env.options, onPorts }))
       await flush()
       await flush(500)
       await flush(1000)
@@ -302,30 +305,86 @@ describe('connectHub', () => {
     })
   })
 
-  describe('the subsystem of the page', () => {
-    it('attaches one output subsystem with an ID that is new for each link', async () => {
+  describe('the subsystems of the page', () => {
+    interface Hello {
+      subsystems: { id: string; kind: string }[]
+    }
+    const helloOf = (socket: FakeSocket) => JSON.parse(socket.sent[0] ?? '{}') as Hello
+
+    it('attaches an output subsystem and an input subsystem in one hello', async () => {
+      await connect()
+      expect(env.sockets).toHaveLength(1)
+      const [output, input] = helloOf(env.last()).subsystems
+      expect(output.kind).toBe('output')
+      expect(input.kind).toBe('input')
+      expect(output.id).toMatch(/^page-[0-9a-f]{16}$/)
+      expect(input.id).toBe(`${output.id}-input`)
+      expect(input.id).toMatch(/^page-[0-9a-f]{16}-input$/)
+    })
+
+    it('gives onPorts the output port and the input port of the link', async () => {
+      await connect()
+      const { output, input } = portPairs[0] ?? (undefined as never)
+      expect(output.subsystem.kind).toBe('output')
+      expect(input.subsystem.kind).toBe('input')
+      const result = await input.submit(inputs.setField({ entity: E1, componentType: CT, field: FLD, value: 'Two' }))
+      expect(result.ok).toBe(true)
+      expect(env.hub.record().at(-1)?.source).toBe(input.subsystem.id)
+      expect(storeOf(output)).toEqual(modelOf('Two'))
+    })
+
+    it('uses the same two IDs after a link ends', async () => {
       await connect()
       env.last().drop()
       await flush(500)
-      const ids = env.sockets.map((socket) => {
-        const hello = JSON.parse(socket.sent[0] ?? '{}') as { subsystems: { id: string; kind: string }[] }
-        expect(hello.subsystems).toHaveLength(1)
-        expect(hello.subsystems[0]?.kind).toBe('output')
-        return hello.subsystems[0]?.id ?? ''
-      })
-      expect(ids).toHaveLength(2)
-      ids.forEach((id) => {
-        expect(id).toMatch(/^page-[0-9a-f]{16}$/)
-      })
-      expect(ids[0]).not.toBe(ids[1])
+      await waitForPorts(2)
+      expect(env.sockets).toHaveLength(2)
+      expect(helloOf(env.sockets[1]).subsystems).toEqual(helloOf(env.sockets[0]).subsystems)
+      expect(portPairs[1]?.input.subsystem.id).toBe(portPairs[0]?.input.subsystem.id)
     })
 
-    it('gives two clients two IDs and both attach', async () => {
+    it('writes one error and makes a new hex for both IDs after a refusal with id-in-use', async () => {
+      await connect()
+      const first = helloOf(env.last()).subsystems
+      env.last().drop()
+      await flush()
+      const taken = env.hub.attach({ id: first[1]?.id ?? '', kind: 'input' })
+      await flush(500)
+      expect(error).toHaveBeenCalledTimes(1)
+      expect(String(error.mock.calls[0]?.[0])).toContain('id-in-use')
+      await flush(1000)
+      await waitForPorts(2)
+      const next = helloOf(env.last()).subsystems
+      const hex = (id: string | undefined) => /^page-([0-9a-f]{16})/.exec(id ?? '')?.[1]
+      expect(hex(next[0]?.id)).not.toBe(hex(first[0]?.id))
+      expect(hex(next[1]?.id)).toBe(hex(next[0]?.id))
+      expect(next[1]?.id).toMatch(/-input$/)
+      taken.close()
+    })
+
+    it('writes no second error for a refusal with another reason in the same period', async () => {
+      await connect()
+      env.last().drop()
+      await flush()
+      const taken = env.hub.attach({ id: helloOf(env.last()).subsystems[0]?.id ?? '', kind: 'input' })
+      await flush(500)
+      expect(error).toHaveBeenCalledTimes(1)
+      taken.close()
+      env.hub.stop()
+      await flush(1000)
+      await flush(2000)
+      expect(error).toHaveBeenCalledTimes(1)
+    })
+
+    it('gives two clients four different IDs', async () => {
       const second = makeEnv(env.hub)
       await connect()
-      clients.push(connectHub({ ...second.options, onPort }))
+      clients.push(connectHub({ ...second.options, onPorts }))
       await waitForPorts(2)
-      expect(env.sockets[0]?.sent[0]).not.toBe(second.sockets[0]?.sent[0])
+      const ids = [env.sockets[0], second.sockets[0]].flatMap((socket) =>
+        helloOf(socket).subsystems.map((subsystem) => subsystem.id),
+      )
+      expect(new Set(ids).size).toBe(4)
       expect(second.sockets).toHaveLength(1)
     })
 
@@ -352,7 +411,7 @@ describe('connectHub', () => {
       expect(storeOf(port)).toEqual(modelOf('Two'))
     })
 
-    it('calls onPort one time after each welcome, with the port of the new link', async () => {
+    it('calls onPorts one time after each welcome, with the port of the new link', async () => {
       await connect()
       env.last().drop()
       await flush(500)
@@ -442,17 +501,17 @@ describe('connectHub', () => {
     })
   })
 
-  describe('onPort throws', () => {
-    it('writes one error, keeps the link open, and calls onPort again after the next welcome', async () => {
+  describe('onPorts throws', () => {
+    it('writes one error, keeps the link open, and calls onPorts again after the next welcome', async () => {
       let calls = 0
-      const failing = (port: Port) => {
+      const failing = (pair: HubPorts) => {
         calls += 1
-        ports.push(port)
+        ports.push(pair.output)
         if (calls === 1) {
           throw new Error('boom')
         }
       }
-      clients.push(connectHub({ ...env.options, onPort: failing }))
+      clients.push(connectHub({ ...env.options, onPorts: failing }))
       await waitForPorts(1)
       expect(error).toHaveBeenCalledTimes(1)
       expect(env.last().readyState).toBe(1)
@@ -487,13 +546,13 @@ describe('connectHub', () => {
       expect(remove.mock.calls).toHaveLength(removed)
     })
 
-    it('inside onPort: closes the link, calls onPort no more, and writes no warning', async () => {
+    it('inside onPortss: closes the link, calls onPorts no more, and writes no warning', async () => {
       const holder: { client?: HubClient } = {}
-      const closing = (port: Port) => {
-        ports.push(port)
+      const closing = (pair: HubPorts) => {
+        ports.push(pair.output)
         holder.client?.close()
       }
-      holder.client = connectHub({ ...env.options, onPort: closing })
+      holder.client = connectHub({ ...env.options, onPorts: closing })
       clients.push(holder.client)
       await waitForPorts(1)
       await flush(10_000)
@@ -505,9 +564,9 @@ describe('connectHub', () => {
       expect(error).not.toHaveBeenCalled()
     })
 
-    it('before the first welcome: calls no onPort and writes no warning', async () => {
+    it('before the first welcome: calls no onPorts and writes no warning', async () => {
       env.plan = ['manual']
-      const client = connectHub({ ...env.options, onPort })
+      const client = connectHub({ ...env.options, onPorts })
       clients.push(client)
       await flush()
       expect(env.sockets).toHaveLength(1)
@@ -519,7 +578,7 @@ describe('connectHub', () => {
       expect(warn).not.toHaveBeenCalled()
     })
 
-    it('while a socket opens: closes the socket at once and calls no onPort', async () => {
+    it('while a socket opens: closes the socket at once and calls no onPorts', async () => {
       const client = await connectAndDrop()
       env.plan = ['manual']
       await flush(500)
@@ -549,7 +608,7 @@ describe('connectHub', () => {
       expect(env.sockets).toHaveLength(2)
     })
 
-    it('closes a link whose welcome comes after it ran, and calls no onPort', async () => {
+    it('closes a link whose welcome comes after it ran, and calls no onPorts', async () => {
       const client = await connectAndDrop()
       env.plan = ['manual']
       await flush(500)
@@ -567,7 +626,7 @@ describe('connectHub', () => {
       expect(env.sockets).toHaveLength(2)
     })
 
-    it('during a delay: opens no link and calls no onPort', async () => {
+    it('during a delay: opens no link and calls no onPorts', async () => {
       const client = await connectAndDrop()
       const warnings = warn.mock.calls.length
       client.close()

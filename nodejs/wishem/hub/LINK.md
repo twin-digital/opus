@@ -287,7 +287,7 @@ A client that gets a malformed message or a wrong sequence number closes the con
 
 A client opens a new link after each end of a link. Do this:
 
-1. Use new subsystem IDs for each link. A subsystem of an old link can still be attached while the hub side detaches it.
+1. Use the same subsystem IDs for each link, for the life of the client. After a `refused` message with the reason `id-in-use`, make new IDs. The hub side can still hold a subsystem of an old link while it detaches it.
 2. Wait 500 ms before the first new attempt. Double the wait after each failed attempt, up to 5 s. Wait 500 ms again after a `welcome`.
 3. Send no input again after a link ends. See "The end of a link".
 

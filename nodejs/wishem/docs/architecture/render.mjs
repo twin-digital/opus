@@ -919,7 +919,7 @@ const pClient = el(
   316,
   'Client of the hub',
   '[Component: connectHub]',
-  'Gives the port of each link.',
+  'Gives the output port and the input port of each link.',
 )
 const pTable = el(
   'component',
@@ -944,7 +944,7 @@ const componentsPage = {
   name: 'components-page',
   title: 'Component diagram: the page of the workbench',
   description:
-    'The page has six components. The client of the hub connects to the workbench process through the link. The renderer reads the part store from the port that the client gives, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.',
+    'The page has six components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The views draw with the catalog.',
   width: WIDTH_PX,
   height: 940,
   items: [
@@ -959,9 +959,10 @@ const componentsPage = {
 
     // The path of the model to a view
     rel('flow', [top(pClient), bottom(pProcess)], 'Connects to the hub [WebSocket link]', [707, 216]),
-    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads the part store [port]', [707, 468]),
+    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads and sends [ports]', [707, 468]),
     rel('flow', [bottom(pRenderer, 740), [740, 668], [250, 668], top(pViews, 250)], 'Mounts with props', [495, 668]),
     rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
+    rel('flow', [top(pViews, 200), [200, 638], [620, 638], bottom(pRenderer, 620)], 'Send inputs [wishem]', [410, 638]),
 
     // How the table of views gets its content
     rel('flow', [left(pRenderer), right(pTable)], 'Finds the view', [440, 568]),
