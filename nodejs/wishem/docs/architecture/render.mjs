@@ -678,7 +678,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has ten containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The sample-product package builds on the core package and on the hub package. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the two folders, and looks at the page.',
+    'Wishem has ten containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the two folders, and looks at the page.',
   width: WIDTH_PX + GUTTER + 32,
   height: 1592,
   items: [
@@ -708,13 +708,13 @@ const containers = {
       [663, 424],
     ),
     rel(
-      'flow',
+      'quiet',
       [top(cProcess, 590), [590, 500], [850, 500], top(cProduct, 850)],
       'Reads, watches, and writes [file system]',
       [720, 500],
     ),
     rel(
-      'flow',
+      'quiet',
       [right(cDesigner, 96), [930, 96], [930, 616], right(cProduct, 616)],
       'Edits files [text editor]',
       [760, 96],
@@ -750,8 +750,6 @@ const containers = {
       [772, 1416],
     ),
     rel('quiet', [right(cClock, 1190), [450, 1190], bottom(cHub, 450)], 'Builds on [import]', [450, 1130]),
-    rel('quiet', [top(cSample), [gx(707), 1044], right(cHub, 1044)], 'Builds on [import]', [gx(707), 1104]),
-    rel('quiet', [top(cSample, 840), bottom(cCore, 840)], 'Builds on [import]', [840, 960]),
     {
       kind: 'legend',
       x: 24,

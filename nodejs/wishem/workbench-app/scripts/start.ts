@@ -236,6 +236,9 @@ const main = async () => {
         'no-view-types': { type: 'boolean' },
       },
     })
+    if (values.product === '') {
+      throw new Error('--product must be a folder')
+    }
     const workbench = await startWorkbench({
       // pnpm runs the script in the package folder and sets INIT_CWD to the folder of the person.
       model: values.model === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.model),

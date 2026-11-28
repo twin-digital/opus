@@ -425,6 +425,13 @@ describe('the start script of the workbench', () => {
     expect(run.output()).toBe(`wishem: ${name} must be a number from 0 to 65535\n`)
   })
 
+  it('prints that --product must be a folder and stops with exit code 1 for an empty value', async () => {
+    const run = start(['--product', '', '--port', '0', '--hub-port', '0'])
+
+    expect(await run.exit).toBe(1)
+    expect(run.output()).toBe('wishem: --product must be a folder\n')
+  }, 30000)
+
   it('prints the reason only one time when the model is not correct', { timeout: 30000 }, async () => {
     writeFileSync(join(model, 'state.json'), '{ not json')
     const run = start(['--port', '0', '--hub-port', '0'])

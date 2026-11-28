@@ -18,10 +18,10 @@ The folder `model/` is a model folder. It holds two files in `definitions/` and 
 
 The one entity has the color `#1d4ed8` and the count `0`. Both fields are strings.
 
-The path of the model folder is `nodejs/wishem/sample-product/model`. To start it alone:
+The path of the model folder is `nodejs/wishem/sample-product/model`. To start it alone, run this command from the root of the repository:
 
 ```sh
-wishem start nodejs/wishem/sample-product/model
+pnpm --filter @thrashplay/wishem-workbench exec wishem start "$PWD/nodejs/wishem/sample-product/model"
 ```
 
 ## The count rule

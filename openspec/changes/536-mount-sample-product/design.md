@@ -416,6 +416,8 @@ flowchart TB
     core["<b>core</b><br/>[Container: TypeScript package]<br/>The model types and the store."]
     hub["<b>hub</b><br/>[Container: TypeScript package]<br/>Joins the subsystems and carries the link."]
     rr["<b>renderer-react</b><br/>[Container: TypeScript package]<br/>Draws React views from a port."]
+    clock["<b>clock</b><br/>[Container: TypeScript package]<br/>Holds the time subsystem and the clock."]
+    sample["<b>sample-product</b><br/>[Container: TypeScript package]<br/>Holds the example model folder and the count rule."]
   end
   designer -- "Looks at [web browser]" --> page
   designer -- "Edits files [text editor]" --> folder
@@ -433,9 +435,10 @@ flowchart TB
   page -- "Builds on [import]" --> hub
   page -- "Builds on [import]" --> rr
   process -- "Builds on [import]" --> rr
+  clock -- "Builds on [import]" --> hub
 ```
 
-- The package `sample-product` is a container, as each TypeScript package of `nodejs/wishem/` is. It has the relationships "Builds on [import]" to `core` and to `hub`, and the container diagram shows both. Its table row says that it holds `model/` and `withCountRule`, and that `model/` is the example product model folder. The table row of the product model folder names `@thrashplay/wishem-sample-product` (`model/`) as the example folder.
+- The package `sample-product` is a container with no relationship, because its imports are type-only. It imports only types from `core` and `hub`. Its table row says that it holds `model/` and `withCountRule`, and that `model/` is the example product model folder. The table row of the product model folder names `@thrashplay/wishem-sample-product` (`model/`) as the example folder.
 - The entity diagram of the model folder applies to the two folders. Its title and its files do not change. The prose says that the product folder has the same entities.
 
 ## Failure Modes

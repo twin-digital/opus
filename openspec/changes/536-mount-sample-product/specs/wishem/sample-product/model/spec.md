@@ -84,4 +84,4 @@ The root entry of the package SHALL use no Node.js API and SHALL compile with no
 #### Scenario: A source file imports a Node.js module
 
 - **WHEN** a source file of the package imports `node:path`
-- **THEN** the type check of the package fails
+- **THEN** the build of the package fails

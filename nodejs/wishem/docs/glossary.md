@@ -22,7 +22,7 @@ Terms in each group are in alphabetical order.
 
 **Model side** (**Proposed**): The definitions, the behaviors, and the authored state of a product or of a workbench. The model side is the model.
 
-**Mount** (**Proposed**): To put the model of a product in the workbench construct. The product model is the store `product` of the workbench construct. The store validates it alone, and it refers to nothing of the workbench. A storage subsystem keeps it in a folder of its own.
+**Mount** (**Proposed**): To put the model of a product in the workbench construct. The product model is the store `product` of the workbench construct. The store validates it alone, and it refers to nothing of the workbench. A storage subsystem of its own keeps it.
 
 **Presentation side** (**Proposed**): The views of a product or of a workbench for one output subsystem. The presentation side is code of the product. It is not part of the model.
 
