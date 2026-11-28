@@ -368,6 +368,19 @@ describe('productChanges', () => {
         modelOf(e1, linked(E_2, { list: [E_2] })),
         [add(linked(E_2, { list: [E_2] }))],
       ],
+      ['a removed entity that names itself', modelOf(e1, linked(E_2, { ref: E_2 })), modelOf(e1), [remove(E_2)]],
+      [
+        'a removed entity whose list holds its own ID',
+        modelOf(e1, linked(E_2, { list: [E_2] })),
+        modelOf(e1),
+        [remove(E_2)],
+      ],
+      [
+        'a changed value and a new entity that names an entity that is added later',
+        modelOf(linked(E_1, { a: 'x' })),
+        modelOf(linked(E_1, { a: 'y' }), linked(E_2, { ref: E_3 }), e3),
+        [add(linked(E_2)), add(e3), set(E_1, CT_A, F_A, 'y'), set(E_2, CT_L, F_REF, E_3)],
+      ],
       [
         'two removed entities whose lists hold each other',
         modelOf(e1, linked(E_2, { list: [E_3] }), linked(E_3, { list: [E_2] })),
@@ -381,6 +394,15 @@ describe('productChanges', () => {
         [add(e3)],
       ],
     ]
+
+    it('keeps the value of a reference field that is not an ID, and the items of a list that are not IDs', () => {
+      const odd = (value: unknown, field: string): Entity => ({
+        id: E_2,
+        components: { [CT_A]: { [F_A]: '' }, [CT_L]: { [field]: value } as Entity['components'][string] },
+      })
+      expect(productChanges(modelOf(e1), modelOf(e1, odd(5, F_REF)))).toEqual([add(odd(5, F_REF))])
+      expect(productChanges(modelOf(e1), modelOf(e1, odd([E_1, 5], F_LIST)))).toEqual([add(odd([E_1, 5], F_LIST))])
+    })
 
     const replaced: [string, Model, Model][] = [
       ['a new order of the entities of the two models, with an addition', modelOf(e1, e2), modelOf(e2, e1, e3)],
