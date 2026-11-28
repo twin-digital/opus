@@ -28,6 +28,8 @@ Terms in each group are in alphabetical order.
 
 **Product**: The part of a project that the designer ships. A product is a model. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
+**Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the function `wrapStore`, which adds the rules to the store of a product construct. The designer names it with the option `--product-code` of the `start` script.
+
 **Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. The workbench holds one authored model, and that model contains the model of the product. The product knows nothing about the workbench.
 
 **Workbench**: The part of a project that the designer uses to make the product. The workbench shows and changes the product. It holds the tools. A workbench is a model that is made with Wishem. It is not a game. The workbench runs as its own construct, and that construct does not hold the subsystems of the product.
@@ -134,7 +136,9 @@ Terms in each group are in alphabetical order.
 
 **Construct**: One hub and all its subsystems. A construct runs in one process or in more than one. Each running copy of a product is one construct, and the workbench runs as its own construct. The hub code is the same for each construct. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Construct manager** (**Proposed**): The part of the workbench construct that starts and stops the constructs of the product. It gives each product construct the product model, sends each later change of the product model as an input, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem.
+**Construct list** (**Proposed**): The model subsystem `constructs` of the workbench construct. It holds one entry for each product construct that must run: the wanted state, the status that the construct manager reported last, and the address of the link. A client changes it with the inputs `constructs/start`, `constructs/stop`, and `constructs/send`. Only the construct manager reports a status.
+
+**Construct manager** (**Proposed**): The I/O part of the workbench construct that reads the construct list, starts each product construct in the process of the workbench, and gives it the product model. It sends each later change of the product model as inputs, passes inputs from a client to a product construct, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem. Only the construct manager can rewind a product construct.
 
 **Hub**: The part of a construct that connects the subsystems. Each subsystem communicates only with the hub. The hub joins the model data that the model subsystems hold, and gives that data to each subsystem that asks. The hub carries hub events, and it keeps the ordered record of inputs that rewind and replay use. A job belongs in the hub only if a subsystem cannot do it.
 

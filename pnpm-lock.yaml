@@ -3811,6 +3811,9 @@ importers:
 
   nodejs/wishem/workbench-app:
     dependencies:
+      '@thrashplay/wishem-construct-manager':
+        specifier: workspace:*
+        version: link:../construct-manager
       '@thrashplay/wishem-core':
         specifier: workspace:*
         version: link:../core
