@@ -71,6 +71,20 @@ describe('viewWarnings', () => {
     expect(result.map((warning) => warning.sidecar)).toEqual(['AppBar.view.json', 'Header.view.json'])
     expect(viewWarnings(backward, definitions)).toEqual(result)
   })
+
+  it('sorts the result by sidecar before the component type', () => {
+    const views = tableOf(entry('B.view.json', APP_BAR), entry('A.view.json', HEADER))
+
+    expect(viewWarnings(views, []).map((warning) => warning.sidecar)).toEqual(['A.view.json', 'B.view.json'])
+  })
+
+  it('sorts the warnings of one sidecar by name', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+
+    const result = viewWarnings(views, [definition(APP_BAR, 'b', 'B', 'a', 'A')])
+
+    expect(result.map((warning) => warning.name)).toEqual(['a', 'b'])
+  })
 })
 
 describe('describeWarning', () => {

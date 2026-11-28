@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -38,6 +38,28 @@ export interface Props {
 describe('renderViewTypes', () => {
   it('gives the text of the design for the definition of AppBar', () => {
     expect(renderViewTypes('AppBar.view.json', APP_BAR, COMMAND, appBar('title'))).toBe(EXPECTED_APP_BAR)
+  })
+
+  it('gives one member for each field, in the order of the definition', () => {
+    const text = renderViewTypes('AppBar.view.json', APP_BAR, COMMAND, appBar('title', 'subtitle'))
+    expect(text).toBe(
+      EXPECTED_APP_BAR.replace(
+        '  readonly title: string | undefined\n',
+        `  readonly title: string | undefined\n  /** The field "subtitle" (${FIELD_B}). */\n  readonly subtitle: string | undefined\n`,
+      ),
+    )
+  })
+
+  it('escapes the end of a comment in a label', () => {
+    const text = renderViewTypes(
+      'AppBar.view.json',
+      APP_BAR,
+      COMMAND,
+      definition(APP_BAR, 'App */ Bar', [TITLE, 'a */ b']),
+    )
+    expect(text).toContain('"App *\\/ Bar"')
+    expect(text).toContain('"a *\\/ b"')
+    expect(text).not.toContain('*/ ')
   })
 
   it('gives a Props type with no member when there is no definition', () => {
@@ -186,6 +208,14 @@ describe('generateViewTypes', () => {
       expect(existsSync(generated('AppBar'))).toBe(false)
     })
 
+    it('gives one error for each label that gives no usable name', async () => {
+      sidecar('AppBar')
+      const result = await run([definition(APP_BAR, 'AppBar', [FIELD_A, '2nd line'], [FIELD_B, '--'])])
+      expect(result.errors).toHaveLength(2)
+      expect(result.errors[0]).toContain(FIELD_A)
+      expect(result.errors[1]).toContain(FIELD_B)
+    })
+
     it('gives an error for an empty name', async () => {
       sidecar('AppBar')
       const result = await run([definition(APP_BAR, 'AppBar', [FIELD_A, '--'])])
@@ -205,6 +235,52 @@ describe('generateViewTypes', () => {
     expect(result.errors[0]).toContain('Broken.view.json')
     expect(result.files.map((file) => file.file)).toEqual(['AppBar.view.gen.ts'])
     expect(existsSync(generated('Broken'))).toBe(false)
+  })
+
+  it('gives an error that says the file cannot be read for a sidecar that is not a file', async () => {
+    mkdirSync(join(views, 'Dir.view.json'))
+    const result = await run([appBar('title')])
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toContain('Dir.view.json: the file cannot be read')
+  })
+
+  it('keeps the generated file of a sidecar that is not valid JSON', async () => {
+    sidecar('AppBar')
+    await run([appBar('title')])
+    sidecar('AppBar', '{ not json')
+    const result = await run([appBar('title')])
+    expect(result.errors).toHaveLength(1)
+    expect(result.files).toEqual([])
+    expect(readFileSync(generated('AppBar'), 'utf8')).toBe(EXPECTED_APP_BAR)
+  })
+
+  it('keeps the generated file of a sidecar that has no componentType', async () => {
+    sidecar('AppBar')
+    await run([appBar('title')])
+    sidecar('AppBar', { kind: 'react' })
+    const result = await run([appBar('title')])
+    expect(result.errors).toHaveLength(1)
+    expect(result.files).toEqual([])
+    expect(readFileSync(generated('AppBar'), 'utf8')).toBe(EXPECTED_APP_BAR)
+  })
+
+  it('lists the files in the order of their names', async () => {
+    sidecar('Zed')
+    writeFileSync(generated('Alpha'), 'export type Props = object\n')
+    const result = await run([appBar('title')])
+    expect(result.files.map((file) => [file.file, file.status])).toEqual([
+      ['Alpha.view.gen.ts', 'removed'],
+      ['Zed.view.gen.ts', 'written'],
+    ])
+  })
+
+  it('gives an error for a generated file that cannot be read when it checks', async () => {
+    sidecar('AppBar')
+    mkdirSync(generated('AppBar'))
+    const result = await run([appBar('title')], true)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toContain('AppBar.view.gen.ts')
+    expect(result.files).toEqual([])
   })
 
   it('gives an error for a sidecar with no componentType', async () => {
