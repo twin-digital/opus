@@ -63,6 +63,11 @@ The generator SHALL report an error, and SHALL write no file for that sidecar, i
 - **WHEN** the label of a field is `Wishem`
 - **THEN** the generator reports an error that names the sidecar file, the field ID, and the name `wishem`, and it writes no file for that sidecar
 
+#### Scenario: A label that gives an empty name
+
+- **WHEN** the label of a field is `???`, and a sidecar names its component type
+- **THEN** the generator reports one error that names the sidecar file, the component type ID, and the field ID, and it writes no file for that sidecar
+
 ### Requirement: A sidecar whose component type has no definition gets an empty type
 
 When a sidecar names a component type that no definition has, the generator SHALL write a `Props` type whose only member is `wishem`, and a `Values` type with no member, and SHALL give a warning that names the sidecar file and the ID. This SHALL NOT be an error.
