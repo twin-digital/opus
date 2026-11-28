@@ -41,16 +41,20 @@ func test_a_color_gives_a_visible_node_that_covers_the_viewport() -> void:
 	node.free()
 
 
-func test_a_value_that_is_not_a_color_hides_the_node() -> void:
-	var node := _updated("not a color")
-	assert_true(not node.visible, "hidden")
-	node.free()
-
-
-func test_no_value_hides_the_node() -> void:
-	var node := _updated(null)
-	assert_true(not node.visible, "hidden")
-	node.free()
+func test_each_case_of_the_table_gives_a_visible_node_with_its_color() -> void:
+	var cases: Array = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/color-cases.json"))
+	assert_true(cases.size() > 0, "the table has cases")
+	for item: Dictionary in cases:
+		var viewport := Vector2(640, 360)
+		var node := _updated(item["value"] if item.has("value") else null, viewport)
+		var name: String = item["name"]
+		var expected := Color.html(item["color"])
+		assert_true(node.visible, "visible: %s" % name)
+		assert_equal(node.position, Vector2.ZERO, "position: %s" % name)
+		assert_equal(node.size, viewport, "size: %s" % name)
+		assert_equal(node.color, expected, "color: %s" % name)
+		assert_equal(node.color.a, 1.0, "alpha: %s" % name)
+		node.free()
 
 
 func test_a_new_viewport_size_changes_the_node() -> void:
@@ -63,12 +67,11 @@ func test_a_new_viewport_size_changes_the_node() -> void:
 	node.free()
 
 
-func test_a_valid_color_after_a_value_that_is_not_a_color_shows_the_node_again() -> void:
+func test_a_valid_color_after_a_value_that_is_not_a_color_gives_that_color() -> void:
 	var view := ClearColor.new()
 	var node: ColorRect = view.create()
 	view.update(node, {"color": "not a color"}, Vector2(640, 360))
 	view.update(node, {"color": "#15803d"}, Vector2(640, 360))
-	assert_true(node.visible, "visible")
 	assert_equal(node.color, Color.html("#15803d"))
 	node.free()
 

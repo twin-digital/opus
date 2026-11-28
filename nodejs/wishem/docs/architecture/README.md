@@ -208,23 +208,23 @@ The script fails when a package has no layer or is in two layers, when a runtime
 node nodejs/wishem/docs/architecture/render.mjs --check
 ```
 
-| Package             | Layer | Responsibility                                                                                                   |
-| ------------------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
-| `hub`               | 1     | The hub, the ports, the record, and the link. It uses no Node.js API.                                            |
-| `core`              | 2     | The model types, the validation, `isEqual`, and the store. It uses no Node.js API.                               |
-| `clock`             | 2     | The `time` subsystem and the clock. It uses no Node.js API.                                                      |
-| `update`            | 2     | The update subsystem. It runs the native behaviors of a product in each tick.                                    |
-| `host-nodejs`       | 3     | Runs a construct in a Node.js process, serves the link, writes `state.json`, and provides the `wishem` command.  |
-| `construct-manager` | 3     | The construct list and `productChanges`. The entry `node` holds the construct manager and the product construct. |
-| `renderer-react`    | 3     | The React renderer. It draws React views from a port, and it writes the types of the props of the views.         |
-| `renderer-pixi`     | 3     | The PixiJS renderer. It draws PixiJS views from a port.                                                          |
-| `renderer-godot`    | 3     | The Godot renderer: the remote port in GDScript, the Godot application, and the Godot runner.                    |
-| `sample-product`    | 3     | The sample product: a model folder with a color and a count, and the count behavior.                             |
-| `workbench`         | 4     | The base workbench. It holds the first model and a `start` script.                                               |
-| `workbench-app`     | 4     | The browser application of the workbench: the page, the client of the hub, the views, and the `start` script.    |
-| `pixi-page`         | 4     | The PixiJS page that draws a construct through the link, and a `start` script that serves it.                    |
-| `three-renderers`   | 4     | The sample construct process, the React page server, and the React page.                                         |
-| `docs-check`        | 5     | Tests that this document agrees with the packages.                                                               |
+| Package             | Layer | Responsibility                                                                                                                 |
+| ------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `hub`               | 1     | The hub, the ports, the record, and the link. It uses no Node.js API.                                                          |
+| `core`              | 2     | The model types, the validation, `isEqual`, and the store. It uses no Node.js API.                                             |
+| `clock`             | 2     | The `time` subsystem and the clock. It uses no Node.js API.                                                                    |
+| `update`            | 2     | The update subsystem. It runs the native behaviors of a product in each tick.                                                  |
+| `host-nodejs`       | 3     | Runs a construct in a Node.js process, serves the link, writes `state.json`, and provides the `wishem` command.                |
+| `construct-manager` | 3     | The construct list and `productChanges`. The entry `node` holds the construct manager and the product construct.               |
+| `renderer-react`    | 3     | The React renderer. It draws React views from a port, and it writes the types of the props of the views.                       |
+| `renderer-pixi`     | 3     | The PixiJS renderer. It draws PixiJS views from a port.                                                                        |
+| `renderer-godot`    | 3     | The Godot renderer: the remote port in GDScript, the Godot application, and the Godot runner.                                  |
+| `sample-product`    | 3     | The sample product: a model folder with a color and a count, the count behavior, and the table of color cases (`color-cases`). |
+| `workbench`         | 4     | The base workbench. It holds the first model and a `start` script.                                                             |
+| `workbench-app`     | 4     | The browser application of the workbench: the page, the client of the hub, the views, and the `start` script.                  |
+| `pixi-page`         | 4     | The PixiJS page that draws a construct through the link, and a `start` script that serves it.                                  |
+| `three-renderers`   | 4     | The sample construct process, the React page server, and the React page.                                                       |
+| `docs-check`        | 5     | Tests that this document agrees with the packages.                                                                             |
 
 ## Entity diagram: the model folder
 

@@ -65,6 +65,8 @@ If the page port is in use, the command prints `wishem: port <n> is in use` and 
 
 The page shows a box of 640 by 360 pixels and one status line. The view `ClearColor` fills the box with the color of the `Color` component of the sample construct. The color changes two times each second.
 
+The color is a text of the form `#rrggbb`, with upper or lower case digits. The view draws it in lower case. When the color has no value, or has any other value, the view fills the box with the fallback color `#ff00ff`. The view is never empty.
+
 | Status line                                           | When                           |
 | ----------------------------------------------------- | ------------------------------ |
 | Connecting to the construct.                          | Before the first link.         |
@@ -85,15 +87,20 @@ The test needs Docker. Docker runs the pinned browser image and the Godot image.
 
 The test starts the sample construct paused, the React page, the PixiJS page, and the Godot application. It opens the two pages in a browser and opens a link of its own to the construct. Each step reads the joined state from the hub and compares the pixels of each renderer with the color of that state.
 
-| Step                            | Check                                                                              |
-| ------------------------------- | ---------------------------------------------------------------------------------- |
-| First picture                   | Each pixel of the three pictures is `#1d4ed8`.                                     |
-| `time/advance` of 500           | Each picture is `#b91c1c` within 5 seconds, and the two pages changed.             |
-| Wait of 1500 ms                 | The two page pictures stay the same, and Godot makes no new shot.                  |
-| `time/set-running` with `true`  | Each picture leaves `#b91c1c` within 5 seconds.                                    |
-| `time/set-running` with `false` | Each picture has the color of the last tick within 2 seconds, and then stays.      |
-| Period key and space key        | The keys of the PixiJS page step and run the clock, and the three pictures follow. |
-| Size of the Godot shot          | The first shot is 640 by 360 pixels.                                               |
+| Step                            | Check                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| First picture                   | Each pixel of the three pictures is `#1d4ed8`.                                                                                 |
+| Size of the Godot shot          | The first shot is 640 by 360 pixels.                                                                                           |
+| `time/advance` of 500           | Each picture is `#b91c1c` within 5 seconds, and the two pages changed.                                                         |
+| Wait of 1500 ms                 | The two page pictures stay the same, and Godot makes no new shot.                                                              |
+| `time/set-running` with `true`  | Each picture leaves `#b91c1c` within 5 seconds.                                                                                |
+| `time/set-running` with `false` | Each picture has the color of the last tick within 2 seconds, and then stays.                                                  |
+| Period key and space key        | The keys of the PixiJS page step and run the clock, and the three pictures follow.                                             |
+| `store/set-field` with `red`    | Each picture is `#ff00ff` within 5 seconds, because `red` is not `#rrggbb`.                                                    |
+| `store/set-field` with a color  | Each picture is `#15803d` within 5 seconds.                                                                                    |
+| `store/replace-model`, no value | The model has no value for the field `color`. Each picture is `#ff00ff`.                                                       |
+| `store/replace-model`, a color  | The label is valid and the color is `#15803d`. Each picture is `#15803d`, so that the next step starts from a different color. |
+| `store/replace-model`, `???`    | The label of the field `color` gives an empty name. Each picture is `#ff00ff`.                                                 |
 
 The test stops the link, the browser, the Godot run, and the three child processes in a `finally` block. After the test, `docker ps -a` shows no container of Godot.
 

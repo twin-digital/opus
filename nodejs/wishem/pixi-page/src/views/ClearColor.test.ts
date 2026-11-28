@@ -1,6 +1,7 @@
 import { Sprite } from 'pixi.js'
 import { describe, expect, it } from 'vitest'
 import { COLOR_TYPE } from '@thrashplay/wishem-sample-product'
+import { COLOR_CASES } from '@thrashplay/wishem-sample-product/color-cases'
 import sidecar from './ClearColor.view.json'
 import view from './ClearColor.js'
 
@@ -11,15 +12,15 @@ describe('the ClearColor view', () => {
     expect(view.create()).toBeInstanceOf(Sprite)
   })
 
-  it('covers the viewport with the color', () => {
+  it.each(COLOR_CASES)('covers the viewport with the color of the case "$name"', ({ value, color }) => {
     const sprite = view.create()
-    view.update(sprite, { color: '#1d4ed8' }, viewport)
+    view.update(sprite, value === undefined ? {} : { color: value }, viewport)
     expect(sprite.visible).toBe(true)
     expect(sprite.width).toBe(640)
     expect(sprite.height).toBe(360)
     expect(sprite.x).toBe(0)
     expect(sprite.y).toBe(0)
-    expect(sprite.tint).toBe(0x1d4ed8)
+    expect(sprite.tint).toBe(Number.parseInt(color.slice(1), 16))
   })
 
   it('covers a smaller viewport after a second update', () => {
@@ -30,32 +31,16 @@ describe('the ClearColor view', () => {
     expect(sprite.height).toBe(180)
   })
 
-  it('hides the sprite for a value that is not a color, with no error', () => {
+  it('draws each case after any other case as if it came first', () => {
     const sprite = view.create()
-    expect(() => {
-      view.update(sprite, { color: 'blue-ish' }, viewport)
-    }).not.toThrow()
-    expect(sprite.visible).toBe(false)
-  })
-
-  it('hides the sprite when the prop has no value', () => {
-    const sprite = view.create()
-    view.update(sprite, {}, viewport)
-    expect(sprite.visible).toBe(false)
-  })
-
-  it('hides the sprite for a value that is not text', () => {
-    const sprite = view.create()
-    view.update(sprite, { color: 5 }, viewport)
-    expect(sprite.visible).toBe(false)
-  })
-
-  it('shows the sprite again for a color after a value that is not a color', () => {
-    const sprite = view.create()
-    view.update(sprite, { color: 'blue-ish' }, viewport)
-    view.update(sprite, { color: '#b91c1c' }, viewport)
-    expect(sprite.visible).toBe(true)
-    expect(sprite.tint).toBe(0xb91c1c)
+    for (const previous of COLOR_CASES) {
+      for (const { value, color } of COLOR_CASES) {
+        view.update(sprite, previous.value === undefined ? {} : { color: previous.value }, viewport)
+        view.update(sprite, value === undefined ? {} : { color: value }, viewport)
+        expect(sprite.visible).toBe(true)
+        expect(sprite.tint).toBe(Number.parseInt(color.slice(1), 16))
+      }
+    }
   })
 
   it('belongs to the Color component type of the sample product', () => {
