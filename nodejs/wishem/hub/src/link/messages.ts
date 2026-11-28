@@ -49,9 +49,9 @@ const isSubsystem = (value: unknown): value is { id: string; kind: string } =>
   isFields(value) && isString(value.id) && isString(value.kind)
 
 const isHello = (fields: Fields) =>
-  isNumber(fields.protocol) && Array.isArray(fields.subsystems) && fields.subsystems.every(isSubsystem)
+  isCount(fields.protocol) && Array.isArray(fields.subsystems) && fields.subsystems.every(isSubsystem)
 
-const isSubmit = (fields: Fields) => isNumber(fields.request) && isString(fields.subsystem) && isInput(fields.input)
+const isSubmit = (fields: Fields) => isCount(fields.request) && isString(fields.subsystem) && isInput(fields.input)
 
 const isWelcome = (fields: Fields) =>
   isCount(fields.protocol) &&
