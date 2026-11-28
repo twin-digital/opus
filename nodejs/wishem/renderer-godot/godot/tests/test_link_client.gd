@@ -265,18 +265,57 @@ func test_the_wait_is_500_again_after_a_welcome() -> void:
 	assert_equal(h.sockets.size(), 5)
 
 
-func test_each_link_has_new_ids() -> void:
+func _ids_of(socket: RefCounted) -> Array:
+	var ids: Array = []
+	for subsystem: Dictionary in Fake.Harness.new().hello_of(socket)["subsystems"]:
+		ids.append(subsystem["id"])
+	return ids
+
+
+func test_a_new_link_has_the_same_ids() -> void:
 	var h := Fake.Harness.new()
 	h.link()
-	var first := h.hello_of(h.sockets[0])["subsystems"] as Array
+	var first := _ids_of(h.sockets[0])
 	h.last_socket().drop()
 	h.step(1)
 	h.step(500)
 	h.connect_socket()
-	var second := h.hello_of(h.last_socket())["subsystems"] as Array
-	assert_true(first[0]["id"] != second[0]["id"], "first id")
-	assert_true(first[1]["id"] != second[1]["id"], "second id")
-	assert_true(_matches(ID_CONTROLS, second[1]["id"]), "form")
+	h.welcome()
+	h.last_socket().drop()
+	h.step(1)
+	h.step(500)
+	h.connect_socket()
+	assert_equal(_ids_of(h.last_socket()), first)
+	assert_true(_matches(ID_CONTROLS, first[1]), "form")
+
+
+func test_new_ids_come_after_id_in_use_and_stay_for_the_next_links() -> void:
+	var h := Fake.Harness.new()
+	h.connect_socket()
+	var first := _ids_of(h.last_socket())
+	h.receive({"t": "refused", "reason": "id-in-use", "message": "A subsystem ID is in use."})
+	h.step(500)
+	h.connect_socket()
+	var second := _ids_of(h.last_socket())
+	assert_true(first[0] != second[0], "first id")
+	assert_true(first[1] != second[1], "second id")
+	assert_true(_matches(ID_CONTROLS, second[1]), "form")
+	h.welcome()
+	h.last_socket().drop()
+	h.step(1)
+	h.step(500)
+	h.connect_socket()
+	assert_equal(_ids_of(h.last_socket()), second)
+
+
+func test_the_same_ids_stay_after_a_refusal_with_a_different_reason() -> void:
+	var h := Fake.Harness.new()
+	h.connect_socket()
+	var first := _ids_of(h.last_socket())
+	h.receive({"t": "refused", "reason": "stopped", "message": "stopped"})
+	h.step(500)
+	h.connect_socket()
+	assert_equal(_ids_of(h.last_socket()), first)
 
 
 func test_the_hub_side_stops_and_starts() -> void:

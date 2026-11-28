@@ -1,5 +1,5 @@
 extends RefCounted
-## A client of the link (`hub/LINK.md`). It opens a link, keeps the joined state, and opens a new link after each end.
+## A client of the link (`hub/LINK.md`). It opens a link, keeps the joined state, and opens a new link after each end. The subsystem IDs stay the same for each link until `refused` with `id-in-use`.
 ##
 ## Options: `url`, `subsystems` (a list of `{ "prefix": String, "kind": "input" | "output" }`),
 ## `socket_factory` (default `WebSocketPeer.new`), `first_delay_ms` (500), `max_delay_ms` (5000),
@@ -51,6 +51,8 @@ func _init(options: Dictionary) -> void:
 	error = _problem()
 	if not error.is_empty():
 		_phase = Phase.CLOSED
+		return
+	_make_ids()
 
 
 ## Moves the client forward. `now_ms` is a time in milliseconds that never goes back.
@@ -96,10 +98,13 @@ func _problem() -> String:
 	return ""
 
 
-func _attempt() -> void:
+func _make_ids() -> void:
 	_ids = []
 	for subsystem: Dictionary in _subsystems:
 		_ids.append(Messages.new_id(subsystem["prefix"]))
+
+
+func _attempt() -> void:
 	var socket: Variant = _factory.call()
 	socket.inbound_buffer_size = _buffer
 	if socket.connect_to_url(_url) != OK:
@@ -178,6 +183,8 @@ func _welcome(message: Dictionary) -> void:
 
 func _refuse(message: Dictionary) -> void:
 	_drop_socket(true)
+	if message.get("reason") == "id-in-use":
+		_make_ids()
 	if not _refused_reported:
 		_refused_reported = true
 		refused.emit(str(message.get("reason", "")), str(message.get("message", "")))

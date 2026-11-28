@@ -194,7 +194,7 @@ The plan read `LINK.md` as the writer of a GDScript client and found these gaps.
 4. **The numbers.** The document gives the type "number" for `protocol`, `seq`, `request`, and the target of `hub/rewind`. Add: each number of version 1 is an integer from 0 to 2^53 - 1. A JSON parser that gives floats (for example GDScript) converts each one to an integer before it compares or sends it.
 5. **The status of `welcome`.** The table gives `"stopped"`, but a stopped hub gives `refused` with the reason `stopped` (`serve-link.ts`). Change: the status is `"created"` or `"running"`.
 6. **No keepalive.** The document does not say if the hub side sends a WebSocket ping. Add: the hub side sends no ping and has no time limit for `hello`. A client that must find a lost connection uses the ping of its WebSocket library.
-7. **The IDs after a link ends.** A client that opens a new link with the IDs of the link that ended can get `id-in-use`, because the hub side can still hold them. The section "A client that connects again" of #540 Task 4 says to use new IDs. No other correction.
+7. **The IDs after a link ends.** No gap. The section "A client that connects again" of `LINK.md` says to use the same subsystem IDs for each link, and to make new IDs only after `refused` with `id-in-use`. The GDScript client does the same.
 
 ### 15. The documents
 

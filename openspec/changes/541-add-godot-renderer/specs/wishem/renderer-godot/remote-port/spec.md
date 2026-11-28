@@ -78,12 +78,22 @@ The port of an input subsystem SHALL send `submit` with a request number that st
 
 ### Requirement: The remote port connects again after a link ends
 
-When a link ends, or an attempt fails, the remote port SHALL report the loss one time and keep the last joined state for reading. It SHALL try again after 500 milliseconds, double the wait after each failed attempt up to 5 seconds, and wait 500 milliseconds again after a `welcome`. A `refused` message SHALL count as a failed attempt.
+When a link ends, or an attempt fails, the remote port SHALL report the loss one time and keep the last joined state for reading. It SHALL try again after 500 milliseconds, double the wait after each failed attempt up to 5 seconds, and wait 500 milliseconds again after a `welcome`. A `refused` message SHALL count as a failed attempt. Each subsystem SHALL keep one ID for the life of the remote port. The remote port SHALL make new IDs only after the hub side refuses a `hello` with `id-in-use`.
 
 #### Scenario: The hub side stops and starts
 
 - **WHEN** the remote port has a link, the hub side stops, and a new hub side starts at the same address
-- **THEN** the remote port reports one loss, opens a new link with new IDs, and gives the ports of the new link
+- **THEN** the remote port reports one loss, opens a new link with the same subsystem IDs, and gives the ports of the new link
+
+#### Scenario: The same IDs after a new link
+
+- **WHEN** a link ends and the remote port opens a new link
+- **THEN** the `hello` of the new link holds the same subsystem IDs as the `hello` of the link before
+
+#### Scenario: New IDs after id-in-use
+
+- **WHEN** the hub side refuses a `hello` with `id-in-use`
+- **THEN** the remote port makes new subsystem IDs for the next link, and keeps them for the links after it
 
 #### Scenario: The waits
 
