@@ -64,12 +64,12 @@ The application SHALL open one link with one output subsystem with the prefix `g
 
 ### Requirement: The application writes a screenshot when the picture changes
 
-After each drawing that follows a `welcome` or a new part `store`, the application SHALL take the rendered image of the viewport and write it as a PNG file with a number that goes up by 1. The command SHALL copy each file to `nodejs/wishem/renderer-godot/shots/`, which it empties at its start. The application SHALL show `wishem-godot: shot <n> seq <seq> color <color> file <path>`, where `<color>` is the pixel at the center of that image and `<path>` is the file of the PNG in the container.
+After each drawing that follows a `welcome` or a new part `store`, the application SHALL take the rendered image of the viewport and write it as a PNG file with a number that goes up by 1. The command SHALL copy each file to `nodejs/wishem/renderer-godot/shots/`, which it empties at its start. The application SHALL show `wishem-godot: shot <n> seq <seq> color <color> file <path>`, where `<color>` is the pixel at the center of that image and `<path>` is the absolute path of the copy of the PNG in `shots/`. When the copy of a file fails, the command SHALL show `wishem-godot: shot <n> could not be copied` and no shot line.
 
 #### Scenario: The first picture
 
 - **WHEN** the application connects to a construct that starts paused
-- **THEN** the terminal shows `wishem-godot: shot 1 seq 0 color #1d4ed8 file /out/0001.png`, and each pixel of `shots/0001.png` is `#1d4ed8`
+- **THEN** the terminal shows `wishem-godot: shot 1 seq 0 color #1d4ed8 file <absolute path of shots/0001.png>`, and each pixel of `shots/0001.png` is `#1d4ed8`
 
 #### Scenario: The construct is paused
 

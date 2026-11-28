@@ -492,6 +492,7 @@ describe('startRenderer: a view that fails', () => {
       storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: GREEN }),
     )
 
+    expect(view.update).toHaveBeenCalledTimes(2)
     expect(object.visible).toBe(false)
   })
 
