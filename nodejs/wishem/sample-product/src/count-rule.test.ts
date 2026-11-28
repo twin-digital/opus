@@ -7,6 +7,7 @@ import counter from '../model/definitions/ct_6af38bd9-a91d-49d9-9370-fa4e6c04769
 import state from '../model/state.json' with { type: 'json' }
 import { withCountRule } from './count-rule.js'
 import { COLOR_FIELD, COLOR_TYPE, COUNTER_TYPE, COUNT_FIELD, SAMPLE_ENTITY } from './ids.js'
+import { wrapStore } from './index.js'
 
 const ID_A = 'e_11111111-1111-4111-8111-111111111111'
 const ID_B = 'e_22222222-2222-4222-8222-222222222222'
@@ -199,5 +200,16 @@ describe('the count follows the record', () => {
     }
     clock.stop()
     expect(counts(hub)).toEqual([5])
+  })
+})
+
+describe('wrapStore', () => {
+  it('gives the same part as withCountRule for the same tick', () => {
+    const input: RecordedInput = { seq: 1, source: 'clock', type: 'time/advance', payload: { ms: 100 } }
+    const context = { read: () => ({}) }
+    const wrapped = wrapStore(createStore({ model: sampleModel() }))
+    const direct = withCountRule(createStore({ model: sampleModel() }))
+    expect(wrapped.apply(wrapped.initial, input, context)).toEqual(direct.apply(direct.initial, input, context))
+    expect(wrapped.apply(wrapped.initial, input, context)).not.toEqual(wrapped.initial)
   })
 })

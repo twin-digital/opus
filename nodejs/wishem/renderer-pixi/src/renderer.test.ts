@@ -195,6 +195,24 @@ describe('startRenderer: drawing', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
+  it('draws each component that has a view, in the order of the definitions', () => {
+    const both: Entity = { id: E1, components: { [OTHER_TYPE]: {}, [CLEAR_COLOR]: { [COLOR_FIELD]: BLUE } } }
+    const { screen } = makeHub(modelOf(both))
+    const other = makeView()
+    other.update.mockImplementation((display) => {
+      display.tint = GREEN
+    })
+    const views: ViewTable = new Map([
+      ...tableOf(makeView()),
+      [OTHER_TYPE, { sidecar: 'Other.view.json', componentType: OTHER_TYPE, view: other }],
+    ])
+    const stage = new Container()
+
+    startRenderer({ port: screen, views, stage, viewport: VIEWPORT })
+
+    expect(tintsOf(stage)).toEqual([hex(BLUE), hex(GREEN)])
+  })
+
   it('calls create one time for each component', async () => {
     const { editor, screen } = makeHub(modelOf(entity(E1, BLUE), entity(E2, RED)))
     const view = makeView()
@@ -323,6 +341,20 @@ describe('startRenderer: following the part store', () => {
     expect(second.destroyed).toBe(false)
   })
 
+  it('adds a new object when an entity that was removed returns', async () => {
+    const { editor, screen } = makeHub(modelOf(entity(E1, BLUE)))
+    const stage = new Container()
+    startRenderer({ port: screen, views: tableOf(makeView()), stage, viewport: VIEWPORT })
+    await editor.submit(storeInputs().removeEntity(E1))
+
+    await editor.submit(storeInputs().addEntity(entity(E1, RED)))
+
+    const objects = objectsOf(stage)
+    expect(objects).toHaveLength(1)
+    expect(objects[0].destroyed).toBe(false)
+    expect((objects[0] as Sprite).tint).toBe(hex(RED))
+  })
+
   it('adds one new object after the objects of the earlier entities for add-entity', async () => {
     const { editor, screen } = makeHub(modelOf(entity(E1, BLUE)))
     const stage = new Container()
@@ -335,6 +367,17 @@ describe('startRenderer: following the part store', () => {
     expect(objects).toHaveLength(2)
     expect(objects[0]).toBe(first)
     expect((objects[1] as Sprite).tint).toBe(hex(RED))
+  })
+
+  it('puts three objects in the new order of the entities', async () => {
+    const { editor, screen } = makeHub(modelOf(entity(E1, BLUE), entity(E2, RED), entity(E3, GREEN)))
+    const stage = new Container()
+    startRenderer({ port: screen, views: tableOf(makeView()), stage, viewport: VIEWPORT })
+    const [first, second, third] = objectsOf(stage)
+
+    await editor.submit(storeInputs().replaceModel(modelOf(entity(E2, RED), entity(E3, GREEN), entity(E1, BLUE))))
+
+    expect(objectsOf(stage)).toEqual([second, third, first])
   })
 
   it('puts the same objects in the new order of the entities', async () => {
@@ -432,6 +475,23 @@ describe('startRenderer: a view that fails', () => {
     expect(onError).toHaveBeenCalledWith(BOOM)
   })
 
+  it('draws the next component after a view whose create throws', () => {
+    const view = makeView()
+    const create = view.create.getMockImplementation() as () => Sprite
+    view.create.mockImplementationOnce(() => {
+      throw BOOM
+    })
+    view.create.mockImplementation(create)
+    const { screen } = makeHub(modelOf(entity(E1, RED), entity(E2, BLUE)))
+    const onError = vi.fn()
+    const stage = new Container()
+
+    startRenderer({ port: screen, views: tableOf(view), stage, viewport: VIEWPORT, onError })
+
+    expect(tintsOf(stage)).toEqual([hex(BLUE)])
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
+
   it('writes the error to console.error when there is no onError', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const view = makeView()
@@ -505,6 +565,20 @@ describe('startRenderer: stop', () => {
     expect(stage.children).toHaveLength(2)
     expect(stage.children[0]).toBe(sibling)
     other.stop()
+  })
+
+  it('removes the listener one time for two stops', () => {
+    const unsubscribed = vi.fn()
+    const port: PortReader = {
+      read: () => ({ store: modelOf(entity(E1, BLUE)) }),
+      subscribe: () => unsubscribed,
+    }
+    const renderer = startRenderer({ port, views: tableOf(makeView()), stage: new Container(), viewport: VIEWPORT })
+
+    renderer.stop()
+    renderer.stop()
+
+    expect(unsubscribed).toHaveBeenCalledTimes(1)
   })
 
   it('changes nothing after a stop from inside a different listener of the same port', () => {

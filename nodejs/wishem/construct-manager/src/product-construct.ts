@@ -1,0 +1,84 @@
+import { createTime, startClock } from '@thrashplay/wishem-clock'
+import type { Clock, ClockTimer } from '@thrashplay/wishem-clock'
+import { createStore } from '@thrashplay/wishem-core'
+import type { Model } from '@thrashplay/wishem-core'
+import { serveHub } from '@thrashplay/wishem-host-nodejs'
+import { createHub } from '@thrashplay/wishem-hub'
+import type { Hub, ModelSubsystem, Port } from '@thrashplay/wishem-hub'
+import { CONSTRUCT_MANAGER_ID } from './ids.js'
+
+export type WrapStore = (store: ModelSubsystem<Model>) => ModelSubsystem<Model>
+
+export interface ProductConstructOptions {
+  /** The ID in the construct list. */
+  id: string
+  model: Model
+  wrapStore?: WrapStore
+  /** The first `running` value of the part `time`. */
+  running: boolean
+  /** Default 50. */
+  stepMs?: number
+  /** For tests. Default: `setInterval` and `Date.now`. */
+  timer?: ClockTimer
+  now?: () => number
+  onError?: (error: unknown) => void
+}
+
+export interface ProductConstruct {
+  readonly id: string
+  /** For example `ws://127.0.0.1:41377/link`. */
+  readonly linkUrl: string
+  readonly hub: Hub
+  /** Stops the clock and the hub, closes each link, and releases the port. Gives the same promise on each call. */
+  close(): Promise<void>
+}
+
+/**
+ * Starts a hub with the parts `time` and `store`, serves its link on a port that the system selects, and starts a clock.
+ * Only the source `construct-manager` can rewind the hub.
+ * Rejects with the error of a step, and then holds no port and no timer.
+ */
+export const startProductConstruct = async (options: ProductConstructOptions): Promise<ProductConstruct> => {
+  const store = createStore({ model: options.model })
+  const hub = createHub({
+    subsystems: [createTime({ running: options.running }), options.wrapStore?.(store) ?? store],
+    rewindSources: [CONSTRUCT_MANAGER_ID],
+    ...(options.onError === undefined ? {} : { onError: options.onError }),
+  })
+  const server = await serveHub(hub, { port: 0 })
+
+  let clock: Clock | undefined
+  let clockPort: Port | undefined
+  try {
+    hub.start()
+    clockPort = hub.attach({ id: 'clock', kind: 'input' })
+    clock = startClock(clockPort, {
+      ...(options.stepMs === undefined ? {} : { stepMs: options.stepMs }),
+      ...(options.timer === undefined ? {} : { timer: options.timer }),
+      ...(options.now === undefined ? {} : { now: options.now }),
+    })
+  } catch (error) {
+    clock?.stop()
+    await server.close()
+    throw error
+  }
+
+  let closing: Promise<void> | undefined
+
+  return {
+    id: options.id,
+    linkUrl: server.linkUrl,
+    hub,
+    close: () => {
+      closing ??= (async () => {
+        try {
+          clock.stop()
+          clockPort.close()
+        } finally {
+          await server.close()
+        }
+      })()
+      return closing
+    },
+  }
+}

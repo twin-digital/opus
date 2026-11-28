@@ -32,6 +32,8 @@ The count depends only on the recorded ticks. A replay or a rewind gives the sam
 
 Put the `time` subsystem before the wrapped store in the list of subsystems.
 
+`wrapStore` is the same function under the name that a product construct uses. The construct manager calls `wrapStore(createStore({ model }))` to get the store of a product construct. A product module must export a function with this name.
+
 ## Example
 
 ```ts

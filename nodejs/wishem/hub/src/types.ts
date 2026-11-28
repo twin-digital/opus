@@ -86,6 +86,11 @@ export interface HubOptions {
   recordLimit?: number
   /** The hub applies this record before `createHub` returns. It sends no event for the inputs. */
   record?: HubRecord
+  /**
+   * The IDs of the subsystems that can send `hub/rewind`. The hub rejects a rewind from each other source with
+   * `not-permitted`. Default: each input subsystem. A replayed record is not checked.
+   */
+  rewindSources?: readonly string[]
 }
 
 export type HubStatus = 'created' | 'running' | 'stopped'

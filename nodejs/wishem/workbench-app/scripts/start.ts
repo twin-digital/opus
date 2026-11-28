@@ -1,10 +1,17 @@
 // Starts the construct of the workbench and the page server in one Node.js process.
-// Usage: node start.ts [--model <folder>] [--product <folder>] [--port <number>] [--hub-port <number>]
+// Usage: node start.ts [--model <folder>] [--product <folder>] [--product-code <module>] [--port <number>] [--hub-port <number>]
 //   [--views <folder>] [--no-view-types]
 import type { AddressInfo } from 'node:net'
 import { dirname, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { createServer, type ViteDevServer } from 'vite'
+import {
+  attachConstructManager,
+  type ConstructManager,
+  type WrapStore,
+} from '@thrashplay/wishem-construct-manager/node'
+import { createConstructList } from '@thrashplay/wishem-construct-manager'
 import { ModelError, type Model } from '@thrashplay/wishem-core'
 import { startConstruct } from '@thrashplay/wishem-host-nodejs'
 import { formatProblem } from '@thrashplay/wishem-host-nodejs/format'
@@ -18,6 +25,8 @@ export interface WorkbenchOptions {
   model?: string
   /** The folder of a product model to mount as the store `product`. Default: no product. */
   product?: string
+  /** The module with the export `wrapStore`: a package name, or a path that starts with `.` or `/`. Needs `product`. */
+  productCode?: string
   /** Default 5173. Use 0 to let the system select a port. */
   port?: number
   /** Default 4747. Use 0 to let the system select a port. */
@@ -46,6 +55,26 @@ const DEFAULT_HUB_PORT = 4747
 const PAGE_ADDRESS = '127.0.0.1'
 const packageRoot = resolve(import.meta.dirname, '..')
 const SIDECAR_SUFFIX = '.view.json'
+
+const isPathValue = (value: string) => value.startsWith('.') || value.startsWith('/')
+
+/** Loads the product code. Logs the reason and throws a `StartError` when it cannot be used. */
+const loadProductCode = async (value: string, log: (line: string) => void): Promise<WrapStore> => {
+  let loaded: { wrapStore?: unknown }
+  try {
+    const target =
+      isPathValue(value) ? pathToFileURL(resolve(process.env.INIT_CWD ?? process.cwd(), value)).href : value
+    loaded = (await import(target)) as { wrapStore?: unknown }
+  } catch (error) {
+    log(`wishem: the product code ${value} cannot be loaded: ${error instanceof Error ? error.message : String(error)}`)
+    throw new StartError('the product code cannot be loaded')
+  }
+  if (typeof loaded.wrapStore !== 'function') {
+    log('wishem: the product code has no function wrapStore')
+    throw new StartError('the product code has no function wrapStore')
+  }
+  return loaded.wrapStore as WrapStore
+}
 
 const isPortInUse = (error: unknown) =>
   error instanceof Error &&
@@ -133,6 +162,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   const {
     model = modelFolder,
     product,
+    productCode,
     port = DEFAULT_PAGE_PORT,
     hubPort = DEFAULT_HUB_PORT,
     views = resolve(packageRoot, 'src', 'views'),
@@ -144,14 +174,30 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
       console.log(line)
     })
 
+  if (productCode !== undefined && product === undefined) {
+    log('wishem: --product-code needs --product')
+    throw new StartError('--product-code needs --product')
+  }
+
   log(`wishem: model ${model}`)
   if (product !== undefined) {
     log(`wishem: product ${product}`)
   }
+  let wrapStore: WrapStore | undefined
+  if (productCode !== undefined) {
+    log(`wishem: product code ${productCode}`)
+    wrapStore = await loadProductCode(productCode, log)
+  }
 
   let construct
   try {
-    construct = await startConstruct({ folder: model, product, port: hubPort, log })
+    construct = await startConstruct({
+      folder: model,
+      product,
+      port: hubPort,
+      log,
+      subsystems: product === undefined ? undefined : [createConstructList()],
+    })
   } catch (error) {
     if (error instanceof ModelError) {
       error.problems.forEach((problem) => {
@@ -164,6 +210,14 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
       log(`wishem: port ${hubPort} is in use`)
       throw new StartError('the port of the hub is in use')
     }
+    throw error
+  }
+
+  let manager: ConstructManager | undefined
+  try {
+    manager = product === undefined ? undefined : attachConstructManager({ hub: construct.hub, wrapStore, log })
+  } catch (error) {
+    await construct.close()
     throw error
   }
 
@@ -182,13 +236,10 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     })
     await server.listen()
   } catch (error) {
-    try {
-      await server?.close()
-    } catch {
-      // The start error below is the one to report.
-    } finally {
-      await construct.close()
-    }
+    // Each part closes. The start error below is the one to report.
+    await server?.close().catch(() => undefined)
+    await manager?.close().catch(() => undefined)
+    await construct.close()
     if (isPortInUse(error)) {
       log(`wishem: port ${port} is in use`)
       throw new StartError('the port of the page is in use')
@@ -206,9 +257,19 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     pageUrl,
     linkUrl: construct.linkUrl,
     close: async () => {
-      await keeper?.stop()
-      await server.close()
-      await construct.close()
+      try {
+        try {
+          await keeper?.stop()
+        } finally {
+          await manager?.close()
+        }
+      } finally {
+        try {
+          await server.close()
+        } finally {
+          await construct.close()
+        }
+      }
     },
   }
 }
@@ -230,6 +291,7 @@ const main = async () => {
       options: {
         model: { type: 'string' },
         product: { type: 'string' },
+        'product-code': { type: 'string' },
         port: { type: 'string' },
         'hub-port': { type: 'string' },
         views: { type: 'string' },
@@ -239,11 +301,15 @@ const main = async () => {
     if (values.product === '') {
       throw new Error('--product must be a folder')
     }
+    if (values['product-code'] === '') {
+      throw new Error('--product-code must be a module')
+    }
     const workbench = await startWorkbench({
       // pnpm runs the script in the package folder and sets INIT_CWD to the folder of the person.
       model: values.model === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.model),
       product:
         values.product === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.product),
+      productCode: values['product-code'],
       port: parsePort('--port', values.port, DEFAULT_PAGE_PORT),
       hubPort: parsePort('--hub-port', values['hub-port'], DEFAULT_HUB_PORT),
       views: values.views === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.views),
