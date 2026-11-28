@@ -145,7 +145,7 @@ describe('startProductConstruct', () => {
     for (let i = 0; i < 5; i++) {
       clock.fire(50)
     }
-    expect(countOf(construct.hub)).toBe('5')
+    expect(countOf(construct.hub)).toBe(5)
     expect(timeOf(construct.hub).ticks).toBe(5)
   })
 
@@ -155,7 +155,7 @@ describe('startProductConstruct', () => {
     for (let i = 0; i < 5; i++) {
       clock.fire(50)
     }
-    expect(countOf(construct.hub)).toBe('0')
+    expect(countOf(construct.hub)).toBe(0)
     expect(timeOf(construct.hub).ticks).toBe(5)
   })
 
@@ -164,7 +164,7 @@ describe('startProductConstruct', () => {
     const construct = await start(clock, { running: false })
     clock.fire(500)
     expect(timeOf(construct.hub)).toMatchObject({ running: false, ticks: 0 })
-    expect(countOf(construct.hub)).toBe('0')
+    expect(countOf(construct.hub)).toBe(0)
   })
 
   it('gives a welcome to a client of linkUrl', async () => {

@@ -4,7 +4,7 @@ Plan commit 2af1251e (planner on opus, with openspec-propose). One task. The pla
 
 ## Order with other changes
 
-- #538 (not merged) also changes `sample-product` and has tests with a text count. The second to merge does the steps of "Order with other changes" of design.md.
+- #538 merged to `main` first (d8233331). This change is second. After the merge of `main`, the tests of `construct-manager` use a number count, and `construct-manager` is in the changeset and in "Package Impact".
 
 ## Pre-flight scan
 

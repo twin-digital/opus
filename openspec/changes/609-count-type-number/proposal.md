@@ -31,5 +31,5 @@ None.
 - `nodejs/wishem/sample-product/`: `model/definitions/ct_6af38bd9-a91d-49d9-9370-fa4e6c04769d.json`, `model/state.json`, `src/count-rule.ts`, `src/count-rule.test.ts`, `src/model.test.ts`, `src/readme-example.test.ts`, `README.md`.
 - `openspec/specs/wishem/sample-product/model/spec.md`, through the delta of this change.
 - A changeset for `@thrashplay/wishem-sample-product`.
-- No other package changes on `main`. The tests of `host-nodejs` have their own definitions of a counter, and they do not read the sample product. The test of `workbench-app` copies the folder and counts only the definitions and the entities.
-- The change #538 (construct manager, not merged) reads and writes the count as text in its tests. The second of the two changes to merge updates them. See "Order with other changes" in `design.md`.
+- No other package changes on `main`. The tests of `host-nodejs` have their own definitions of a counter, and they do not read the sample product. The test of `workbench-app` reads the count of the product construct, and it reads a number.
+- The tests of the construct manager (#538, merged) read and write the count as a number after the merge of this change. See "Order with other changes" in `design.md`.

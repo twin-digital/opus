@@ -10,19 +10,19 @@ See `proposal.md` for the reason. The current state:
 
 The places in the repository that read or write the count of the sample product:
 
-| Place                                                                                 | Reads or writes the count as text | Change                          |
-| ------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------- |
-| `sample-product/model/` (definition and `state.json`)                                 | Yes                               | Type `number`, value `0`.       |
-| `sample-product/src/count-rule.ts`                                                    | Yes                               | Adds 1 to a number.             |
-| `sample-product/src/count-rule.test.ts`, `model.test.ts`, `readme-example.test.ts`    | Yes                               | Numbers.                        |
-| `sample-product/README.md`                                                            | Yes                               | Numbers.                        |
-| `openspec/specs/wishem/sample-product/model/spec.md`                                  | Yes                               | The delta of this change.       |
-| `host-nodejs/src/start-construct.test.ts`, `model-folder-storage.test.ts`             | Yes, with their own fixtures      | None. See decision 4.           |
-| `host-nodejs/src/cli.test.ts`                                                         | No (only the IDs and the label)   | None.                           |
-| `workbench-app/src/start.test.ts`                                                     | No (counts definitions, entities) | None.                           |
-| `pixi-page`, `renderer-react`, `renderer-pixi`, `workbench`                           | No                                | None.                           |
-| `docs/architecture/README.md`, `nodejs/wishem/CLAUDE.md`                              | No ("adds 1 to each count")       | None.                           |
-| `construct-manager` and `sample-product/src/count-rule.test.ts` on the branch of #538 | Yes                               | See "Order with other changes". |
+| Place                                                                                 | Reads or writes the count as text                           | Change                                              |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------- |
+| `sample-product/model/` (definition and `state.json`)                                 | Yes                                                         | Type `number`, value `0`.                           |
+| `sample-product/src/count-rule.ts`                                                    | Yes                                                         | Adds 1 to a number.                                 |
+| `sample-product/src/count-rule.test.ts`, `model.test.ts`, `readme-example.test.ts`    | Yes                                                         | Numbers.                                            |
+| `sample-product/README.md`                                                            | Yes                                                         | Numbers.                                            |
+| `openspec/specs/wishem/sample-product/model/spec.md`                                  | Yes                                                         | The delta of this change.                           |
+| `host-nodejs/src/start-construct.test.ts`, `model-folder-storage.test.ts`             | Yes, with their own fixtures                                | None. See decision 4.                               |
+| `host-nodejs/src/cli.test.ts`                                                         | No (only the IDs and the label)                             | None.                                               |
+| `workbench-app/src/start.test.ts`                                                     | Yes (test of the product construct reads the count as text) | The regular expression of `countOf` reads a number. |
+| `pixi-page`, `renderer-react`, `renderer-pixi`, `workbench`                           | No                                                          | None.                                               |
+| `docs/architecture/README.md`, `nodejs/wishem/CLAUDE.md`                              | No ("adds 1 to each count")                                 | None.                                               |
+| `construct-manager` and `sample-product/src/count-rule.test.ts` on the branch of #538 | Yes                                                         | See "Order with other changes".                     |
 
 ## Goals / Non-Goals
 
@@ -134,15 +134,16 @@ classDiagram
 
 ## Package Impact
 
-| Package                             | Published or private | Bump  | Reason                                                                                                     |
-| ----------------------------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------- |
-| `@thrashplay/wishem-sample-product` | Private              | minor | The field `count` has the type `number`. The count rule adds 1 to a number. The data contract is breaking. |
+| Package                                | Published or private | Bump  | Reason                                                                                                     |
+| -------------------------------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------- |
+| `@thrashplay/wishem-sample-product`    | Private              | minor | The field `count` has the type `number`. The count rule adds 1 to a number. The data contract is breaking. |
+| `@thrashplay/wishem-construct-manager` | Private              | patch | The tests give the count as a number.                                                                      |
 
-No other package changes. `workbench-app` has `sample-product` as a development dependency, and its test does not change. When #538 merges first, see "Order with other changes" for the row of `construct-manager`.
+No other package changes.
 
 ## Order with other changes
 
-The change #538 (`538-add-construct-manager`, not merged) adds the package `construct-manager` and the export `wrapStore` of `sample-product`. Its diff against `main`:
+The change #538 (`538-add-construct-manager`) merged to `main` first. It added the package `construct-manager` and the export `wrapStore` of `sample-product`. Its diff against the `main` of that time:
 
 - `sample-product/src/index.ts`: `export { withCountRule as wrapStore } from './count-rule.js'`. No conflict with this change.
 - `sample-product/src/count-rule.test.ts`: a block `describe('wrapStore')` that compares `wrapStore` with `withCountRule` with `toEqual`. It has no count value, so it does not change.
@@ -152,13 +153,13 @@ The change #538 (`538-add-construct-manager`, not merged) adds the package `cons
 - `construct-manager/src/product-changes.test.ts`: its own fixtures, not the sample product. No change.
 - `design.md` of #538, "The test guide": steps 6 and 9 send and look for the text `"1000"`.
 
-The two changes can merge in each order. The second to merge does these steps after it merges `main` into its branch:
+This change is the second to merge. It does these steps after it merges `main` into its branch:
 
 1. In `construct-manager.test.ts`, give `setCount` the value type `number`, send numbers, and expect the numbers `100`, `0`, `3`, and `1`.
 2. In `product-construct.test.ts`, give `countOf` the return type `FieldValue | undefined` (from `@thrashplay/wishem-core`), and expect the numbers `5` and `0`.
 3. Search the `construct-manager` package for each other text count of the sample product (`grep -rn "COUNT_FIELD\|countOf\|setCount" nodejs/wishem/construct-manager/src`), and change it to a number.
 4. Keep the `wrapStore` paragraph and the text of this change in `sample-product/README.md`.
-5. When #609 is second: add `@thrashplay/wishem-construct-manager` (private, patch: the tests give the count as a number) to the changeset and to "Package Impact". When #538 is second: change the steps 6 and 9 of its test guide to send `1000` with no quotes and to look for `1000` with no quotes.
+5. Add `@thrashplay/wishem-construct-manager` and `@thrashplay/wishem-workbench-app` (private, patch: the tests give the count as a number) to the changeset and to "Package Impact".
 6. Run the tests of `sample-product` and `construct-manager`.
 
 ## Risks / Trade-offs
@@ -223,4 +224,4 @@ Set `P`, `COUNT`, and `SET` in both terminals. Result: the build ends with no fa
 9. **A stop and a start, then the rule on the kept count.** Press Ctrl+C in terminal 1. Start again with the command of step 3. Result: `raw-link.mjs --once` shows `8`. Stop terminal 1. Run the command of step 2 again. Result: `11 number`.
 10. **The tests of the package.** `pnpm exec turbo run test --filter @thrashplay/wishem-sample-product`. Result: each test passes.
 
-When #538 merged first, also do this step: start the construct manager with the copy, as "The test guide" of #538 shows, and read the link of the product construct with `raw-link.mjs --url <its link> --once`. Result: the count is a number with no quotes, and it grows between two reads.
+Also do this step: start the construct manager with the copy, as "The test guide" of the archived change #538 shows, and read the link of the product construct with `raw-link.mjs --url <its link> --once`. Result: the count is a number with no quotes, and it grows between two reads.
