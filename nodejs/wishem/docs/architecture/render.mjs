@@ -860,7 +860,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has eleven containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
+    'Wishem has eleven containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub and to each product construct over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
   width: WIDTH_PX,
   height: LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -894,7 +894,7 @@ const containers = {
 
     // The workbench process
     stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
-    stacked('flow', cPage, cProcess, 250, 'Connects to the hub [WebSocket link]'),
+    stacked('flow', cPage, cProcess, 265, 'Connects to the hub\nand to each product\nconstruct [WebSocket]'),
     stacked('flow', cProcess, cModel, 165, 'Reads, watches, and writes [file system]'),
     rel(
       'quiet',
@@ -1009,18 +1009,20 @@ const dynamicChange = {
 }
 
 // Components of the page
+const P_LEFT = 124
+const P_ROW = (n) => 416 + 200 * (n - 1)
 const pProcess = el(
   'container',
   RIGHT,
   64,
   'Workbench process',
   '[Container: Node.js]',
-  'Holds the construct and serves the page.',
+  'Holds the construct and the product constructs, and serves the page.',
 )
 const pSidecars = el(
   'component',
-  LEFT,
-  316,
+  P_LEFT,
+  P_ROW(1),
   'Sidecars',
   '[Component: JSON files]',
   'Attach each view to a component type.',
@@ -1028,15 +1030,15 @@ const pSidecars = el(
 const pClient = el(
   'component',
   RIGHT,
-  316,
+  P_ROW(1),
   'Client of the hub',
   '[Component: connectHub]',
   'Gives the output port and the input port of each link.',
 )
 const pTable = el(
   'component',
-  LEFT,
-  516,
+  P_LEFT,
+  P_ROW(2),
   'Table of views',
   '[Component: renderer-react]',
   'Gives the view of a component type.',
@@ -1044,39 +1046,79 @@ const pTable = el(
 const pRenderer = el(
   'component',
   RIGHT,
-  516,
+  P_ROW(2),
   'Renderer',
   '[Component: renderer-react]',
   'Draws each component in a marked element.',
 )
-const pViews = el('component', LEFT, 716, 'Views', '[Component: React]', 'Draw one component type each.')
+const pViews = el('component', P_LEFT, P_ROW(3), 'Views', '[Component: React]', 'Draw one component type each.')
 const pCatalog = el(
   'component',
   RIGHT,
-  716,
+  P_ROW(3),
   'Catalog',
   '[Component: React]',
-  'The app bar, the zero state, and the parts of the product panel.',
+  'The app bar, the zero state, the panel parts, the button, the run bar, and the stage frame.',
+  { h: 200 * 2 + CARD_H },
 )
 const pPanel = el(
   'component',
-  LEFT,
-  916,
+  P_LEFT,
+  P_ROW(4),
   'Product panel',
   '[Component: React]',
   'Lists the entities of the product and changes a field value.',
 )
+const pRun = el(
+  'component',
+  P_LEFT,
+  P_ROW(5),
+  'Run controls',
+  '[Component: React]',
+  'Run, stop, pause, step, and step back the product construct.',
+)
+const pStage = el(
+  'component',
+  P_LEFT,
+  P_ROW(6),
+  'Stage',
+  '[Component: renderer-react]',
+  'Draws the product construct through its own link.',
+)
+const pProductViews = el(
+  'component',
+  RIGHT,
+  P_ROW(6),
+  'Views of the product',
+  '[Component: dynamic import]',
+  'The React views of the product.',
+)
+
+// One lane at the left of the cards for each arrow that goes up to the top. The lower the card, the further out the lane.
+const P_LANE = { stage: 34, run: 64, panel: 94 }
+const P_PANEL_Y = 362
+const P_RUN_Y = 302
+const P_BELOW_RENDERER = P_ROW(2) + CARD_H
+const P_MID = (n) => P_ROW(n) + CARD_H / 2
+const P_LEGEND_Y = P_ROW(6) + CARD_H + 66
 
 const componentsPage = {
   name: 'components-page',
   title: 'Component diagram: the page of the workbench',
   description:
-    'The page has seven components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The views draw with the catalog. The product panel reads the part product from the output port and sends product/set-field through the input port, and it draws with the catalog.',
+    'The page has ten components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The product panel reads the part product and sends product/set-field. The run controls read the part constructs and send the controls through the same ports, and read the part time of the stage. The stage connects to the product construct through the workbench process, with its own link, and mounts the views of the product. The views, the product panel, the run controls, and the stage draw with the catalog.',
   width: WIDTH_PX,
-  height: 1140,
+  height: P_LEGEND_Y + LEGEND_H + 24,
   items: [
     pProcess,
-    { kind: 'group', x: 24, y: 244, w: 832, h: 800, label: 'Page [Container: React, web browser]' },
+    {
+      kind: 'group',
+      x: 24,
+      y: 244,
+      w: 832,
+      h: P_ROW(6) + CARD_H + 30 - 244,
+      label: 'Page [Container: React, web browser]',
+    },
     pSidecars,
     pClient,
     pTable,
@@ -1084,31 +1126,70 @@ const componentsPage = {
     pViews,
     pCatalog,
     pPanel,
+    pRun,
+    pStage,
+    pProductViews,
 
     // The path of the model to a view
     rel('flow', [top(pClient), bottom(pProcess)], 'Connects to the hub [WebSocket link]', [707, 216]),
-    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads and sends [ports]', [707, 468]),
-    rel('flow', [bottom(pRenderer, 740), [740, 668], [250, 668], top(pViews, 250)], 'Mounts with props', [495, 668]),
-    rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
-    rel('flow', [top(pViews, 200), [200, 638], [620, 638], bottom(pRenderer, 620)], 'Send inputs [wishem]', [410, 638]),
+    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads and sends [ports]', [707, P_ROW(1) + CARD_H + 48]),
+    rel(
+      'flow',
+      [bottom(pRenderer, 740), [740, P_BELOW_RENDERER + 48], [326, P_BELOW_RENDERER + 48], top(pViews, 326)],
+      'Mounts with props',
+      [533, P_BELOW_RENDERER + 48],
+    ),
+    rel('flow', [right(pViews), left(pCatalog, P_MID(3))], 'Draw with', [478, P_MID(3)]),
+    rel(
+      'flow',
+      [top(pViews, 276), [276, P_BELOW_RENDERER + 18], [620, P_BELOW_RENDERER + 18], bottom(pRenderer, 620)],
+      'Send inputs [wishem]',
+      [385, P_BELOW_RENDERER + 18],
+    ),
 
     // The product panel
     rel(
       'quiet',
-      [left(pPanel), [36, 968], [36, 292], [620, 292], top(pClient, 620)],
+      [left(pPanel), [P_LANE.panel, P_MID(4)], [P_LANE.panel, P_PANEL_Y], [620, P_PANEL_Y], top(pClient, 620)],
       'Reads part product and sends product/set-field [ports]',
-      [430, 292],
+      [380, P_PANEL_Y],
     ),
-    rel('quiet', [right(pPanel), [707, 968], bottom(pCatalog, 707)], 'Draws with', [500, 968]),
+    rel('quiet', [right(pPanel), left(pCatalog, P_MID(4))], 'Draws with', [478, P_MID(4)]),
+
+    // The run controls and the stage
+    rel(
+      'quiet',
+      [left(pRun), [P_LANE.run, P_MID(5)], [P_LANE.run, P_RUN_Y], [665, P_RUN_Y], top(pClient, 665)],
+      'Reads part constructs and sends the controls [ports]',
+      [380, P_RUN_Y],
+    ),
+    rel('quiet', [right(pRun), left(pCatalog, P_MID(5))], 'Draws with', [478, P_MID(5)]),
+    rel('quiet', [bottom(pRun), top(pStage)], 'Reads part time of', [P_LEFT + CARD_W / 2, P_ROW(5) + CARD_H + 48]),
+    rel(
+      'quiet',
+      [left(pStage), [P_LANE.stage, P_MID(6)], [P_LANE.stage, 116], left(pProcess, 116)],
+      'Connects to the product construct [WebSocket link]',
+      [308, 116],
+    ),
+    rel(
+      'quiet',
+      [right(pStage, P_ROW(6) + 24), [478, P_ROW(6) + 24], [478, P_ROW(5) + 86], left(pCatalog, P_ROW(5) + 86)],
+      'Draws with',
+      [478, P_ROW(6) - 20],
+    ),
+    rel('quiet', [right(pStage, P_ROW(6) + 76), left(pProductViews, P_ROW(6) + 76)], 'Mounts with props', [
+      478,
+      P_ROW(6) + 76,
+    ]),
 
     // How the table of views gets its content
-    rel('flow', [left(pRenderer), right(pTable)], 'Finds the view', [440, 568]),
-    rel('quiet', [top(pTable), bottom(pSidecars)], 'Reads', [173, 468]),
-    rel('quiet', [bottom(pTable, 110), top(pViews, 110)], 'Collects', [110, 668]),
+    rel('flow', [left(pRenderer), right(pTable)], 'Finds the view', [478, P_ROW(2) + 52]),
+    rel('quiet', [top(pTable), bottom(pSidecars)], 'Reads', [P_LEFT + CARD_W / 2, P_ROW(1) + CARD_H + 48]),
+    rel('quiet', [bottom(pTable, 186), top(pViews, 186)], 'Collects', [186, P_ROW(2) + CARD_H + 48]),
     {
       kind: 'legend',
       x: 24,
-      y: 1076,
+      y: P_LEGEND_Y,
       w: 832,
       entries: [
         ['container', 'Container'],
@@ -1139,7 +1220,7 @@ const wVite = wpComponent(
   1,
   'Vite development server',
   '[Component: Vite]',
-  'Serves the page code and passes the link.',
+  'Serves the page code and the product views, and passes the links.',
 )
 const wConstruct = wpComponent(
   RIGHT,
@@ -1154,7 +1235,7 @@ const wGen = wpComponent(
   'Generator of the view types',
   '[Component: renderer-react]',
   'Writes the types of the props.',
-  { w: 280, x: RIGHT + CARD_W - 280 },
+  { w: 270, x: RIGHT + CARD_W - 270 },
 )
 const wStorage = wpComponent(
   RIGHT,
@@ -1216,14 +1297,14 @@ const wProduct = el(
   { h: WP_FOLDER_H },
 )
 const WP_LEGEND_Y = WP_FOLDER_Y + WP_FOLDER_H + 40
-const WP_LANE = { construct: 440, code: 380, storage: 530 }
+const WP_LANE = { construct: 440, code: 380, storage: 545 }
 const WP_MID = (row) => WP_ROW(row) + CARD_H + 48
 
 const componentsWorkbenchProcess = {
   name: 'components-workbench-process',
   title: 'Component diagram: the workbench process',
   description:
-    'The workbench process has nine components. The start script loads the product code, starts the workbench construct and the Vite development server, and attaches the construct manager with the behaviors. The page gets page code from the Vite development server and connects to the hub through it. The Vite development server passes the link to the workbench construct. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads the product and the construct list from the workbench construct, and starts, stops, and updates the product constructs. Each product construct runs the behaviors with the update subsystem, which calls the product code. The generator of the view types reads the definitions from the workbench construct.',
+    'The workbench process has nine components. The start script loads the product code, starts the workbench construct and the Vite development server, and attaches the construct manager with the behaviors. The page gets page code from the Vite development server and connects to the hub and to each product construct through it. The Vite development server passes the link to the workbench construct, and the link of each product construct to the product construct. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads the product and the construct list from the workbench construct, and starts, stops, and updates the product constructs. Each product construct runs the behaviors with the update subsystem, which calls the product code. The generator of the view types reads the definitions from the workbench construct.',
   width: WIDTH_PX,
   height: WP_LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -1249,9 +1330,20 @@ const componentsWorkbenchProcess = {
     wProduct,
 
     // The path of the page to the construct
-    rel('quiet', [bottom(wPage, 780), top(wVite, 780)], 'Gets page code [HTTP]', [780, 216]),
-    rel('flow', [bottom(wPage, 630), top(wVite, 630)], 'Connects to the hub [WebSocket link]', [630, 216]),
+    rel('quiet', [bottom(wPage, 790), top(wVite, 790)], 'Gets page code [HTTP]', [790, 216]),
+    rel(
+      'flow',
+      [bottom(wPage, 600), top(wVite, 600)],
+      'Connects to the hub and each\nproduct construct [WebSocket]',
+      [600, 216],
+    ),
     rel('flow', [bottom(wVite, 630), top(wConstruct, 630)], 'Passes the link [WebSocket]', [630, WP_MID(1)]),
+    rel(
+      'flow',
+      [left(wVite, WP_ROW(1) + 90), [520, WP_ROW(1) + 90], [520, WP_ROW(3) + 60], right(wProducts, WP_ROW(3) + 60)],
+      'Passes each\nproduct link\n[WebSocket]',
+      [450, WP_ROW(3) + 60],
+    ),
 
     // The start script
     rel('quiet', [right(wStart, WP_ROW(1) + 26), left(wVite, WP_ROW(1) + 26)], 'Starts', [440, WP_ROW(1) + 26]),
@@ -1280,8 +1372,8 @@ const componentsWorkbenchProcess = {
     ),
 
     // The construct manager and the product constructs
-    rel('quiet', [right(wManager, WP_ROW(2) + 52), left(wConstruct, WP_ROW(2) + 52)], 'Reads and reports\n[port]', [
-      480,
+    rel('quiet', [right(wManager, WP_ROW(2) + 52), left(wConstruct, WP_ROW(2) + 52)], 'Reads and\nreports [port]', [
+      450,
       WP_ROW(2) + 52,
     ]),
     rel('flow', [bottom(wManager, 173), top(wProducts, 173)], 'Starts, stops, and updates [port]', [173, WP_MID(2)]),
@@ -1289,7 +1381,7 @@ const componentsWorkbenchProcess = {
     rel('quiet', [bottom(wUpdate, 173), top(wCode, 173)], 'Calls', [173, WP_MID(4)]),
 
     // The storage subsystems and the generator
-    rel('quiet', [top(wGen, 630), bottom(wConstruct, 630)], 'Reads the definitions [port]', [630, WP_MID(2)]),
+    rel('quiet', [top(wGen, 700), bottom(wConstruct, 700)], 'Reads the definitions [port]', [700, WP_MID(2)]),
     rel(
       'quiet',
       [
