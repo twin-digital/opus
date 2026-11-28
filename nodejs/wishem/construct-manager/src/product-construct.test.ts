@@ -264,7 +264,7 @@ describe('startProductConstruct', () => {
     const port = await open(construct, { id: 'client', kind: 'input' })
     const result = await port.submit(timeInputs.advance(50))
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
-    expect(JSON.stringify(result)).toContain('test/broken')
+    expect(result).toMatchObject({ problems: [{ path: ['behaviors', 'test/broken', expect.any(String)] }] })
   })
 
   it('rejects when the clock fails to start, and releases the port', async () => {
