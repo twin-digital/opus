@@ -291,8 +291,8 @@ describe('wishem command', () => {
     const process_ = start(['start', folder, '--port', '0'])
     await until(() => process_.stdout().includes('link at'))
     await writeFile(path.join(folder, 'state.json'), '{')
-    await until(() => process_.stdout().includes('problem in state.json'))
-    expect(process_.stdout()).toContain('wishem: the last correct model stays')
+    await until(() => process_.stdout().includes('wishem: the last correct model stays'))
+    expect(process_.stdout()).toContain('problem in state.json')
     await writeFile(
       path.join(folder, 'state.json'),
       JSON.stringify({ entities: [{ id: E, components: { [CT]: { [FLD]: 'Again' } } }] }),
