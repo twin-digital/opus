@@ -189,7 +189,8 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
         if (entry.status !== 'running' || entry.link !== next.link || entry.time !== next.time) {
           await report(next)
         }
-      } else if (entry.status === 'pending' || entry.status === 'running') {
+      } else if (entry.want !== 'running' && (entry.status === 'pending' || entry.status === 'running')) {
+        // A wanted entry that is not live waits for its start event.
         await report({ construct: id, status: 'stopped' })
       }
     }
