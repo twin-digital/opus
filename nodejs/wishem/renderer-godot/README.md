@@ -85,3 +85,55 @@ func _on_linked(ports: Array) -> void:
 ### The fixture of the link examples
 
 `godot/tests/fixtures/link-examples.json` holds the messages of `examples.ts` of the hub. To write it again, run `node --conditions=source scripts/link-examples.ts`. The test `src/link-examples.test.ts` fails when the file is not equal to the examples.
+
+## The Godot renderer and the Godot view
+
+`godot/wishem/renderer.gd` draws Godot views from a port. It reads the part `store` of `port.read()` and listens with `port.subscribe`. It sends no input and it never closes the port.
+
+### A view and its sidecar
+
+A view is a GDScript file `<name>.gd` that extends `RefCounted`. It has two functions:
+
+- `create() -> Node`: makes the node of one component. The renderer calls it one time for each component.
+- `update(node: Node, props: Dictionary, viewport: Vector2) -> void`: sets the node from the props. The renderer calls it at each update with the size of the viewport.
+
+The sidecar `<name>.view.json` attaches the view to a component type:
+
+```json
+{ "kind": "godot", "componentType": "ct_c47a0a86-b82f-43a8-8b0b-31a1e4ef6f37" }
+```
+
+`Views.collect_views(folder)` of `godot/wishem/views.gd` reads the sidecars of a folder. It gives `{ "views": { <ID>: { "sidecar", "view" } }, "errors": [String] }`. It ignores a sidecar of another kind. Each error names the file. The renderer draws no view that has an error. Two sidecars with one component type are an error, and neither view is drawn.
+
+### The props
+
+A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. A label with no letter or digit gives no prop. For two fields with one name, the first field gives the value.
+
+### Use
+
+```gdscript
+const Views = preload("res://wishem/views.gd")
+const Renderer = preload("res://wishem/renderer.gd")
+
+var views: Dictionary = Views.collect_views("res://views")["views"]
+var renderer := Renderer.new(port, views, self, func() -> Vector2: return get_viewport_rect().size)
+```
+
+- The renderer adds one `Control` to the root node. It keeps one node for each component that has a view, in the order of the entities and then the definitions.
+- It calls the views only when the part `store` is a different object. It makes the node of a new component. It removes and frees the node of a component that is gone.
+- When `create` gives no node, the renderer writes one error with `push_error` and keeps the text in `renderer.errors`. The other views draw.
+
+`entity_at(point)` gives `{ "entity": String, "componentType": String }` for the top visible `Control` that holds the point. It gives an empty dictionary when no visible node holds the point, and after `stop()`.
+
+`stop()` removes the listener from the port and frees the nodes. It does not close the port. A second call does nothing.
+
+### The view ClearColor
+
+`godot/views/ClearColor.gd` makes a `ColorRect` that covers the viewport with the color of the prop `color`. The node is hidden when the prop has no value or is not a color.
+
+### Add a view
+
+1. Write `godot/views/<Name>.gd` with `create` and `update`.
+2. Write `godot/views/<Name>.view.json` with the kind `godot` and the ID of the component type.
+3. Write a test `godot/tests/test_<name>.gd`. Test `update` on a node that `create` makes.
+4. Run `pnpm test:godot`.
