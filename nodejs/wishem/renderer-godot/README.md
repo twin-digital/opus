@@ -108,9 +108,18 @@ The sidecar `<name>.view.json` attaches the view to a component type:
 
 `Views.collect_views(folder)` of `godot/wishem/views.gd` reads the sidecars of a folder. It gives `{ "views": { <ID>: { "sidecar", "view" } }, "errors": [String] }`. It ignores a sidecar of another kind. Each error names the file. The renderer draws no view that has an error. Two sidecars with one component type are an error, and neither view is drawn.
 
+A sidecar can name a component type that has no definition. The view draws nothing, and the renderer writes one warning for it with `push_warning`: `wishem: the sidecar <sidecar> names the component type <component type ID>, which no definition has. No view is drawn for it.`
+
+With no part `store`, the renderer writes no warning. The renderer writes the warnings again only when their text changes, and keeps each line in `renderer.warnings`. The renderer sorts the warnings by sidecar, then component type, then name, then kind, and then the position (the order of the fields). "The props" describes the two other warnings.
+
 ### The props
 
-A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. A label with no letter or digit gives no prop, and the renderer writes one warning for it with `push_warning`: `wishem: the sidecar <sidecar>: the label of the field <field ID> of the component type <component type ID> gives an empty name. The view does not get the field.` A view whose sidecar names a component type that has no definition draws nothing, and the renderer writes one warning for it with `push_warning`: `wishem: the sidecar <sidecar> names the component type <component type ID>, which no definition has. No view is drawn for it.` With no part `store`, the renderer writes no warning. The renderer writes the warnings again only when their text changes, and keeps each line in `renderer.warnings`. For two fields with one name, the first field gives the value, and the renderer writes one warning with `push_warning` for each later field: `wishem: the sidecar <sidecar>: the fields <first field ID> and <later field ID> of the component type <component type ID> give the same name "<name>". The prop has the value of the first field.` The renderer sorts the warnings by sidecar, component type, name, and kind. The renderer gives no warning for a name that starts with a digit.
+A view gets one prop for each field of the definition of its component type. `Views.field_name(label)` makes the name: it joins the words of the label in camel case (`Max health` gives `maxHealth`). A field with no value gives no prop. The renderer gives no warning for a name that starts with a digit.
+
+Two problems of a label give a warning. The renderer writes each warning with `push_warning`:
+
+- A label with no letter or digit gives no prop: `wishem: the sidecar <sidecar>: the label of the field <field ID> of the component type <component type ID> gives an empty name. The view does not get the field.`
+- For two fields with one name, the first field gives the value. Each later field gives one warning: `wishem: the sidecar <sidecar>: the fields <first field ID> and <later field ID> of the component type <component type ID> give the same name "<name>". The prop has the value of the first field.`
 
 ### Use
 

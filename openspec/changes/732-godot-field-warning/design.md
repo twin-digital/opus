@@ -192,7 +192,7 @@ Result: the build ends with each task successful, and the last command shows `wi
 node nodejs/wishem/docs/flow-scripts/heavy.mjs pnpm --filter @thrashplay/wishem-renderer-godot test:godot
 ```
 
-Result: the last line is `wishem-godot tests: <n> passed, 0 failed`. The output has a `PASS` line for each test of `test_view_warnings.gd`, and for the tests of `test_renderer.gd` whose names start with `test_warns_` and `test_writes_no_warning_`. It has lines that start with `WARNING: wishem:`, from these tests, and no line with `SCRIPT ERROR`.
+Result: the output has the line `wishem-godot tests: <n> passed, 0 failed`. Godot writes more lines to stderr after it (exit lines such as `WARNING: <n> ObjectDB instances were leaked at exit`); they do not fail the run. The output has a `PASS` line for each test of `test_view_warnings.gd`, and for the tests of `test_renderer.gd` whose names start with `test_warns_` and `test_writes_no_warning_`. It has lines that start with `WARNING: wishem:`, from these tests, and no line with `SCRIPT ERROR`.
 
 ### 2. The application with no warning
 

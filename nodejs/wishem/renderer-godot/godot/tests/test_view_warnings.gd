@@ -89,8 +89,25 @@ func test_sorts_the_warnings_by_name() -> void:
 
 
 func test_keeps_the_order_of_the_fields_for_warnings_that_rank_equal() -> void:
-	var warnings := ViewWarnings.view_warnings(_table(), [_definition(["???", "--", "!!", "##", "%%"])])
-	assert_equal(warnings.map(func(warning: Dictionary) -> String: return warning["fields"][0]), ["fld_0", "fld_1", "fld_2", "fld_3", "fld_4"])
+	var labels: Array = []
+	var expected: Array = []
+	for index in 40:
+		labels.append("?".repeat(index + 1))
+		expected.append("fld_%02d" % index)
+	var definition := _definition(labels)
+	for index in 40:
+		definition["fields"][index]["id"] = "fld_%02d" % index
+	var warnings := ViewWarnings.view_warnings(_table(), [definition])
+	assert_equal(warnings.map(func(warning: Dictionary) -> String: return warning["fields"][0]), expected)
+
+
+func test_sorts_by_component_type_for_one_sidecar() -> void:
+	var table := {
+		"ct_b": {"sidecar": "A.view.json", "view": RefCounted.new()},
+		"ct_a": {"sidecar": "A.view.json", "view": RefCounted.new()},
+	}
+	var warnings := ViewWarnings.view_warnings(table, [])
+	assert_equal(warnings.map(func(warning: Dictionary) -> String: return warning["componentType"]), ["ct_a", "ct_b"])
 
 
 func test_sorts_by_sidecar_before_component_type() -> void:

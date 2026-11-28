@@ -125,6 +125,12 @@ const SIDECAR = 'ClearColor.view.json'
 const warningLines = (lines: string[], from: number) =>
   lines.slice(from).filter((line) => line.startsWith('WARNING: wishem:'))
 
+// Stderr and stdout are two streams: wait for the warning lines before the assert.
+const waitForWarnings = (lines: string[], from: number, expected: string[]) =>
+  waitFor(`the warning lines from ${from}`, () =>
+    warningLines(lines, from).length >= expected.length ? true : undefined,
+  )
+
 const sameNameLine =
   `WARNING: wishem: the sidecar ${SIDECAR}: the fields fld_694d6cb2-97e8-444e-961e-aa76744837fb and ` +
   `fld_5d6e7f80-9a1b-4c2d-8e3f-4a5b6c7d8e9f of the component type ${COLOR_TYPE} give the same name "color". ` +
@@ -169,9 +175,11 @@ await test('the Godot application writes the view warnings', async () => {
     run = await runGodot({ hubPort, shotsDir: WARNING_SHOTS_DIR, log: (line) => lines.push(line) })
     await waitFor('connected (link 1)', () => lines.find((line) => line.includes('connected (link 1)')))
     await waitFor('shot seq 0 (link 1)', () => shotsAfter(lines, 0).find((shot) => shot.seq === 0))
+    await waitForWarnings(lines, 0, [notDefinedLine])
     assert.deepEqual(warningLines(lines, 0), [notDefinedLine])
     const tick1 = lines.length
     await advance(construct.linkUrl)
+    // The shot of the tick proves that the renderer handled the tick.
     await waitFor('shot seq 1 (link 1)', () => shotsAfter(lines, tick1).find((shot) => shot.seq === 1))
     assert.deepEqual(warningLines(lines, tick1), [], 'the tick writes no warning')
     closeClient()
@@ -203,11 +211,13 @@ await test('the Godot application writes the view warnings', async () => {
     await waitFor('connected (link 2)', () => lines.slice(from).find((line) => line.includes('connected (link 2)')))
     const second = await waitFor('shot seq 0 (link 2)', () => shotsAfter(lines, from).find((shot) => shot.seq === 0))
     assertAllPixels(second.file, BLUE)
+    await waitForWarnings(lines, from, [emptyNameLine, sameNameLine])
     assert.deepEqual(warningLines(lines, from), [emptyNameLine, sameNameLine])
     const tick2 = lines.length
     await advance(construct.linkUrl)
     const ticked = await waitFor('shot seq 1 (link 2)', () => shotsAfter(lines, tick2).find((shot) => shot.seq === 1))
     assertAllPixels(ticked.file, RED)
+    // The shot of the tick proves that the renderer handled the tick.
     assert.deepEqual(warningLines(lines, tick2), [], 'the tick writes no warning')
     closeClient()
 
@@ -220,6 +230,10 @@ await test('the Godot application writes the view warnings', async () => {
     await waitFor('connected (link 3)', () => lines.slice(from).find((line) => line.includes('connected (link 3)')))
     const third = await waitFor('shot seq 0 (link 3)', () => shotsAfter(lines, from).find((shot) => shot.seq === 0))
     assertAllPixels(third.file, BLUE)
+    const tick3 = lines.length
+    await advance(construct.linkUrl)
+    // The shot of the tick proves that the renderer handled the model.
+    await waitFor('shot seq 1 (link 3)', () => shotsAfter(lines, tick3).find((shot) => shot.seq === 1))
     assert.deepEqual(warningLines(lines, from), [], 'a plain model gives no warning')
 
     // The container is gone after close.
