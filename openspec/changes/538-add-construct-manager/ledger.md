@@ -38,6 +38,24 @@ Follow-up issues of design.md (created 2026-11-28, before apply): #628 a product
 
 Ruling: Task 3 adds the export `./node` (to `src/node.ts`, in the form of the root entry, with the `source` condition) to `nodejs/wishem/construct-manager/package.json` — the interface of Task 3 produces the entry `@thrashplay/wishem-construct-manager/node`, and no task writes it — cost if wrong: one entry of `exports`.
 
+## Tasks
+
+Task 1: dispatched (implementer: sonnet), base 219a7325
+
+Task 1: implementer DONE, commit fb08c223 (hub 481 tests, host-nodejs 266; lint, typecheck pass). Notes: five new tests pass before the code by design (the cases of no option and of an accepted input, and the replay); a clash of a store ID is refused by createHub before serveHub, so the test of the free port passes trivially; host-nodejs typecheck needs dist/ in a fresh worktree; the README example of `subsystems` uses a placeholder `counter`. Review dispatched (sonnet).
+
+Task 1: review (sonnet): spec compliant, quality Approved, no Critical or Important. The item it could not verify (each existing test passes with no change) is in the report: hub 481 and host-nodejs 266 pass, and the diff only adds to the test files. No gap.
+Task 1: minor (deferred): the test of a subsystem with the ID store has `toThrow()` with no matcher, and its port check passes trivially; the replay test uses the source `keyboard`, not `keys`, and does not assert the record; the test of time/advance builds its own hub; the README example of `subsystems` uses an undefined `counter`.
+Task 1: complete (commits 219a732..fb08c22, review clean)
+Task 2: dispatched (implementer: sonnet), base fb08c223
+
+Task 2: implementer DONE, commit ccdc7a61 (construct-manager 38 tests; lint, typecheck, test pass; the root-entry test fails with a temporary node:path import). Choices that the brief did not fix: `constructs/report` refuses a status other than running, stopped, failed (path payload.status) and a bad link, time, message, or lastSend; a report with no lastSend keeps the earlier one, and link and time stay only with running; productChanges gives set-field only when the definitions, the entity IDs and their order, and the component types of each entity are equal and no field is removed, else one replace-model. Review dispatched (sonnet).
+
+Task 2: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify: (a) the failure table of design.md says to send `constructs/start` again after a `failed` report, but the spec (construct-list) says a start of an entry that wants `running` returns the same part, so the entry stays `failed`; (b) the generated files (engines.pnpm 11.x is what repo-kit writes).
+Ruling: (a) the spec is the authority and stays; the row of the failure table of design.md changes to "send `constructs/stop`, then `constructs/start`" — the spec is binding, and the change is one line of the design with no code — cost if wrong: one more input to start a failed construct again (#539 can give one control for both). Task 3 makes the change of design.md with openspec-update-change. (b) no gap.
+Task 2: minor (deferred): `lastSend.result` of a report is not validated (only `seq`); no tests of a report with a bad link, time, message, or lastSend; the lookup with hasOwn is repeated in start; package.json lists clock, host-nodejs, and sample-product, which Task 3 uses.
+Task 2: complete (commits fb08c22..ccdc7a6, review clean)
+
 ## State at the end of the session of 2026-11-28
 
-- NEXT STEP: Task 1, then Tasks 2 to 4.
+- NEXT STEP: Task 2, then Tasks 3 and 4. Carry to Task 3 the ruling on the export `./node`.
