@@ -190,6 +190,9 @@ A test of one requirement does not find a fault that needs two features in a seq
 - The final reviewer does these steps on the branch before it gives its verdict, and reports the real result of each step. A step that does not give its result is a finding of the grade Important or higher.
 - Each step of the test guide that a program can do is also an automated test of the change, in the package of the change (a test with real processes, or a Playwright test, or a script such as `docs/milestones/a4-workbench/page-driver.mjs`). Reason: four bug fixes of the A3 period (#624, #642, #652, #657) were faults of two features in a sequence that only a test guide or a break-test found, after the merge. A test in CI finds such a fault in the next change.
 - An automated test with real processes or a browser keeps a margin. Each time limit is at least 3 times the expected time. Each wait has its own limit, and that limit is less than the test timeout. A test with real processes leaves no process behind, on a pass or on a failure: it kills each process that it knows, or its process group. The brief of an implementer and the brief of a reviewer give this rule, and each review checks it. Reason: the two flakes of 2026-11-28 (#767 and #628 Task 4) came from tight limits (#798).
+- A test of a signal or of an event during a start holds the start at a known point, and sends the signal or the event at that point. The hold point is an option or an environment variable that only the test sets. A delay or a poll is not a hold point. Reason: the test of a signal during the start of #543 Task 3 sent the signal after a poll of 20 milliseconds, so the signal arrived after the start and the test did not test the start.
+- A test of a step that restores a state (a step back, a rewind, a reload) uses a history in which each restored value is different from the current value. Reason: the test of a step back while a construct runs had only ticks that ran, so it could not find that the step back restored `running` `false` (#816, found by the review of the milestone A4).
+- When the implementer writes a test of real processes after its code, the implementer breaks the code on purpose, shows that the test fails, and then restores the code. The report gives the failing run. Reason: #543 Task 2 and Task 3 wrote such tests after the code, and one of them could not fail (see the hold point above).
 - The test guide of the milestone uses these sections.
 
 ### Reviews
@@ -230,7 +233,7 @@ A brief of a planner holds each item. A brief of a task reviewer and of a final 
 - The expected results of "The test guide" come from a real run on `main` where the behavior exists, or say clearly that they are the result after the change.
 - Each open issue of the type `Bug` that touches the same files or behavior is named, with what the change does about it.
 - One changeset for each distinct change, as `~/.claude/rules/changesets.md` says.
-- The margin rule for the automated tests of the test guide (see "The steps that a person does"). A brief of an implementer holds it, and a brief of a reviewer holds the check of it.
+- The margin rule, the hold point, and the restored values for the automated tests of the test guide (see "The steps that a person does"). A brief of an implementer holds them, and a brief of a reviewer holds the check of them.
 - A planner does not drop or reduce a feature that the owner named in the issue or in a decision. When the full feature costs much work, the planner plans it in more tasks, or asks the owner. Reason: the owner overruled #650, which left out the arrows of the package view.
 
 ### Work at the same time
