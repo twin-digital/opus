@@ -351,6 +351,7 @@ const tabTo = async (page: Page, scope: Locator, target: Locator) => {
 
 const DANGER_TEXT = { light: 'rgb(198, 40, 40)', dark: 'rgb(242, 102, 106)' }
 const MAKER_TEXT = { light: 'rgb(158, 91, 12)', dark: 'rgb(242, 169, 59)' }
+const CONTROL_BORDER = { light: 'rgb(133, 133, 154)', dark: 'rgb(107, 107, 136)' }
 
 test.describe('button, text controls, and checkbox', () => {
   for (const theme of themes) {
@@ -381,6 +382,11 @@ test.describe('button, text controls, and checkbox', () => {
       expect((await lookOf(within(page, 'button-maker-hover', 'button'))).filter).not.toBe(base.filter)
       expect((await lookOf(within(page, 'button-maker-active', 'button'))).translate).not.toBe(base.translate)
       expect((await lookOf(within(page, 'button-maker-focus', 'button'))).outlineStyle).not.toBe(base.outlineStyle)
+    })
+
+    test(`${theme}: the neutral button has a border in control-border`, async ({ page }) => {
+      const look = await lookOf(within(page, 'button-neutral-default', 'button'))
+      expect(look.borderColor).toBe(CONTROL_BORDER[theme])
     })
 
     test(`${theme}: a button and a checkbox show no ring after a click`, async ({ page }) => {

@@ -23,7 +23,7 @@ export interface ButtonProps extends Native<'button'> {
 }
 
 const baseClass = [
-  'inline-flex items-center justify-center rounded-sm border border-transparent px-3 py-1.5 text-control font-medium whitespace-nowrap',
+  'inline-flex items-center justify-center rounded-sm border px-3 py-1.5 text-control font-medium whitespace-nowrap',
   'st-focus-visible:outline-2 st-focus-visible:outline-offset-2 st-focus-visible:outline-maker-text',
 ].join(' ')
 
@@ -34,13 +34,13 @@ const neutralFill = [
 
 const variantClass: Record<ButtonVariant, { look: string; states: string }> = {
   maker: {
-    look: 'bg-maker font-semibold text-on-fill',
+    look: 'border-transparent bg-maker font-semibold text-on-fill',
     states: 'st-hover:brightness-[1.08] st-active:translate-y-px st-active:brightness-[0.88]',
   },
   neutral: { look: 'border-control-border bg-surface text-fg', states: neutralFill },
-  quiet: { look: 'text-fg-muted', states: neutralFill },
+  quiet: { look: 'border-transparent text-fg-muted', states: neutralFill },
   danger: {
-    look: 'bg-danger font-semibold text-on-fill',
+    look: 'border-transparent bg-danger font-semibold text-on-fill',
     states: 'st-hover:brightness-[1.08] st-active:translate-y-px st-active:brightness-[0.96]',
   },
 }

@@ -11,6 +11,7 @@ describe('Button', () => {
     view.draw(<Button>Cancel</Button>)
     expect(button()?.classList.contains('bg-surface')).toBe(true)
     expect(button()?.classList.contains('border-control-border')).toBe(true)
+    expect(button()?.classList.contains('border-transparent')).toBe(false)
   })
 
   it.each([
