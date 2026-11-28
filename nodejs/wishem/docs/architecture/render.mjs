@@ -923,7 +923,7 @@ const containers = {
 
     // The Wishem command process
     stacked('flow', cCommand, cPcp, 165, 'Starts, stops, and\nreaches the hub\n[child process,\nlink over IPC]'),
-    stacked('quiet', cCommand, cModel, 165, 'Reads, watches, and writes [file system]'),
+    stacked('quiet', cCommand, cModel, 150, 'Reads, watches,\nwrites [file system]'),
     rel(
       'quiet',
       [
