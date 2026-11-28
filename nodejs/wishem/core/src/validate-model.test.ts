@@ -347,7 +347,9 @@ describe('validateModel', () => {
         const problems = errors(withValues({ [field]: value }))
         expect(problems).toHaveLength(1)
         expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, field])
+        const label = fields.find((candidate) => candidate.id === field)?.label
         expect(problems[0]?.message).toContain(ENT)
+        expect(problems[0]?.message).toContain(`for the field "${label}" of "AppBar"`)
         expect(problems[0]?.message).toContain(`"${type}"`)
       })
 
@@ -380,8 +382,21 @@ describe('validateModel', () => {
         expect(problems).toHaveLength(1)
         expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD4])
         expect(problems[0]?.message).toContain(ENT)
-        expect(problems[0]?.message).toContain('d')
+        expect(problems[0]?.message).toContain('the field "d" of "AppBar"')
         expect(problems[0]?.message).toContain(missing)
+      })
+
+      it('names each reference to an entity that does not exist', () => {
+        const missing = 'e_00000000-0000-4000-8000-000000000000'
+        const other = 'e_00000000-0000-4000-8000-000000000001'
+        const second = entity({ [CT]: { [FLD4]: other } }, ENT2)
+        const problems = errors(withValues({ [FLD4]: missing }, [second]))
+        expect(problems.map((problem) => problem.path)).toEqual([
+          ['entities', 0, 'components', CT, FLD4],
+          ['entities', 1, 'components', CT, FLD4],
+        ])
+        expect(problems[0]?.message).toContain(missing)
+        expect(problems[1]?.message).toContain(other)
       })
 
       it('names the entity and the field for a reference that is not an entity ID', () => {
@@ -390,6 +405,7 @@ describe('validateModel', () => {
         expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD4])
         expect(problems[0]?.message).toContain(ENT)
         expect(problems[0]?.message).toContain('"hero"')
+        expect(problems[0]?.message).toContain('the field "d" of "AppBar"')
       })
 
       it('names the prefix e_ for a reference with the prefix ct_', () => {
