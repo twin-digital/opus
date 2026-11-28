@@ -147,6 +147,35 @@ The `Page` shows the zero state (`ZeroState`) of the catalog in the space below 
 
 The React renderer is the package `renderer-react`. It holds `Renderer`, `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, and the generator. The page keeps `connectHub`, the views, and the sidecars.
 
+## Component diagram: the workbench process
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="components-workbench-process-dark.svg">
+  <img alt="Component diagram of the workbench process. The page gets page code from the Vite development server and connects to the hub through it. The Vite development server passes the WebSocket link to the workbench construct. The start script loads the product code, starts the workbench construct and the Vite development server, and attaches the construct manager with the behaviors. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads and reports through ports of the workbench construct, and starts, stops, and updates the product constructs. Each product construct runs the behaviors with the update subsystem, which calls the product code. The generator of the view types reads the definitions from the workbench construct." src="components-workbench-process-light.svg">
+</picture>
+
+Amber arrows show the primary paths: how the page reaches the workbench construct, and how the construct manager runs the product constructs and their update subsystems. Gray arrows show the other relationships.
+
+`startConstruct` of `host-nodejs` makes the workbench construct. It reads and checks the model folders, builds the hub with the stores `store` and `product` and the construct list, attaches the storage subsystems, and serves the link. `attachModelFolderStorage` makes one storage subsystem for each model folder. A storage subsystem has an input port that sends the files to the hub and an output port that writes each change back to the files.
+
+`attachConstructManager` attaches the input port `construct-manager` and the output port `construct-manager-reader` to the workbench hub. It reads the part `product` and the construct list. It starts one product construct (`startProductConstruct`) for each construct that the list wants, and sends the changes of the product model to it. It reports the state of each product construct in the construct list.
+
+A product construct is a hub with a store, an update subsystem (`createUpdate`), a clock (`startClock`), and its own link (`serveHub`). The update subsystem runs the native behaviors at each tick. The behaviors come from the product code. The `start` script loads the product code with `import()` and checks it with `checkBehaviors`, and the construct manager gives the behaviors to each product construct. A renderer in a different process can open the link of a product construct.
+
+`keepViewTypesCurrent` in `scripts/start.ts` attaches the output port `view-types` to the workbench hub. It runs the generator after each change to the definitions. The generator writes `src/views/*.view.gen.ts`. The page does not read these files.
+
+| Element                     | Type                           | Responsibility                                                                                                               | Module                                                                            |
+| --------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Start script                | Component: `workbench-app`     | Reads the options, loads the product code, and starts the construct, the construct manager, and the Vite development server. | `workbench-app` (`scripts/start.ts`)                                              |
+| Vite development server     | Component: Vite                | Serves the page code to the page. It passes the WebSocket at `/link` to the workbench construct and passes no other path.    | `vite` (`createServer` in `scripts/start.ts`)                                     |
+| Workbench construct         | Component: `host-nodejs`       | Holds the hub, the stores `store` and `product`, and the construct list. It serves the link.                                 | `host-nodejs` (`startConstruct`), `construct-manager` (`createConstructList`)     |
+| Storage subsystems          | Component: `host-nodejs`       | Read, watch, and write the model folder and the product model folder. They send the model to the hub.                        | `host-nodejs` (`attachModelFolderStorage`)                                        |
+| Construct manager           | Component: `construct-manager` | Starts, stops, and updates the product constructs, and reports their state in the construct list.                            | `construct-manager` (`attachConstructManager`)                                    |
+| Product constructs          | Component: `construct-manager` | Each one is a hub with a store, an update subsystem, a clock, and a link.                                                    | `construct-manager` (`startProductConstruct`)                                     |
+| Update subsystem            | Component: `update`            | Runs the native behaviors of the product at each tick.                                                                       | `update` (`createUpdate`)                                                         |
+| Product code                | Component: dynamic `import()`  | The module with the export `behaviors`. It gives the native behaviors of the product.                                        | The module of `--product-code`, for example `sample-product`                      |
+| Generator of the view types | Component: `renderer-react`    | Writes the types of the props of each view from the definitions.                                                             | `renderer-react` (`generateViewTypes`), `workbench-app` (`scripts/view-types.ts`) |
+
 ## Package dependency view: Wishem
 
 <picture>

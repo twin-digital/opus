@@ -115,6 +115,31 @@ describe('the container diagram', () => {
   })
 })
 
+describe('the component diagram of the workbench process', () => {
+  for (const theme of ['light', 'dark']) {
+    it(`exists (${theme})`, () => {
+      expect(existsSync(join(architectureFolder, `components-workbench-process-${theme}.svg`))).toBe(true)
+    })
+  }
+
+  it('names the nine components', () => {
+    const svg = readFileSync(join(architectureFolder, 'components-workbench-process-light.svg'), 'utf8')
+    for (const name of [
+      'Start script',
+      'Vite development server',
+      'Workbench construct',
+      'Storage subsystems',
+      'Construct manager',
+      'Product constructs',
+      'Update subsystem',
+      'Product code',
+      'Generator of the view types',
+    ]) {
+      expect(svg).toContain(name)
+    }
+  })
+})
+
 const arrowPairs = (svg: string) =>
   [...svg.matchAll(/<g class="uses" data-from="([^"]+)" data-to="([^"]+)">/g)]
     .map((match) => `${match[1]} -> ${match[2]}`)

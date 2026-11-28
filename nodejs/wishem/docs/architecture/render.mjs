@@ -1017,6 +1017,213 @@ const componentsPage = {
   ],
 }
 
+// Components of the workbench process (`workbench-app/scripts/start.ts`)
+const WP_ROW = (n) => 284 + 200 * (n - 1)
+const wpComponent = (x, row, name, type, description, extra) =>
+  el('component', x, WP_ROW(row), name, type, description, extra)
+
+const wPage = el(
+  'container',
+  RIGHT,
+  64,
+  'Page',
+  '[Container: React, web browser]',
+  'Draws each component that has a view.',
+)
+const wVite = wpComponent(
+  RIGHT,
+  1,
+  'Vite development server',
+  '[Component: Vite]',
+  'Serves the page code and passes the link.',
+)
+const wConstruct = wpComponent(
+  RIGHT,
+  2,
+  'Workbench construct',
+  '[Component: host-nodejs]',
+  'The hub, the stores, and the construct list.',
+)
+const wGen = wpComponent(
+  RIGHT,
+  3,
+  'Generator of the view types',
+  '[Component: renderer-react]',
+  'Writes the types of the props.',
+  { w: 280, x: RIGHT + CARD_W - 280 },
+)
+const wStorage = wpComponent(
+  RIGHT,
+  4,
+  'Storage subsystems',
+  '[Component: host-nodejs]',
+  'Read, watch, and write the model folders.',
+)
+const wStart = wpComponent(
+  LEFT,
+  1,
+  'Start script',
+  '[Component: workbench-app]',
+  'Reads the options and starts each part.',
+)
+const wManager = wpComponent(
+  LEFT,
+  2,
+  'Construct manager',
+  '[Component: construct-manager]',
+  'Starts and stops the product constructs.',
+)
+const wProducts = wpComponent(
+  LEFT,
+  3,
+  'Product constructs',
+  '[Component: construct-manager]',
+  'A hub, a store, and a clock each, with a link.',
+)
+const wUpdate = wpComponent(LEFT, 4, 'Update subsystem', '[Component: update]', 'Runs the behaviors at each tick.')
+const wCode = wpComponent(
+  LEFT,
+  5,
+  'Product code',
+  '[Component: dynamic import]',
+  'The native behaviors of the product.',
+)
+
+const WP_GROUP_Y = 244
+const WP_GROUP_BOTTOM = WP_ROW(5) + CARD_H + 30
+const WP_FOLDER_Y = WP_GROUP_BOTTOM + 72
+const WP_FOLDER_H = 112
+const wModel = el(
+  'store',
+  RIGHT,
+  WP_FOLDER_Y,
+  'Model folder',
+  '[Container: JSON files]',
+  'Holds the definitions and state.json.',
+  { h: WP_FOLDER_H },
+)
+const wProduct = el(
+  'store',
+  LEFT,
+  WP_FOLDER_Y,
+  'Product model folder',
+  '[Container: JSON files]',
+  'The model of the mounted product.',
+  { h: WP_FOLDER_H },
+)
+const WP_LEGEND_Y = WP_FOLDER_Y + WP_FOLDER_H + 40
+const WP_LANE = { construct: 440, code: 380, storage: 530 }
+const WP_MID = (row) => WP_ROW(row) + CARD_H + 48
+
+const componentsWorkbenchProcess = {
+  name: 'components-workbench-process',
+  title: 'Component diagram: the workbench process',
+  description:
+    'The workbench process has nine components. The start script loads the product code, starts the workbench construct and the Vite development server, and attaches the construct manager with the behaviors. The page gets page code from the Vite development server and connects to the hub through it. The Vite development server passes the link to the workbench construct. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads the product and the construct list from the workbench construct, and starts, stops, and updates the product constructs. Each product construct runs the behaviors with the update subsystem, which calls the product code. The generator of the view types reads the definitions from the workbench construct.',
+  width: WIDTH_PX,
+  height: WP_LEGEND_Y + LEGEND_H + 24,
+  items: [
+    wPage,
+    {
+      kind: 'group',
+      x: 24,
+      y: WP_GROUP_Y,
+      w: 832,
+      h: WP_GROUP_BOTTOM - WP_GROUP_Y,
+      label: 'Workbench process [Container: Node.js]',
+    },
+    wVite,
+    wConstruct,
+    wGen,
+    wStorage,
+    wStart,
+    wManager,
+    wProducts,
+    wUpdate,
+    wCode,
+    wModel,
+    wProduct,
+
+    // The path of the page to the construct
+    rel('quiet', [bottom(wPage, 780), top(wVite, 780)], 'Gets page code [HTTP]', [780, 216]),
+    rel('flow', [bottom(wPage, 630), top(wVite, 630)], 'Connects to the hub [WebSocket link]', [630, 216]),
+    rel('flow', [bottom(wVite, 630), top(wConstruct, 630)], 'Passes the link [WebSocket]', [630, WP_MID(1)]),
+
+    // The start script
+    rel('quiet', [right(wStart, WP_ROW(1) + 26), left(wVite, WP_ROW(1) + 26)], 'Starts', [440, WP_ROW(1) + 26]),
+    rel(
+      'quiet',
+      [
+        right(wStart, WP_ROW(1) + 78),
+        [WP_LANE.construct, WP_ROW(1) + 78],
+        [WP_LANE.construct, WP_ROW(2) + 18],
+        left(wConstruct, WP_ROW(2) + 18),
+      ],
+      'Starts',
+      [WP_LANE.construct, WP_ROW(1) + 150],
+    ),
+    rel('quiet', [bottom(wStart, 173), top(wManager, 173)], 'Attaches with the behaviors', [173, WP_MID(1)]),
+    rel(
+      'quiet',
+      [
+        right(wStart, WP_ROW(1) + 52),
+        [WP_LANE.code, WP_ROW(1) + 52],
+        [WP_LANE.code, WP_ROW(5) + 52],
+        right(wCode, WP_ROW(5) + 52),
+      ],
+      'Loads and checks [import()]',
+      [WP_LANE.code, WP_ROW(4) + 52],
+    ),
+
+    // The construct manager and the product constructs
+    rel('quiet', [right(wManager, WP_ROW(2) + 52), left(wConstruct, WP_ROW(2) + 52)], 'Reads and reports\n[port]', [
+      480,
+      WP_ROW(2) + 52,
+    ]),
+    rel('flow', [bottom(wManager, 173), top(wProducts, 173)], 'Starts, stops, and updates [port]', [173, WP_MID(2)]),
+    rel('flow', [bottom(wProducts, 173), top(wUpdate, 173)], 'Runs the behaviors with', [173, WP_MID(3)]),
+    rel('quiet', [bottom(wUpdate, 173), top(wCode, 173)], 'Calls', [173, WP_MID(4)]),
+
+    // The storage subsystems and the generator
+    rel('quiet', [top(wGen, 630), bottom(wConstruct, 630)], 'Reads the definitions [port]', [630, WP_MID(2)]),
+    rel(
+      'quiet',
+      [
+        left(wStorage, WP_ROW(4) + 52),
+        [WP_LANE.storage, WP_ROW(4) + 52],
+        [WP_LANE.storage, WP_ROW(2) + 86],
+        left(wConstruct, WP_ROW(2) + 86),
+      ],
+      'Sends the model [port]',
+      [WP_LANE.storage, WP_MID(3)],
+    ),
+    rel('quiet', [bottom(wStorage, 750), top(wModel, 750)], 'Reads, watches, and writes [file system]', [
+      750,
+      (WP_ROW(4) + CARD_H + WP_FOLDER_Y) / 2,
+    ]),
+    rel(
+      'quiet',
+      [bottom(wStorage, 610), [610, WP_GROUP_BOTTOM + 36], [230, WP_GROUP_BOTTOM + 36], top(wProduct, 230)],
+      'Reads, watches, and writes [file system]',
+      [420, WP_GROUP_BOTTOM + 36],
+    ),
+    {
+      kind: 'legend',
+      x: 24,
+      y: WP_LEGEND_Y,
+      w: 832,
+      entries: [
+        ['container', 'Container'],
+        ['component', 'Component'],
+        ['store', 'Store'],
+        ['boundary', 'Boundary'],
+        ['flow', 'Primary path'],
+        ['quiet', 'Other relationship'],
+      ],
+    },
+  ],
+}
+
 // Entities of the model folder (`core/src/model.ts`)
 const ENTITY_W = 290
 const ENTITY_LEFT = 48
@@ -1624,6 +1831,7 @@ const diagrams = [
   containers,
   dynamicChange,
   componentsPage,
+  componentsWorkbenchProcess,
   packagesDiagram(packages, layerOf),
   entitiesModelFolder,
 ]
