@@ -267,6 +267,7 @@ The files of the model folder are `definitions/*.json` for the component types a
 
 - [`wishem/architecture/diagrams`](../../../../openspec/specs/wishem/architecture/diagrams/spec.md): the diagrams of this document.
 - [`wishem/renderer-html/views`](../../../../openspec/specs/wishem/renderer-html/views/spec.md): the view files, the sidecars, and the table of views.
+- [`wishem/renderer-html/view-types`](../../../../openspec/specs/wishem/renderer-html/view-types/spec.md): the generated types of the props of a React view.
 - [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the hub, and the marked element.
 - [`wishem/renderer-html/renderer`](../../../../openspec/specs/wishem/renderer-html/renderer/spec.md): the React renderer package and what it draws from a port.
 - [`wishem/renderer-html/react-page`](../../../../openspec/specs/wishem/renderer-html/react-page/spec.md): the React page and its page server.
@@ -282,7 +283,11 @@ The files of the model folder are `definitions/*.json` for the component types a
 - [`wishem/workbench/construct-list`](../../../../openspec/specs/wishem/workbench/construct-list/spec.md): the model subsystem `constructs` and its inputs.
 - [`wishem/workbench/construct-manager`](../../../../openspec/specs/wishem/workbench/construct-manager/spec.md): the construct manager and the product constructs.
 - [`wishem/sample-product/model`](../../../../openspec/specs/wishem/sample-product/model/spec.md): the model of the sample product, its count behavior, and its color behavior.
+- [`wishem/core/model`](../../../../openspec/specs/wishem/core/model/spec.md): the data of a model, its IDs, and the rules of a correct model.
 - [`wishem/core/store`](../../../../openspec/specs/wishem/core/store/spec.md): the store.
+- [`wishem/host-nodejs/cli`](../../../../openspec/specs/wishem/host-nodejs/cli/spec.md): the `wishem` command.
+- [`wishem/host-nodejs/model-folder`](../../../../openspec/specs/wishem/host-nodejs/model-folder/spec.md): the model folder, the storage subsystem, and `state.json`.
+- [`wishem/host-nodejs/server`](../../../../openspec/specs/wishem/host-nodejs/server/spec.md): the local server that carries the link as a WebSocket.
 - [`wishem/clock/time`](../../../../openspec/specs/wishem/clock/time/spec.md): the `time` subsystem and the clock.
 - [`wishem/update/update-subsystem`](../../../../openspec/specs/wishem/update/update-subsystem/spec.md): the update subsystem and the native behaviors.
 - [`wishem/hub/construct`](../../../../openspec/specs/wishem/hub/construct/spec.md): the hub, the ports, and the record.
