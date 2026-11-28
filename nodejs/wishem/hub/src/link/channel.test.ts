@@ -261,6 +261,65 @@ describe('webSocketChannel', () => {
     expect(log).toEqual(['binary', 'text late'])
   })
 
+  it('holds text and binary messages in their order before the listeners', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    fire('message', { data: 'a' })
+    fire('message', { data: new Uint8Array([1]) })
+    fire('message', { data: 'b' })
+    fire('message', { data: new Uint8Array([2]) })
+    const log: string[] = []
+    channel.onMessage(
+      (text) => log.push(`text ${text}`),
+      () => log.push('binary'),
+    )
+    expect(log).toEqual(['text a', 'binary', 'text b', 'binary'])
+  })
+
+  it('gives a binary message to the onBinary of the latest registration', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    const first = vi.fn()
+    const second = vi.fn()
+    channel.onMessage(() => undefined, first)
+    channel.onMessage(() => undefined, second)
+    fire('message', { data: new Uint8Array([1]) })
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalledTimes(1)
+  })
+
+  it('drops a binary message after a registration with no onBinary', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    const first = vi.fn()
+    channel.onMessage(() => undefined, first)
+    channel.onMessage(() => undefined)
+    fire('message', { data: new Uint8Array([1]) })
+    expect(first).not.toHaveBeenCalled()
+  })
+
+  it('gives an empty text message to the listener and not to onBinary', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    const got: string[] = []
+    const onBinary = vi.fn()
+    channel.onMessage((text) => got.push(text), onBinary)
+    fire('message', { data: '' })
+    expect(got).toEqual([''])
+    expect(onBinary).not.toHaveBeenCalled()
+  })
+
+  it('holds an empty text message that arrives before the listeners', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    fire('message', { data: '' })
+    const got: string[] = []
+    const onBinary = vi.fn()
+    channel.onMessage((text) => got.push(text), onBinary)
+    expect(got).toEqual([''])
+    expect(onBinary).not.toHaveBeenCalled()
+  })
+
   it('gives no binary message after the close', async () => {
     const { socket, fire } = fakeSocket(1)
     const channel = await webSocketChannel(socket)

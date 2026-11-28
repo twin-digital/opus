@@ -16,7 +16,7 @@ const inputs = {
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
-  options: { url: { type: 'string', default: 'ws://127.0.0.1:4749/link' } },
+  options: { url: { type: 'string', default: 'ws://127.0.0.1:4750/link' } },
 })
 const makeInput = inputs[positionals[0] ?? '']
 if (positionals.length !== 1 || makeInput === undefined) {

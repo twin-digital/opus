@@ -1,17 +1,17 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { hostname } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { createDockerCli, ensureImage, type DockerCli } from './docker.ts'
 import { startRelay } from './relay.ts'
 
-const DEFAULT_HUB_PORT = 4749
+const DEFAULT_HUB_PORT = 4750
 
 const packageDir = join(import.meta.dirname, '..', '..')
 
 export interface RunGodotOptions {
-  /** Default 4749. */
+  /** Default 4750. */
   hubPort?: number
   /** Default `<package>/shots`. Emptied at the start. */
   shotsDir?: string
@@ -49,7 +49,10 @@ const startRun = (options: RunGodotOptions): GodotRun => {
   const tag = ensureImage(docker, join(packageDir, 'docker'), log)
   emptyFolder(shotsDir)
 
-  const label = `wishem-godot=${createHash('sha1').update(`${hostname()}\0${packageDir}`).digest('hex').slice(0, 8)}`
+  const label = `wishem-godot=${createHash('sha1')
+    .update(`${hostname()}\0${packageDir}\0${resolve(shotsDir)}`)
+    .digest('hex')
+    .slice(0, 8)}`
   const container = `wishem-godot-${randomBytes(4).toString('hex')}`
 
   const old = (docker.run(['ps', '-aq', '--filter', `label=${label}`]) ?? '').split('\n').filter((id) => id !== '')

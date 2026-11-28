@@ -1,4 +1,5 @@
 import type { NativeBehavior } from '@thrashplay/wishem-update'
+import { colorBehavior } from './color-behavior.js'
 import { COUNTER_TYPE, COUNT_FIELD } from './ids.js'
 
 /** Adds 1 to the `count` of a `Counter` component at each tick. It keeps a `count` that is not a number. */
@@ -12,4 +13,4 @@ export const countBehavior: NativeBehavior = {
 }
 
 /** The native behaviors of the sample product. */
-export const behaviors: readonly NativeBehavior[] = [countBehavior]
+export const behaviors: readonly NativeBehavior[] = [countBehavior, colorBehavior]

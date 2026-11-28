@@ -1,6 +1,6 @@
 # @thrashplay/wishem-renderer-godot
 
-The Godot renderer of Wishem. The package holds a Godot project, a remote port of the link in GDScript, and the commands that run Godot in Docker.
+The Godot renderer of Wishem. The package holds a Godot project, a remote port of the link in GDScript, and the commands that run Godot in Docker. The Godot application draws the sample construct. The package holds no construct.
 
 ## Godot runs only in Docker
 
@@ -16,7 +16,6 @@ No command installs Godot on your computer. Each command that needs Godot uses t
 
 | Script        | Command                          | Docker | Purpose                                                 |
 | ------------- | -------------------------------- | ------ | ------------------------------------------------------- |
-| `start`       | `node scripts/start.ts`          | No     | Start the construct in a Node.js process.               |
 | `godot`       | `node scripts/godot.ts run`      | Yes    | Run the Godot application in a container.               |
 | `godot:image` | `node scripts/godot.ts image`    | Yes    | Build the image when it is missing.                     |
 | `test`        | `opus-test`                      | No     | Run the Vitest tests of `src/`.                         |
@@ -71,7 +70,7 @@ var _client: RefCounted
 
 func _ready() -> void:
 	_client = LinkClient.new({
-		"url": "ws://127.0.0.1:4749/link",
+		"url": "ws://127.0.0.1:4750/link",
 		"subsystems": [{"prefix": "godot-screen", "kind": "output"}],
 	})
 	_client.linked.connect(_on_linked)
@@ -104,7 +103,7 @@ A view is a GDScript file `<name>.gd` that extends `RefCounted`. It has two func
 The sidecar `<name>.view.json` attaches the view to a component type:
 
 ```json
-{ "kind": "godot", "componentType": "ct_c47a0a86-b82f-43a8-8b0b-31a1e4ef6f37" }
+{ "kind": "godot", "componentType": "ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512" }
 ```
 
 `Views.collect_views(folder)` of `godot/wishem/views.gd` reads the sidecars of a folder. It gives `{ "views": { <ID>: { "sidecar", "view" } }, "errors": [String] }`. It ignores a sidecar of another kind. Each error names the file. The renderer draws no view that has an error. Two sidecars with one component type are an error, and neither view is drawn.
@@ -142,53 +141,9 @@ var renderer := Renderer.new(port, views, self, func() -> Vector2: return get_vi
 3. Write a test `godot/tests/test_<name>.gd`. Test `update` on a node that `create` makes.
 4. Run `pnpm test:godot`.
 
-## The construct
-
-The construct is the hub that the Godot application draws. It is the code in `src/construct/`.
-
-- It holds one component type `Clear color` with the field `Color`, and one entity with this component.
-- The hub runs in a Node.js process. Godot does not run a hub. The application reaches the hub through the link.
-- The process serves the link at `ws://127.0.0.1:4749/link` with `serveHub` of `@thrashplay/wishem-host-nodejs`.
-- The model is in code. Each start begins at tick 0 with the first color.
-
-### The model
-
-```ts
-export const CONSTRUCT_MODEL: Model = {
-  definitions: [
-    { id: CLEAR_COLOR_TYPE, label: 'Clear color', fields: [{ id: COLOR_FIELD, label: 'Color', type: 'string' }] },
-  ],
-  entities: [{ id: SCREEN_ENTITY, components: { [CLEAR_COLOR_TYPE]: { [COLOR_FIELD]: COLORS[0] } } }],
-}
-```
-
-`CLEAR_COLOR_TYPE` is the component type of the view `ClearColor`.
-
-### The color rule
-
-`withColorRule` wraps the store. It has the ID `store` and applies each store input and `time/advance`. For each tick, it sets `Color` to `COLORS[ticks % 4]`: `#1d4ed8`, `#b91c1c`, `#15803d`, `#a16207`. The rule reads only the parts `store` and `time`, so a rewind gives the color of the target tick.
-
-### The clock
-
-The clock sends `time/advance` of 500 milliseconds for each 500 milliseconds of real time while `time` has `running` set to `true`. A client of the link starts and stops it with `time/set-running`.
-
-### The command
-
-```
-pnpm --filter @thrashplay/wishem-renderer-godot start [--port <number>] [--paused]
-```
-
-- The command prints `wishem: link at ws://127.0.0.1:4749/link`.
-- `--port` changes the port. The value 0 lets the system select a port.
-- `--paused` starts the time with `running` set to `false`.
-- When the port is in use, the command prints `wishem: port <port> is in use` and ends with exit code 1.
-- On `SIGINT` or `SIGTERM`, the command stops the clock and the hub. Each link gets `stopping`. The command ends with exit code 0.
-
-`startGodotConstruct({ port, paused })` gives the same construct to a program.
-
 ## The Godot application
 
-The Godot application opens a link to the construct and draws it. `godot/main.gd` is the main scene. It opens one link with one output subsystem with the prefix `godot-screen`, and it sends no input.
+The Godot application opens a link to the sample construct and draws it. The `Color` component type of `@thrashplay/wishem-sample-product` has the field `Color`. The view `ClearColor` draws it. `godot/main.gd` is the main scene. It opens one link with one output subsystem with the prefix `godot-screen`, and it sends no input.
 
 ### The command
 
@@ -197,8 +152,8 @@ pnpm --filter @thrashplay/wishem-renderer-godot godot [--hub-port <number>]
 ```
 
 - The command runs the application in a container with a viewport of 640 by 360 pixels.
-- `--hub-port` gives the port of the construct. The default is 4749.
-- Start the construct with `pnpm --filter @thrashplay/wishem-renderer-godot start --paused` in a second terminal.
+- `--hub-port` gives the port of the sample construct. The default is 4750.
+- Start the sample construct with `pnpm --filter @thrashplay/wishem-three-renderers construct` in a second terminal. The application tries again until the construct runs.
 - On `SIGINT` or `SIGTERM`, the command removes the container and ends with exit code 0.
 - `runGodot(options)` gives the same run to a program.
 
@@ -228,15 +183,15 @@ The Docker daemon can be on a different computer (`DOCKER_HOST`). A container ca
 4. The runner connects to `127.0.0.1:<hub port>` on its own computer and carries the bytes in both directions.
 5. When one side ends, the runner ends the other side and starts the next relay.
 
-The limit: one connection at a time. For a short time between two connections, no relay listens, and the application tries again. The runner needs no published port and no change to the construct.
+The limit: one connection at a time. For a short time between two connections, no relay listens, and the application tries again. The runner needs no published port and no change to the sample construct.
 
 ## The screenshot test
 
-`tests/godot.ui.test.ts` runs the construct and the Godot application as two real processes, and checks the pictures of the application.
+`tests/godot.ui.test.ts` runs the sample construct and the Godot application, and checks the pictures of the application.
 
 ### Run
 
-The test needs Docker, because the application runs in the image. It needs no running construct: the test starts its own.
+The test needs Docker, because the application runs in the image. It needs no running construct: the test starts its own sample construct with `startSampleConstruct` of `tests/sample-construct.ts`, with the time paused.
 
 ```
 pnpm --filter @thrashplay/wishem-renderer-godot test:godot
@@ -248,12 +203,12 @@ pnpm --filter @thrashplay/wishem-renderer-godot test:ui
 
 ### The two processes
 
-- The construct runs in the Node.js process of the test, on a port that the system selects, with the time paused.
+- The sample construct runs in the Node.js process of the test, on a port that the system selects, with the time paused. The clock step is 500 milliseconds.
 - The Godot application runs in a container through `runGodot`. The runner carries the bytes of the link.
 
 ### Steps
 
-1. Start the construct.
+1. Start the sample construct.
 2. Start the application. Wait for `connected (link 1)` and a shot with `seq 0`. Each pixel is `#1d4ed8`.
 3. A link client of the test sends `time/advance` of 500. Wait for a shot with `seq 1`. Each pixel is `#b91c1c`, and the file differs from the first one.
 4. Wait 1500 milliseconds. No new shot comes.

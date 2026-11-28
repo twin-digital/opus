@@ -7,7 +7,7 @@ const LinkClient = preload("res://wishem/link_client.gd")
 const Renderer = preload("res://wishem/renderer.gd")
 const Views = preload("res://wishem/views.gd")
 
-const DEFAULT_LINK := "ws://127.0.0.1:4749/link"
+const DEFAULT_LINK := "ws://127.0.0.1:4750/link"
 const DEFAULT_SHOTS := "user://shots"
 const PREFIX := "godot-screen"
 

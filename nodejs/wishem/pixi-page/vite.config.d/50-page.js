@@ -8,6 +8,6 @@ export default defineConfig({
     strictPort: true,
     // The Vite client reloads the page when the server comes back, and a reload hides the new link.
     ws: false,
-    proxy: { '^/link$': { target: 'http://127.0.0.1:4748', ws: true, changeOrigin: false } },
+    proxy: { '^/link$': { target: 'http://127.0.0.1:4750', ws: true, changeOrigin: false } },
   },
 })
