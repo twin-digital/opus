@@ -30,6 +30,9 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
+      - name: Fail if the Wishem architecture diagrams are out of date
+        run: node nodejs/wishem/docs/architecture/render.mjs --check
+
       # `update-readme` and `sync` run repo-kit directly from source (node strips the TypeScript), so no build or
       # bin link is needed here — and the gate can never evaluate a stale `dist`.
       - name: Fail if README out of date

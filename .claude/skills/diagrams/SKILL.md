@@ -16,8 +16,8 @@ Each product has its own render script. There is no shared renderer library.
 ## Steps
 
 1. **Decide the form.** In a temporary context, write a Mermaid diagram and stop. This skill is for permanent documentation only.
-2. **Decide the type and the scope.** Select one row of the C4 table or of the entity diagram table in `docs/diagrams.md`. For a store of persisted data, the type is an entity diagram of that store. Write the title: `<type>: <scope>`, for example `Entity diagram: <store>`.
-3. **Read the code.** Find each element and each relationship in the code. Record the direction of each relationship: which element calls, sends, reads, or writes. For an entity diagram, read the schema of the store: each entity, its keys, and the cardinality of each relationship.
+2. **Decide the type and the scope.** Select one row of the C4 table, the package dependency view, or the entity diagram table in `docs/diagrams.md`. For a store of persisted data, the type is an entity diagram of that store. Write the title: `<type>: <scope>`, for example `Entity diagram: <store>`.
+3. **Read the code.** For the package dependency view, the `package.json` files of the packages are the source. Do not draw the view by hand. Find each element and each relationship in the code. Record the direction of each relationship: which element calls, sends, reads, or writes. For an entity diagram, read the schema of the store: each entity, its keys, and the cardinality of each relationship.
 4. **Write one description of the diagram.** The description is data in the render script: the title, the `desc` text, the size, and a list of items (boundaries, elements, relationships, legend). Each element has its name, its type and technology, and one short line of description. Each relationship has one short label.
 5. **Write or extend the render script.** See "The render script".
 6. **Run the script.** Run it two times. Make sure that the second run changes no file (`git status`).
@@ -50,6 +50,8 @@ The script fails (throws an error and writes no file) when one of these checks f
 - **Arrow length.** Measure the visible line of each arrow. Fail when an arrow without a label is shorter than `MIN_PLAIN` (start at 56 px). For an arrow with a label chip, fail when the line on either side of the chip is shorter than `MIN_SIDE` (start at 28 px).
 - **Label position.** Fail when the point of a label chip is not on the line of its arrow.
 - **Tokens.** Fail when a token is not in the token file, or does not resolve to a plain color.
+- **Arrows of the package dependency view.** Fail when an arrow crosses a card or when two arrows share a line.
+- **Check mode.** `node <folder>/render.mjs --check` writes no file. It fails when a file on the disk is not current.
 
 ## Look at each image
 
@@ -74,6 +76,12 @@ Open each image and look at it. Check each item of this list:
 - [ ] Elements align on a grid. The spaces between elements are equal where the elements are peers.
 - [ ] The dark image has the same content as the light image, and each part is visible on the dark page color. No shadow, filter, or fill is missing.
 - [ ] Few text sizes are in use: a title size, a name size, and a detail size.
+
+For the package dependency view, also check each item of this list:
+
+- [ ] Each runtime dependency has an arrow.
+- [ ] Each arrow goes down.
+- [ ] The legend gives the meaning of the arrow.
 
 For an entity diagram, also check each item of this list:
 
@@ -100,11 +108,12 @@ After the diagram, write the prose and the table of the elements, as `docs/diagr
 
 ## Common mistakes
 
-| Mistake                                    | Fix                                                                             |
-| ------------------------------------------ | ------------------------------------------------------------------------------- |
-| An arrow points the wrong way              | Check each arrow against the code. A check of the image alone does not find it. |
-| The dark file references a filter it lacks | Write the same `defs` in each theme. `check-svg.mjs` finds this.                |
-| Paragraphs of text in the diagram          | Keep the C4 text only. Move the detail to the prose.                            |
-| A short arrow with a label chip            | Move the elements apart until the script passes the `MIN_SIDE` check.           |
-| An embedded web font                       | Use the system font stack. The brand shows in the token colors.                 |
-| An SVG file edited by hand                 | Change the description in `render.mjs` and run the script again.                |
+| Mistake                                    | Fix                                                                                |
+| ------------------------------------------ | ---------------------------------------------------------------------------------- |
+| An arrow points the wrong way              | Check each arrow against the code. A check of the image alone does not find it.    |
+| The dark file references a filter it lacks | Write the same `defs` in each theme. `check-svg.mjs` finds this.                   |
+| Paragraphs of text in the diagram          | Keep the C4 text only. Move the detail to the prose.                               |
+| A short arrow with a label chip            | Move the elements apart until the script passes the `MIN_SIDE` check.              |
+| An embedded web font                       | Use the system font stack. The brand shows in the token colors.                    |
+| A library package as a container           | A container runs or stores data. Show the packages in the package dependency view. |
+| An SVG file edited by hand                 | Change the description in `render.mjs` and run the script again.                   |

@@ -95,7 +95,7 @@ wishem: the page connects to ws://127.0.0.1:4750/link
 
 Open `http://127.0.0.1:5175/`.
 
-Result with no construct: the status line says "The construct is not reachable. The page tries again." The terminal 2 prints a Vite error with `ECONNREFUSED 127.0.0.1:4750` at each try of the page (see "Observed faults" at the end of this guide).
+Result with no construct: the status line says "The construct is not reachable. The page tries again." The terminal 2 prints one line: `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again`. It prints the line again only after a link succeeds. When the construct resets an open link, the terminal prints `wishem: the link to ws://127.0.0.1:4750/link closed; the page connects again` in place of that line. A browser that closes its own link prints nothing. A plain HTTP request to `/link` gets status 502.
 
 Start the construct of section 1 (terminal 1).
 
@@ -119,7 +119,7 @@ wishem: the page connects to ws://127.0.0.1:4750/link
 
 Open `http://127.0.0.1:5174/` in a second tab.
 
-Result with no construct: after a few seconds, the status line says "The construct is not reachable. The page tries again." In the first second it can say "Connecting to the construct."
+Result with no construct: after a few seconds, the status line says "The construct is not reachable. The page tries again." In the first second it can say "Connecting to the construct." The terminal 3 prints one line: `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again`.
 
 Start the construct of section 1 (terminal 1).
 
@@ -218,7 +218,7 @@ The PixiJS page has no key for a rewind. The sample construct refuses a rewind f
 
 ## 9. A stop and a start of the construct
 
-1. Terminal 1: press Ctrl+C. Result: the command ends. `echo $?` gives `0`. In less than 5 seconds, the two pages keep their last color and say "The construct is not reachable. The page tries again." Terminal 4 prints `wishem-godot: the hub is not reachable. Godot tries again.` one time and no new shot.
+1. Terminal 1: press Ctrl+C. Result: the command ends. `echo $?` gives `0`. In less than 5 seconds, the two pages keep their last color and say "The construct is not reachable. The page tries again." Terminals 2 and 3 each print `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again` one time. Terminal 4 prints `wishem-godot: the hub is not reachable. Godot tries again.` one time and no new shot.
 2. Terminal 1: run the command of section 1 again. Result: in less than 10 seconds, the React page says "Connected (link 2).", the PixiJS page says "Connected (link 2). Space: pause or run. Period: one step.", and terminal 4 prints `connected (link 2)` and `shot ... seq 0 color #1d4ed8`. Each picture is blue again. Neither page reloaded. The writer put a marker in each page (`window.__marker`) before the stop, and read it after the start.
 3. Terminal 5, with terminal 1 running:
 
@@ -335,9 +335,7 @@ After each command, `docker ps -a --filter name=wishem-godot` shows no container
 
 ## Observed faults
 
-The writer did each step and found no step that fails to give its result. The writer found no new fault. One known fault shows in sections 2 and 3: the terminal of each page prints a Vite proxy stack trace at each retry while no construct runs. It is the issue [#735](https://github.com/twin-digital/opus/issues/735), in the milestone R1 Tech Debt. The page itself works.
-
-A page server also prints `ECONNRESET` errors from the proxy when the construct stops (section 9, step 1). They are the same fault.
+The writer did each step and found no step that fails to give its result. The writer found no fault that is still open.
 
 ## What the milestone did not build
 
@@ -345,7 +343,6 @@ A page server also prints `ECONNRESET` errors from the proxy when the construct 
 - A warning from the Godot application for a field whose label gives no prop. Issue #732.
 - The prop types of the views as generated code for a package other than `workbench-app`. The React page declares its prop types by hand. Issue #733.
 - One shared copy of the browser server code. Three packages have their own copy. Issue #734.
-- A quiet terminal while no construct runs. Issue #735.
 - Generated types of the props of a Godot view. Issue #612, moved to the milestone Later.
 - An input subsystem in the Godot application. The application only draws. Issue #613, moved to the milestone Later.
 - A single command that starts the construct and the three renderers. Each one has its own command.

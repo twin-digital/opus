@@ -216,6 +216,53 @@ func test_a_result_with_no_ok_closes_the_socket_and_gives_down_once() -> void:
 	assert_equal(submission.result, {"error": "The link closed."})
 
 
+func _assert_result_is_malformed(outcome: Variant) -> void:
+	var h := Fake.Harness.new()
+	var ports := h.link()
+	var submission = ports[1].submit({"type": "a"})
+	h.receive({"t": "result", "request": 1, "result": outcome})
+	assert_equal(h.sockets[0].close_count, 1, str(outcome))
+	assert_equal(h.down_count, 1, str(outcome))
+	assert_equal(submission.result, {"error": "The link closed."}, str(outcome))
+
+
+func _assert_result_is_accepted(outcome: Dictionary) -> void:
+	var h := Fake.Harness.new()
+	var ports := h.link()
+	var submission = ports[1].submit({"type": "a"})
+	h.receive({"t": "result", "request": 1, "result": outcome})
+	assert_equal(h.sockets[0].close_count, 0, str(outcome))
+	assert_equal(h.down_count, 0, str(outcome))
+	assert_equal(submission.result, outcome, str(outcome))
+
+
+func test_an_accepted_result_with_a_bad_seq_closes_the_socket_and_gives_down_once() -> void:
+	_assert_result_is_malformed({"ok": true})
+	_assert_result_is_malformed({"ok": true, "seq": 1.5})
+	_assert_result_is_malformed({"ok": true, "seq": -1})
+	_assert_result_is_malformed({"ok": true, "seq": "4"})
+	_assert_result_is_malformed({"ok": true, "seq": 9007199254740992.0})
+
+
+func test_a_rejection_with_a_bad_reason_or_problems_closes_the_socket_and_gives_down_once() -> void:
+	_assert_result_is_malformed({"ok": false, "problems": []})
+	_assert_result_is_malformed({"ok": false, "reason": "other", "problems": []})
+	_assert_result_is_malformed({"ok": false, "reason": 4, "problems": []})
+	_assert_result_is_malformed({"ok": false, "reason": "invalid"})
+	_assert_result_is_malformed({"ok": false, "reason": "invalid", "problems": "x"})
+	_assert_result_is_malformed({"ok": false, "reason": "invalid", "problems": {}})
+
+
+func test_a_correct_accepted_result_is_given_to_the_submission() -> void:
+	_assert_result_is_accepted({"ok": true, "seq": 4})
+	_assert_result_is_accepted({"ok": true, "seq": 9007199254740991})
+
+
+func test_a_correct_rejection_is_given_to_the_submission_for_each_reason() -> void:
+	for reason in ["not-permitted", "not-running", "unknown-type", "invalid"]:
+		_assert_result_is_accepted({"ok": false, "reason": reason, "problems": []})
+
+
 func test_a_result_for_an_unknown_request_changes_nothing() -> void:
 	var h := Fake.Harness.new()
 	h.link()

@@ -42,7 +42,7 @@ Open the page address in a web browser. Press Ctrl+C to stop the command. The co
 | `--port <number>`     | The port of the page. Default 5174. Use 0 to let the system select a port. |
 | `--hub-port <number>` | The port of the sample construct. Default 4750.                            |
 
-The page server starts also when no construct runs. The page then shows "The construct is not reachable. The page tries again." and connects when the construct starts. When the page port is in use, the command writes `wishem: port <number> is in use` and ends with exit code 1.
+The page server starts also when no construct runs. The page then shows "The construct is not reachable. The page tries again." and connects when the construct starts. While no construct runs, the page server prints one line, for example `wishem: no construct at ws://127.0.0.1:4750/link; the page connects again`. It prints the line again only after a link succeeds. When the construct resets an open link, the server prints `wishem: the link to ws://127.0.0.1:4750/link closed; the page connects again` in place of that line. A browser that closes its own link prints nothing. A plain HTTP request to `/link` gets status 502. When the page port is in use, the command writes `wishem: port <number> is in use` and ends with exit code 1.
 
 The page server sends the WebSocket at `/link` to the sample construct on the hub port. The page opens `ws://<host of the page>/link`, so the page needs no setting. The hub refuses a link from a page of a different site (status 403).
 

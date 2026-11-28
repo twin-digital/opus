@@ -42,8 +42,8 @@ export const startRenderer = (options: RendererOptions): PixiRenderer => {
   let lastWarnings = ''
 
   /** Writes the lines only when they differ from the last lines. */
-  const warn = (definitions: readonly ComponentTypeDefinition[]): void => {
-    const lines = viewWarnings(views, definitions).map(describeWarning)
+  const warn = (definitions: readonly ComponentTypeDefinition[] | undefined): void => {
+    const lines = definitions ? viewWarnings(views, definitions).map(describeWarning) : []
     const text = lines.join('\n')
     if (text !== lastWarnings) {
       lastWarnings = text
@@ -72,7 +72,7 @@ export const startRenderer = (options: RendererOptions): PixiRenderer => {
       return
     }
     lastPart = part
-    warn(part?.definitions ?? [])
+    warn(part?.definitions)
 
     const next: Drawn[] = []
     const wanted = new Set<string>()
