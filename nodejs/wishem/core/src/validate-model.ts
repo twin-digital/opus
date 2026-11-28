@@ -22,7 +22,10 @@ const FIELD_TYPE_NAMES = FIELD_TYPES.map((type) => `"${type}"`).join(', ')
 
 const isFieldType = (value: unknown): value is FieldType => FIELD_TYPES.includes(value as FieldType)
 
-const describeValue = (value: unknown): string => (typeof value === 'string' ? `"${value}"` : JSON.stringify(value))
+const describeValue = (value: unknown): string =>
+  typeof value === 'string' ? `"${value}"`
+  : typeof value === 'number' ? String(value)
+  : JSON.stringify(value)
 
 /** A reference agrees when it is a string. Its form and its entity are checked later. */
 const agrees = (type: FieldType, value: unknown): boolean =>
