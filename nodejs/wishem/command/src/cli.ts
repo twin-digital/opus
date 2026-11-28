@@ -123,6 +123,10 @@ const main = async () => {
       process.exit(1)
     }
     const check = await checkProductCode(productCodeUrl)
+    if (stopRequested()) {
+      process.exit(0)
+      return
+    }
     if (!check.ok) {
       console.error(
         check.reason === 'behaviors' ?

@@ -228,6 +228,28 @@ describe('the stop signal during the start of the wishem command', () => {
       expect(startConstruct).not.toHaveBeenCalled()
     })
 
+    it('exits with code 0 after a stop signal during a check that does not end', async () => {
+      const { checkProductCode } = await import('@thrashplay/wishem-construct-manager/node')
+      let endCheck: (result: ProductCodeCheck) => void = () => undefined
+      vi.mocked(checkProductCode).mockReturnValue(
+        new Promise((resolve) => {
+          endCheck = resolve
+        }),
+      )
+      const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
+      vi.mocked(startConstruct).mockClear()
+      vi.mocked(checkProductCode).mockClear()
+      const loaded = load(['--product', '/product', '--product-code', '/code.mjs'])
+      await vi.waitFor(() => {
+        expect(vi.mocked(checkProductCode)).toHaveBeenCalled()
+      })
+      handlers.get('SIGINT')?.()
+      endCheck({ ok: false, reason: 'load', message: 'The check did not end in 5 seconds.' })
+      await loaded
+      expect(exitCodes).toEqual([0])
+      expect(startConstruct).not.toHaveBeenCalled()
+    })
+
     it('attaches no manager when a stop signal comes before the start ends', async () => {
       const loaded = load(['--product', '/product'])
       await vi.waitFor(() => {
